@@ -1,46 +1,25 @@
 import express from "express";
+import { config } from "dotenv";
 import dotenv from "dotenv";
 import { connectDB, disconnectDB } from "./config/db.js";
+import authRoutes from "./routes/auth.routes.js";
 
+dotenv.config();
+config();
 connectDB();
 const app = express();
 const PORT = process.env.PORT || 3000;
 app.use(express.json());
- 
-const server = app.listen (process.env.PORT || 3000, "0.0.0.0", ()=>{
-    console.log(`Server is running on port ${PORT}`);
-})
+app.use("/api/v1/auth", authRoutes);
 
-app.get ("/", (req, res)=>{
-    res.send("Welcome to the Job Portal API");
+const server = app.listen(process.env.PORT || 3000, "0.0.0.0", () => {
+  console.log(`Server is running on port ${PORT}`);
 });
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+app.get("/", (req, res) => {
+  res.send("Welcome to the Job Portal API");
+});
+// =========================================================================================================
 
 // ================================================================================================================
 // This for unhandle promise rejection, for example when database connection fails
