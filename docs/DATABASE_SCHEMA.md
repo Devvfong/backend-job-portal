@@ -2,16 +2,16 @@
 
 ## Overview
 
-This document describes the **database structure** of the Job Finder System.
+This document describes the database structure of the **Job Finder System**.
 
 The backend uses:
 
 * Node.js
 * Express.js
 * Prisma ORM
-* PostgreSQL (NeonDB)
+* PostgreSQL
 
-The database contains **four core entities**:
+The database contains four core entities:
 
 1. User
 2. Company
@@ -22,33 +22,23 @@ The database contains **four core entities**:
 
 # Entity Relationship Overview
 
-Relationships:
-
 ```
-User 1 --- N Application
-Job 1 --- N Application
-Company 1 --- N Job
+User 1 ------ N Application
+Job 1 ------ N Application
+Company 1 ------ N Job
 ```
 
 Meaning:
 
-* A **user can apply to many jobs**
-* A **job can receive many applications**
-* A **company can post many jobs**
-
-Additional constraint:
-
-```
-User 1 --- 1 Application per Job
-```
-
-A user **cannot apply to the same job more than once**.
+* A user can apply to multiple jobs
+* A job can receive multiple applications
+* A company can post multiple jobs
 
 ---
 
-# Prisma Schema
+# Prisma Schema File
 
-File location:
+Location:
 
 ```
 prisma/schema.prisma
@@ -58,36 +48,47 @@ prisma/schema.prisma
 
 # Enums
 
-Enums ensure **data consistency and validation**.
-
 ## ApplicationStatus
 
-```prisma
-enum ApplicationStatus {
-  pending
-  reviewed
-  accepted
-  rejected
-}
+Defines the status of a job application.
+
 ```
+pending
+reviewed
+accepted
+rejected
+```
+
+---
 
 ## JobType
 
-```prisma
-enum JobType {
-  full_time
-  part_time
-  contract
-  internship
-  remote
-}
+Defines job types.
+
+```
+full_time
+part_time
+contract
+internship
+remote
+```
+
+---
+
+## JobStatus
+
+Controls whether a job is visible.
+
+```
+open
+closed
 ```
 
 ---
 
 # User Model
 
-Represents a **job seeker**.
+Represents a job seeker.
 
 ```prisma
 model User {
@@ -101,26 +102,26 @@ model User {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([email])
 }
 ```
 
-### Fields
+Fields:
 
-| Field     | Type     | Description          |
-| --------- | -------- | -------------------- |
-| id        | Int      | Primary key          |
-| name      | String   | User name            |
-| email     | String   | Unique email         |
-| password  | String   | Hashed password      |
-| resume    | String?  | Resume file path     |
-| createdAt | DateTime | Record creation time |
-| updatedAt | DateTime | Last update time     |
+| Field    | Description        |
+| -------- | ------------------ |
+| id       | Primary key        |
+| name     | User full name     |
+| email    | Unique login email |
+| password | Hashed password    |
+| resume   | Resume file path   |
 
 ---
 
 # Company Model
 
-Represents a **company or HR account**.
+Represents a company or HR account.
 
 ```prisma
 model Company {
@@ -132,24 +133,24 @@ model Company {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([email])
 }
 ```
 
-### Fields
+Fields:
 
-| Field       | Type     | Description          |
-| ----------- | -------- | -------------------- |
-| id          | Int      | Company ID           |
-| companyName | String   | Company name         |
-| email       | String   | HR email             |
-| createdAt   | DateTime | Record creation time |
-| updatedAt   | DateTime | Last update time     |
+| Field       | Description  |
+| ----------- | ------------ |
+| id          | Company ID   |
+| companyName | Company name |
+| email       | HR email     |
 
 ---
 
 # Job Model
 
-Represents a **job posting**.
+Represents job postings.
 
 ```prisma
 model Job {
@@ -159,8 +160,13 @@ model Job {
   jobType     JobType
   description String?
 
+  salaryMin Int?
+  salaryMax Int?
+
+  status JobStatus @default(open)
+
   companyId Int
-  company   Company @relation(fields: [companyId], references: [id])
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   applications Application[]
 
@@ -168,27 +174,28 @@ model Job {
   updatedAt DateTime @updatedAt
 
   @@index([companyId])
+  @@index([location])
 }
 ```
 
-### Fields
+Fields:
 
-| Field       | Type     | Description          |
-| ----------- | -------- | -------------------- |
-| id          | Int      | Job ID               |
-| title       | String   | Job title            |
-| location    | String   | Job location         |
-| jobType     | JobType  | Job category         |
-| description | String?  | Job description      |
-| companyId   | Int      | Company reference    |
-| createdAt   | DateTime | Record creation time |
-| updatedAt   | DateTime | Last update time     |
+| Field       | Description     |
+| ----------- | --------------- |
+| id          | Job ID          |
+| title       | Job title       |
+| location    | Job location    |
+| jobType     | Job type        |
+| description | Job details     |
+| salaryMin   | Minimum salary  |
+| salaryMax   | Maximum salary  |
+| status      | Job open/closed |
 
 ---
 
 # Application Model
 
-Represents a **job application**.
+Represents job applications.
 
 ```prisma
 model Application {
@@ -199,63 +206,32 @@ model Application {
   userId Int
   jobId  Int
 
-  user User @relation(fields: [userId], references: [id])
-  job  Job  @relation(fields: [jobId], references: [id])
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
   @@unique([userId, jobId])
   @@index([jobId])
+  @@index([userId])
 }
 ```
 
-### Fields
+Fields:
 
-| Field       | Type              | Description         |
-| ----------- | ----------------- | ------------------- |
-| id          | Int               | Application ID      |
-| status      | ApplicationStatus | Application state   |
-| appliedDate | DateTime          | Date of application |
-| userId      | Int               | Applicant           |
-| jobId       | Int               | Job applied         |
+| Field       | Description        |
+| ----------- | ------------------ |
+| id          | Application ID     |
+| status      | Application status |
+| appliedDate | Date applied       |
+| userId      | Applicant          |
+| jobId       | Job applied        |
 
----
-
-# Application Status Values
-
-Possible values:
-
-```
-pending
-reviewed
-accepted
-rejected
-```
-
-These values are enforced using the **ApplicationStatus enum**.
-
----
-
-# Database Constraints
-
-Important rules enforced by the schema:
-
-### Unique Email
-
-```
-User.email is unique
-Company.email is unique
-```
-
-### Single Application per Job
+Constraint:
 
 ```
 @@unique([userId, jobId])
 ```
 
-This ensures:
-
-```
-One user cannot apply to the same job multiple times.
-```
+This ensures a **user cannot apply to the same job twice**.
 
 ---
 
@@ -264,7 +240,7 @@ One user cannot apply to the same job multiple times.
 After modifying the schema run:
 
 ```
-npx prisma migrate dev --name update_schema
+npx prisma migrate dev --name init
 ```
 
 Generate Prisma client:
@@ -273,36 +249,51 @@ Generate Prisma client:
 npx prisma generate
 ```
 
-Reset database (development only):
-
-```
-npx prisma migrate reset
-```
-
 ---
 
 # Database Best Practices
 
 Recommended practices:
 
-* Always hash passwords using bcrypt
-* Use enums instead of free text for status fields
-* Add indexes to frequently queried fields
-* Validate user input before saving
-* Use transactions for complex operations
-* Prevent duplicate records with unique constraints
+* hash passwords before storing
+* use indexes for search fields
+* avoid duplicate applications
+* use transactions for complex operations
+* validate user input before database queries
 
 ---
 
-# Future Schema Improvements
+# Example Database Queries
 
-Possible future enhancements:
+Get jobs:
 
-* Job categories
-* Job salary range
-* User profile details (skills, experience)
-* Company logo upload
-* Bookmark / save job feature
+```
+GET /jobs
+```
+
+Apply to job:
+
+```
+POST /jobs/:jobId/apply
+```
+
+Get applications:
+
+```
+GET /applications
+```
+
+---
+
+# Future Database Improvements
+
+Possible future extensions:
+
+* saved jobs
+* job categories
+* notifications
+* company profiles
+* job recommendations
 
 ---
 
