@@ -36,6 +36,14 @@ Meaning:
 * A **job can receive many applications**
 * A **company can post many jobs**
 
+Additional constraint:
+
+```
+User 1 --- 1 Application per Job
+```
+
+A user **cannot apply to the same job more than once**.
+
 ---
 
 # Prisma Schema
@@ -48,7 +56,36 @@ prisma/schema.prisma
 
 ---
 
-## User Model
+# Enums
+
+Enums ensure **data consistency and validation**.
+
+## ApplicationStatus
+
+```prisma
+enum ApplicationStatus {
+  pending
+  reviewed
+  accepted
+  rejected
+}
+```
+
+## JobType
+
+```prisma
+enum JobType {
+  full_time
+  part_time
+  contract
+  internship
+  remote
+}
+```
+
+---
+
+# User Model
 
 Represents a **job seeker**.
 
@@ -63,57 +100,63 @@ model User {
   applications Application[]
 
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 ```
 
 ### Fields
 
-| Field    | Type   | Description      |
-| -------- | ------ | ---------------- |
-| id       | Int    | Primary key      |
-| name     | String | User name        |
-| email    | String | Unique email     |
-| password | String | Hashed password  |
-| resume   | String | Resume file path |
+| Field     | Type     | Description          |
+| --------- | -------- | -------------------- |
+| id        | Int      | Primary key          |
+| name      | String   | User name            |
+| email     | String   | Unique email         |
+| password  | String   | Hashed password      |
+| resume    | String?  | Resume file path     |
+| createdAt | DateTime | Record creation time |
+| updatedAt | DateTime | Last update time     |
 
 ---
 
-## Company Model
+# Company Model
 
 Represents a **company or HR account**.
 
 ```prisma
 model Company {
-  id          Int    @id @default(autoincrement())
+  id          Int     @id @default(autoincrement())
   companyName String
-  email       String
+  email       String  @unique
 
-  jobs        Job[]
+  jobs Job[]
 
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 ```
 
 ### Fields
 
-| Field       | Type   | Description  |
-| ----------- | ------ | ------------ |
-| id          | Int    | Company ID   |
-| companyName | String | Company name |
-| email       | String | HR email     |
+| Field       | Type     | Description          |
+| ----------- | -------- | -------------------- |
+| id          | Int      | Company ID           |
+| companyName | String   | Company name         |
+| email       | String   | HR email             |
+| createdAt   | DateTime | Record creation time |
+| updatedAt   | DateTime | Last update time     |
 
 ---
 
-## Job Model
+# Job Model
 
 Represents a **job posting**.
 
 ```prisma
 model Job {
-  id        Int    @id @default(autoincrement())
-  title     String
-  location  String
-  jobType   String
+  id          Int     @id @default(autoincrement())
+  title       String
+  location    String
+  jobType     JobType
   description String?
 
   companyId Int
@@ -122,29 +165,35 @@ model Job {
   applications Application[]
 
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
 }
 ```
 
 ### Fields
 
-| Field     | Type   | Description           |
-| --------- | ------ | --------------------- |
-| id        | Int    | Job ID                |
-| title     | String | Job title             |
-| location  | String | Job location          |
-| jobType   | String | Full-time / Part-time |
-| companyId | Int    | Company relation      |
+| Field       | Type     | Description          |
+| ----------- | -------- | -------------------- |
+| id          | Int      | Job ID               |
+| title       | String   | Job title            |
+| location    | String   | Job location         |
+| jobType     | JobType  | Job category         |
+| description | String?  | Job description      |
+| companyId   | Int      | Company reference    |
+| createdAt   | DateTime | Record creation time |
+| updatedAt   | DateTime | Last update time     |
 
 ---
 
-## Application Model
+# Application Model
 
 Represents a **job application**.
 
 ```prisma
 model Application {
   id          Int      @id @default(autoincrement())
-  status      String   @default("pending")
+  status      ApplicationStatus @default(pending)
   appliedDate DateTime @default(now())
 
   userId Int
@@ -152,18 +201,21 @@ model Application {
 
   user User @relation(fields: [userId], references: [id])
   job  Job  @relation(fields: [jobId], references: [id])
+
+  @@unique([userId, jobId])
+  @@index([jobId])
 }
 ```
 
 ### Fields
 
-| Field       | Type     | Description        |
-| ----------- | -------- | ------------------ |
-| id          | Int      | Application ID     |
-| status      | String   | Application status |
-| appliedDate | DateTime | Application date   |
-| userId      | Int      | Applicant          |
-| jobId       | Int      | Job applied        |
+| Field       | Type              | Description         |
+| ----------- | ----------------- | ------------------- |
+| id          | Int               | Application ID      |
+| status      | ApplicationStatus | Application state   |
+| appliedDate | DateTime          | Date of application |
+| userId      | Int               | Applicant           |
+| jobId       | Int               | Job applied         |
 
 ---
 
@@ -178,6 +230,33 @@ accepted
 rejected
 ```
 
+These values are enforced using the **ApplicationStatus enum**.
+
+---
+
+# Database Constraints
+
+Important rules enforced by the schema:
+
+### Unique Email
+
+```
+User.email is unique
+Company.email is unique
+```
+
+### Single Application per Job
+
+```
+@@unique([userId, jobId])
+```
+
+This ensures:
+
+```
+One user cannot apply to the same job multiple times.
+```
+
 ---
 
 # Migration Commands
@@ -188,10 +267,16 @@ After modifying the schema run:
 npx prisma migrate dev --name update_schema
 ```
 
-To generate Prisma client:
+Generate Prisma client:
 
 ```
 npx prisma generate
+```
+
+Reset database (development only):
+
+```
+npx prisma migrate reset
 ```
 
 ---
@@ -200,14 +285,25 @@ npx prisma generate
 
 Recommended practices:
 
-* Always hash passwords
-* Use indexes for search fields
-* Validate user input
+* Always hash passwords using bcrypt
+* Use enums instead of free text for status fields
+* Add indexes to frequently queried fields
+* Validate user input before saving
 * Use transactions for complex operations
-* Avoid duplicate applications
-
-Example rule:
-
-A user **cannot apply to the same job twice**.
+* Prevent duplicate records with unique constraints
 
 ---
+
+# Future Schema Improvements
+
+Possible future enhancements:
+
+* Job categories
+* Job salary range
+* User profile details (skills, experience)
+* Company logo upload
+* Bookmark / save job feature
+
+---
+
+# End of Document
