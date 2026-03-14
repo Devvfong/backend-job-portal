@@ -15,7 +15,12 @@ const register = async (req, res) => {
     }
 
     // Create user (hashing handled in service)
-    const user = await createUser({ name, email, password });
+    const user = await createUser({
+      name,
+      email,
+      password,
+      role: "job_seeker", //prevent hacker patch if leak endpoint, only allow register as job seeker, company admin must be created by admin
+    });
 
     // Generate token and set cookie
     const token = generateToken(user.id, res);

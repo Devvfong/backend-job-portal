@@ -1,6 +1,7 @@
 import { prisma } from "../config/db.js";
 import bcrypt from "bcryptjs";
 
+// Find a user by their email address
 const findUserByEmail = async (email) => {
   const user = await prisma.user.findUnique({
     where: {
@@ -10,7 +11,7 @@ const findUserByEmail = async (email) => {
   return user;
 };
 
-const createUser = async ({ name, email, password }) => {
+const createUser = async ({ name, email, password, role }) => {
   // Hash password
   const salt = await bcrypt.genSalt(10);
   const hashedPassword = await bcrypt.hash(password, salt);
@@ -21,6 +22,7 @@ const createUser = async ({ name, email, password }) => {
       name: name,
       email: email,
       password: hashedPassword,
+      role: role,
     },
     select: {
       id: true,
