@@ -91,7 +91,7 @@ const getprofile = async (req, res) => {
     return res.status(200).json({
       status: "success",
       data: {
-        user: req.user, // ah nis vea jenh data sarub 
+        user: req.user, // ah nis vea jenh data sarub
       },
     });
   } catch (e) {

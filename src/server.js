@@ -3,14 +3,16 @@ import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import { connectDB, disconnectDB } from "./config/db.js";
 import authRoutes from "./routes/auth.routes.js";
+import jobroutes from "./routes/job.routes.js";
 
 dotenv.config();
 connectDB();
 const app = express();
 const PORT = process.env.PORT || 3000;
 app.use(express.json());
-app.use(cookieParser());
+app.use(cookieParser()); // Middleware to parse cookies from incoming requests
 app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1/jobs", jobroutes);
 
 const server = app.listen(process.env.PORT || 3000, "0.0.0.0", () => {
   console.log(`Server is running on port ${PORT}`);

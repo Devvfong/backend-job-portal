@@ -7,11 +7,13 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum ApplicationStatus {
-  pending
-  reviewed
-  accepted
-  rejected
+//////////////////////////////////////////////////////
+// ENUMS
+//////////////////////////////////////////////////////
+
+enum Role {
+  job_seeker
+  company_admin
 }
 
 enum JobType {
@@ -27,12 +29,29 @@ enum JobStatus {
   closed
 }
 
+enum ApplicationStatus {
+  pending
+  reviewed
+  accepted
+  rejected
+}
+
+//////////////////////////////////////////////////////
+// USER
+//////////////////////////////////////////////////////
+
 model User {
-  id        Int      @id @default(autoincrement())
-  name      String
-  email     String   @unique
-  password  String
-  resume    String?
+  id       Int    @id @default(autoincrement())
+  name     String
+  email    String @unique
+  password String
+
+  role Role @default(job_seeker)
+
+  resume String?
+
+  companyId Int?
+  company   Company? @relation(fields: [companyId], references: [id])
 
   applications Application[]
 
@@ -42,25 +61,40 @@ model User {
   @@index([email])
 }
 
-model Company {
-  id          Int     @id @default(autoincrement())
-  companyName String
-  email       String  @unique
+//////////////////////////////////////////////////////
+// COMPANY
+//////////////////////////////////////////////////////
 
-  jobs Job[]
+model Company {
+  id          Int    @id @default(autoincrement())
+  companyName String
+  email       String @unique
+
+  logo        String?
+  description String?
+  website     String?
+  location    String?
+
+  users User[]
+  jobs  Job[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  @@index([email])
 }
 
+//////////////////////////////////////////////////////
+// JOB
+//////////////////////////////////////////////////////
+
 model Job {
-  id          Int     @id @default(autoincrement())
-  title       String
-  location    String
-  jobType     JobType
-  description String?
+  id       Int @id @default(autoincrement())
+  title    String
+  location String
+  jobType  JobType
+
+  description  String?
+  requirements String?
+  benefits     String?
 
   salaryMin Int?
   salaryMax Int?
@@ -79,8 +113,12 @@ model Job {
   @@index([location])
 }
 
+//////////////////////////////////////////////////////
+// APPLICATION
+//////////////////////////////////////////////////////
+
 model Application {
-  id          Int      @id @default(autoincrement())
+  id          Int @id @default(autoincrement())
   status      ApplicationStatus @default(pending)
   appliedDate DateTime @default(now())
 
@@ -91,6 +129,6 @@ model Application {
   job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
   @@unique([userId, jobId])
-  @@index([jobId])
   @@index([userId])
+  @@index([jobId])
 }
