@@ -1,32 +1,26 @@
-import { prisma } from "../config/db.js";
-import bcrypt from "bcryptjs";
 import generateToken from "../utils/generateToken.js";
+import {
+  findUserByEmail,
+  createUser,
+  verifyPassword,
+} from "../services/auth.service.js";
+
 const register = async (req, res) => {
   const { name, email, password } = req.body;
   try {
     // Check if user already exists
-    const userExits = await prisma.user.findUnique({
-      where: {
-        email: email,
-      },
-    });
-    if (userExits) {
+    const userExists = await findUserByEmail(email);
+    if (userExists) {
       return res.status(400).json({ message: "User already exists" });
     }
 
-    //hash password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-    //create user
-    const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-      },
-    });
+    // Create user (hashing handled in service)
+    const user = await createUser({ name, email, password });
+
+    // Generate token and set cookie
     const token = generateToken(user.id, res);
-    return res.status(200).json({
+
+    return res.status(201).json({
       status: "success",
       message: "User registered successfully",
       data: {
@@ -34,7 +28,6 @@ const register = async (req, res) => {
           id: user.id,
           name: user.name,
           email: user.email,
-          password: user.password,
         },
         token,
       },
@@ -44,39 +37,65 @@ const register = async (req, res) => {
     return res.status(500).json({ message: "Server error" });
   }
 };
+
 const login = async (req, res) => {
   const { email, password } = req.body;
-  const user = await prisma.user.findUnique({
-    where: {
-      email: email,
-    },
-  });
-  if (!user) {
-    return res.status(400).json({ message: "Invalid email or password" });
-  }
-  const isPasswordValid = await bcrypt.compare(password, user.password);
-  if (!isPasswordValid) {
-    return res.status(400).json({ message: "Invalid email or password" });
-  }
-  const token = generateToken(user.id, res);
-  return res.status(200).json({
-    status: "success",
-    message: "User logged in successfully",
-    data: {
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
+  try {
+    // Check if user exists
+    const user = await findUserByEmail(email);
+    if (!user) {
+      return res.status(400).json({ message: "Invalid email or password" });
+    }
+
+    // Check if password is correct
+    const isPasswordValid = await verifyPassword(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(400).json({ message: "Invalid email or password" });
+    }
+
+    // Generate token and set cookie
+    const token = generateToken(user.id, res);
+
+    return res.status(200).json({
+      status: "success",
+      message: "User logged in successfully",
+      data: {
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+        },
+        token,
       },
-      token,
-    },
-  });
+    });
+  } catch (error) {
+    console.error("Error logging in:", error);
+    return res.status(500).json({ message: "Server error" });
+  }
 };
+
 const logout = async (req, res) => {
   res.cookie("jwt", "", {
     expires: new Date(0),
     httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
   });
-  res.status(200).json({ message: "Logged out successfully" });
+  return res.status(200).json({
+    status: "success",
+    message: "Logged out successfully",
+  });
 };
-export { register, login, logout };
+const getprofile = async (req, res) => {
+  try {
+    return res.status(200).json({
+      status: "success",
+      data: {
+        user: req.user, // ah nis vea jenh data sarub 
+      },
+    });
+  } catch (e) {
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+export { register, login, logout, getprofile };
