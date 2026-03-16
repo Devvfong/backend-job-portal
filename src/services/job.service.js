@@ -47,4 +47,19 @@ const updateJob = async (id, data) => {
     },
   });
 };
-export { createJobService, getJobs, getJobById, updateJob };
+const deletJob = async (id) => {
+  const job = await prisma.job.findUnique({
+    where: { id },
+  });
+  try {
+    if (!job) {
+      throw new Error("Job not found");
+    }
+  } catch (error) {
+    throw error;
+  }
+  return prisma.job.delete({
+    where: { id },
+  });
+};
+export { createJobService, getJobs, getJobById, updateJob, deletJob };

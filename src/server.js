@@ -1,9 +1,11 @@
 import express from "express";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
+import { apiReference } from "@scalar/express-api-reference";
 import { connectDB, disconnectDB } from "./config/db.js";
 import authRoutes from "./routes/auth.routes.js";
 import jobroutes from "./routes/job.routes.js";
+import openApiDocument from "./utils/openapi.js";
 
 dotenv.config();
 connectDB();
@@ -13,6 +15,18 @@ app.use(express.json());
 app.use(cookieParser()); // Middleware to parse cookies from incoming requests
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/jobs", jobroutes);
+
+app.get("/openapi.json", (req, res) => {
+  res.status(200).json(openApiDocument);
+});
+
+app.get(
+  "/docs",
+  apiReference({
+    theme: "kepler",
+    url: "/openapi.json",
+  }),
+);
 
 const server = app.listen(process.env.PORT || 3000, "0.0.0.0", () => {
   console.log(`Server is running on port ${PORT}`);
