@@ -24,10 +24,84 @@ const createJobService = async (data, user) => {
   });
 };
 
-const getJobs = async () => {
-  return prisma.job.findMany({
-    where: { status: "open" },
-  });
+const getJobs = async (query) => {
+  const {
+    search,
+    location,
+    jobType,
+    minSalary,
+    maxSalary,
+    page = 1,
+    limit = 10,
+    sort = "createdAt",
+    order = "desc",
+  } = query;
+
+  const pageNumber = Math.max(1, Number(page) || 1); // Ensure page is at least 1
+  const limitNumber = Math.min(100, Math.max(1, Number(limit) || 10)); // Ensure limit is between 1 and 100
+  const skip = (pageNumber - 1) * limitNumber;
+
+  const where = {
+    status: "open",
+  };
+
+  if (search) {
+    where.title = {
+      contains: String(search),
+      mode: "insensitive",
+    };
+  }
+
+  if (location) {
+    where.location = {
+      contains: String(location),
+      mode: "insensitive",
+    };
+  }
+
+  if (jobType) {
+    where.jobType = String(jobType);
+  }
+
+  if (minSalary || maxSalary) {
+    where.salaryMin = {};
+
+    if (minSalary) {
+      where.salaryMin.gte = Number(minSalary);
+    }
+
+    if (maxSalary) {
+      where.salaryMin.lte = Number(maxSalary);
+    }
+  }
+
+  const allowedSortFields = ["createdAt", "salaryMin", "salaryMax"];
+  const sortField = allowedSortFields.includes(sort) ? sort : "createdAt";
+  const sortOrder = order === "asc" ? "asc" : "desc";
+
+  const [jobs, total] = await Promise.all([
+    prisma.job.findMany({
+      where,
+      orderBy: {
+        [sortField]: sortOrder,
+      },
+      skip,
+      take: limitNumber,
+    }),
+    prisma.job.count({ where }),
+  ]);
+
+  return {
+    jobs,
+    meta: {
+      total,
+      page: pageNumber,
+      limit: limitNumber,
+      totalPages: Math.ceil(total / limitNumber),
+      sort: sortField,
+      order: sortOrder,
+    },
+  };
 };
 
 const getJobById = async (id) => {

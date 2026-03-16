@@ -7,9 +7,9 @@ import authRoutes from "./routes/auth.routes.js";
 import jobroutes from "./routes/job.routes.js";
 import openApiDocument from "./utils/openapi.js";
 
-dotenv.config();
-connectDB();
-const app = express();
+dotenv.config(); // Load environment variables from .env file
+connectDB(); // Connect to the database when the server starts
+const app = express(); // Create an Express application
 const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(cookieParser()); // Middleware to parse cookies from incoming requests

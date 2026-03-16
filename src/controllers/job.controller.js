@@ -33,11 +33,12 @@ const createJobController = async (req, res) => {
 
 const getJobsController = async (req, res) => {
   try {
-    const jobs = await getJobs();
+    const result = await getJobs(req.query);
 
     return res.status(200).json({
       status: "success",
-      data: jobs,
+      data: result.jobs,
+      meta: result.meta,
     });
   } catch (e) {
     console.error(e);
