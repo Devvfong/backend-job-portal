@@ -16,14 +16,14 @@ This project focuses on improving recruitment efficiency, reducing manual proces
 
 Users can:
 
-* Register and login
-* Manage profile
-* Upload resume
-* Search jobs
-* Apply filters
-* View job details
-* Apply to jobs
-* Track application status
+- Register and login
+- Manage profile
+- Upload resume
+- Search jobs
+- Apply filters
+- View job details
+- Apply to jobs
+- Track application status
 
 ---
 
@@ -31,14 +31,14 @@ Users can:
 
 Administrators can:
 
-* Login to admin dashboard
-* Manage company profile
-* Create job postings
-* Edit job postings
-* Delete job postings
-* View applicants
-* Review resumes
-* Update application status
+- Login to admin dashboard
+- Manage company profile
+- Create job postings
+- Edit job postings
+- Delete job postings
+- View applicants
+- Review resumes
+- Update application status
 
 ---
 
@@ -46,36 +46,36 @@ Administrators can:
 
 ## Frontend
 
-* React.js
-* HTML5
-* CSS3
-* Tailwind CSS
-* DaisyUI
-* JavaScript
+- React.js
+- HTML5
+- CSS3
+- Tailwind CSS
+- DaisyUI
+- JavaScript
 
 ---
 
 ## Backend
 
-* Node.js
-* Express.js
-* Prisma ORM
-* REST API
+- Node.js
+- Express.js
+- Prisma ORM
+- REST API
 
 ---
 
 ## Database
 
-* PostgreSQL
+- PostgreSQL
 
 ---
 
 ## Development Tools
 
-* Git
-* GitHub
-* Visual Studio Code
-* Vite
+- Git
+- GitHub
+- Visual Studio Code
+- Vite
 
 ---
 
@@ -101,10 +101,10 @@ PostgreSQL Database
 
 This structure ensures the system is:
 
-* scalable
-* maintainable
-* modular
-* easy to extend
+- scalable
+- maintainable
+- modular
+- easy to extend
 
 ---
 
@@ -238,6 +238,8 @@ http://localhost:5000
 ```
 POST /api/v1/auth/register
 POST /api/v1/auth/login
+POST /api/v1/auth/logout
+GET /api/v1/auth/profile
 ```
 
 ---
@@ -268,11 +270,11 @@ PATCH /api/v1/applications/:id
 
 The system implements several security measures:
 
-* Password hashing using **bcrypt**
-* JWT authentication
-* Input validation
-* Protected routes
-* Environment variables for secrets
+- Password hashing using **bcrypt**
+- JWT authentication
+- Input validation
+- Protected routes
+- Environment variables for secrets
 
 ---
 
@@ -280,12 +282,12 @@ The system implements several security measures:
 
 Possible future enhancements include:
 
-* Job recommendation system
-* Email notifications
-* Saved jobs feature
-* Admin analytics dashboard
-* Advanced job filtering
-* Real-time notifications
+- Job recommendation system
+- Email notifications
+- Saved jobs feature
+- Admin analytics dashboard
+- Advanced job filtering
+- Real-time notifications
 
 ---
 
