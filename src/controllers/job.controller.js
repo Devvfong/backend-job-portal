@@ -2,9 +2,10 @@ import {
   createJobService,
   getJobs,
   getJobById,
+  updateJob,
 } from "../services/job.service.js";
 
-const createJob = async (req, res) => {
+const createJobController = async (req, res) => {
   try {
     const job = await createJobService(req.body);
 
@@ -51,5 +52,23 @@ const getJobByIdController = async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 };
+const updateJobController = async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const job = await updateJob(id, req.body);
+    res.status(200).json({
+      status: "success",
+      data: job,
+    });
+  } catch (e) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
+};
 
-export { createJob, getJobsController, getJobByIdController };
+export {
+  createJobController,
+  getJobsController,
+  getJobByIdController,
+  updateJobController,
+};
