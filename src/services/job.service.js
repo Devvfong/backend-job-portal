@@ -1,7 +1,10 @@
-import { id } from "zod/locales";
 import { prisma } from "../config/db.js";
+// This file is for the business logic of the job, it will be called by the controller and it will call the database to perform the CRUD operations on the job model
+const createJobService = async (data, user) => {
+  if (!user || !user.companyId) {
+    throw new Error("Forbidden");
+  }
 
-const createJobService = async (data) => {
   return prisma.job.create({
     //.job is the name of the model in prisma schema.prisma file, .create is the method to create a new record in the database
     data: {
@@ -13,7 +16,7 @@ const createJobService = async (data) => {
       benefits: data.benefits,
       salaryMin: data.salaryMin,
       salaryMax: data.salaryMax,
-      companyId: data.companyId,
+      companyId: user.companyId,
     },
   });
 };
@@ -32,7 +35,19 @@ const getJobById = async (id) => {
     },
   });
 };
-const updateJob = async (id, data) => {
+const updateJob = async (id, data, user) => {
+  const job = await prisma.job.findUnique({
+    where: { id },
+  });
+
+  if (!job) {
+    throw new Error("Job not found");
+  }
+
+  if (!user || job.companyId !== user.companyId) {
+    throw new Error("Forbidden");
+  }
+
   return prisma.job.update({
     where: { id },
     data: {
@@ -44,20 +59,23 @@ const updateJob = async (id, data) => {
       benefits: data.benefits,
       salaryMin: data.salaryMin,
       salaryMax: data.salaryMax,
+      companyId: user.companyId,
     },
   });
 };
-const deletJob = async (id) => {
+const deletJob = async (id, user) => {
   const job = await prisma.job.findUnique({
     where: { id },
   });
-  try {
-    if (!job) {
-      throw new Error("Job not found");
-    }
-  } catch (error) {
-    throw error;
+
+  if (!job) {
+    throw new Error("Job not found");
   }
+
+  if (!user || job.companyId !== user.companyId) {
+    throw new Error("Forbidden");
+  }
+
   return prisma.job.delete({
     where: { id },
   });

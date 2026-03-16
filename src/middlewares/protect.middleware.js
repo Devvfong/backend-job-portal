@@ -20,7 +20,13 @@ const protect = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = await prisma.user.findUnique({
       where: { id: decoded.id },
-      select: { id: true, name: true, email: true, role: true },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true, //to check if the user is company admin or not in the authorize middleware
+        companyId: true,
+      },
     });
     if (!req.user) {
       return res
