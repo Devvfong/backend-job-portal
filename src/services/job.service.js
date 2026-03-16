@@ -1,12 +1,15 @@
 import { prisma } from "../config/db.js";
-// This file is for the business logic of the job, it will be called by the controller and it will call the database to perform the CRUD operations on the job model
+
 const createJobService = async (data, user) => {
-  if (!user || !user.companyId) {
+  if (!user) {
     throw new Error("Forbidden");
   }
 
+  if (!user.companyId) {
+    throw new Error("Admin account is not linked to a company");
+  }
+
   return prisma.job.create({
-    //.job is the name of the model in prisma schema.prisma file, .create is the method to create a new record in the database
     data: {
       title: data.title,
       location: data.location,
@@ -16,7 +19,7 @@ const createJobService = async (data, user) => {
       benefits: data.benefits,
       salaryMin: data.salaryMin,
       salaryMax: data.salaryMax,
-      companyId: user.companyId,
+      companyId: user.companyId, // from DB user only
     },
   });
 };
@@ -35,6 +38,7 @@ const getJobById = async (id) => {
     },
   });
 };
+
 const updateJob = async (id, data, user) => {
   const job = await prisma.job.findUnique({
     where: { id },
@@ -63,6 +67,7 @@ const updateJob = async (id, data, user) => {
     },
   });
 };
+
 const deletJob = async (id, user) => {
   const job = await prisma.job.findUnique({
     where: { id },
@@ -80,4 +85,5 @@ const deletJob = async (id, user) => {
     where: { id },
   });
 };
+
 export { createJobService, getJobs, getJobById, updateJob, deletJob };
