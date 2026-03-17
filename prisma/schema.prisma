@@ -48,12 +48,32 @@ model User {
 
   role Role @default(job_seeker)
 
+  //////////////////////////////////////////////////////
+  // PROFILE FIELDS
+  //////////////////////////////////////////////////////
+
+  headline String?
+  bio      String?
+  location String?
+  phone    String?
+  avatar   String?
+
+  skills   String[] // PostgreSQL array
+
   resume String?
+
+  //////////////////////////////////////////////////////
+  // RELATIONS
+  //////////////////////////////////////////////////////
 
   companyId Int?
   company   Company? @relation(fields: [companyId], references: [id])
 
   applications Application[]
+
+  //////////////////////////////////////////////////////
+  // META
+  //////////////////////////////////////////////////////
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -75,8 +95,20 @@ model Company {
   website     String?
   location    String?
 
+  // 🔥 Optional improvements
+  industry String?
+  size     String? // e.g. "1-10", "10-50", "50-200"
+
+  //////////////////////////////////////////////////////
+  // RELATIONS
+  //////////////////////////////////////////////////////
+
   users User[]
   jobs  Job[]
+
+  //////////////////////////////////////////////////////
+  // META
+  //////////////////////////////////////////////////////
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -101,16 +133,30 @@ model Job {
 
   status JobStatus @default(open)
 
+  //////////////////////////////////////////////////////
+  // RELATIONS
+  //////////////////////////////////////////////////////
+
   companyId Int
   company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   applications Application[]
 
+  //////////////////////////////////////////////////////
+  // META
+  //////////////////////////////////////////////////////
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  //////////////////////////////////////////////////////
+  // INDEXES (IMPORTANT FOR PERFORMANCE)
+  //////////////////////////////////////////////////////
+
   @@index([companyId])
   @@index([location])
+  @@index([jobType])
+  @@index([status])
 }
 
 //////////////////////////////////////////////////////
@@ -122,13 +168,24 @@ model Application {
   status      ApplicationStatus @default(pending)
   appliedDate DateTime @default(now())
 
+  // 🔥 IMPORTANT FEATURE
+  coverLetter String?
+
+  //////////////////////////////////////////////////////
+  // RELATIONS
+  //////////////////////////////////////////////////////
+
   userId Int
   jobId  Int
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, jobId])
+  //////////////////////////////////////////////////////
+  // CONSTRAINTS
+  //////////////////////////////////////////////////////
+
+  @@unique([userId, jobId]) // prevent duplicate applications
   @@index([userId])
   @@index([jobId])
 }

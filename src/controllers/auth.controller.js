@@ -91,16 +91,19 @@ const logout = async (req, res) => {
     message: "Logged out successfully",
   });
 };
-const getprofile = async (req, res) => {
+const getMe = async (req, res) => {
+  const token = generateToken(req.user.id, res); // Refresh token on profile access
   try {
     return res.status(200).json({
       status: "success",
       data: {
-        user: req.user, // ah nis vea jenh data sarub
+        name: req.user.name,
+        email: req.user.email,
       },
+      token,
     });
   } catch (e) {
     return res.status(500).json({ message: "Server error" });
   }
 };
-export { register, login, logout, getprofile };
+export { register, login, logout, getMe };

@@ -1,4 +1,8 @@
-# Job Platform API (Final)
+# Job Platform API
+
+A REST API for a job platform where users can create profiles, upload resumes, apply for jobs, and recruiters can manage companies and job postings.
+
+---
 
 ## Base URL
 
@@ -7,6 +11,50 @@
 ```
 
 All endpoints return JSON responses.
+
+Authentication uses **JWT tokens**.
+
+Protected endpoints require:
+
+```
+Authorization: Bearer <token>
+```
+
+---
+
+## Standard API Response Format
+
+### Success
+
+```json
+{
+  "success": true,
+  "data": {}
+}
+```
+
+### Error
+
+```json
+{
+  "success": false,
+  "message": "Error description"
+}
+```
+
+---
+
+## HTTP Status Codes
+
+| Code | Meaning          |
+| ---- | ---------------- |
+| 200  | Success          |
+| 201  | Created          |
+| 400  | Validation Error |
+| 401  | Unauthorized     |
+| 403  | Forbidden        |
+| 404  | Not Found        |
+| 500  | Server Error     |
 
 ---
 
@@ -27,8 +75,6 @@ All endpoints return JSON responses.
 ```
 
 ### Response
-
-Status: **201 Created**
 
 ```json
 {
@@ -60,8 +106,6 @@ Status: **201 Created**
 
 ### Response
 
-Status: **200 OK**
-
 ```json
 {
   "success": true,
@@ -79,17 +123,23 @@ Status: **200 OK**
 
 **POST** `/auth/logout`
 
-Invalidates the current user session.
-
 ---
 
 ## Get Current User
 
 **GET** `/auth/me`
 
-Requires authentication.
+```
+Authorization: Bearer <JWT>
+```
 
-### Response
+---
+
+# User Profile
+
+## Get Profile
+
+**GET** `/users/profile`
 
 ```json
 {
@@ -97,9 +147,90 @@ Requires authentication.
   "data": {
     "id": "uuid",
     "name": "John Doe",
-    "email": "john@email.com"
+    "email": "john@email.com",
+    "headline": "Backend Developer",
+    "bio": "Backend developer with 5 years experience",
+    "location": "Singapore",
+    "phone": "+65 12345678",
+    "skills": ["Node.js", "PostgreSQL"],
+    "avatar": "/uploads/avatar.jpg",
+    "resumeUrl": "/uploads/resume.pdf"
   }
 }
+```
+
+---
+
+## Update Profile
+
+**PUT** `/users/profile`
+
+```json
+{
+  "headline": "Backend Developer",
+  "bio": "5 years experience",
+  "location": "Singapore",
+  "skills": ["Node.js", "PostgreSQL"]
+}
+```
+
+---
+
+## Upload Avatar
+
+**POST** `/users/avatar`
+
+```
+multipart/form-data
+```
+
+---
+
+## Upload Resume
+
+**POST** `/users/resume`
+
+```
+multipart/form-data
+```
+
+---
+
+# Companies
+
+## Create Company
+
+**POST** `/companies`
+
+```json
+{
+  "name": "Tech Corp",
+  "description": "AI startup",
+  "website": "https://techcorp.com",
+  "location": "Singapore"
+}
+```
+
+---
+
+## Get Company
+
+**GET** `/companies/:id`
+
+---
+
+## Update Company
+
+**PUT** `/companies/:id`
+
+---
+
+## Upload Logo
+
+**POST** `/companies/:id/logo`
+
+```
+multipart/form-data
 ```
 
 ---
@@ -110,42 +241,13 @@ Requires authentication.
 
 **GET** `/jobs`
 
-### Query Parameters
+Query:
 
-| Parameter | Description                    |
-| --------- | ------------------------------ |
-| search    | Search job title               |
-| location  | Filter by location             |
-| jobType   | full_time, part_time, contract |
-| minSalary | Minimum salary                 |
-| maxSalary | Maximum salary                 |
-| page      | Page number                    |
-| limit     | Items per page                 |
-| sort      | createdAt, salaryMin           |
-| order     | asc, desc                      |
-
-### Example
-
-```
-GET /jobs?location=Singapore&jobType=remote&page=1&limit=10
-```
-
-### Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "items": [],
-    "meta": {
-      "page": 1,
-      "limit": 10,
-      "total": 120,
-      "pages": 12
-    }
-  }
-}
-```
+- search
+- location
+- jobType
+- page
+- limit
 
 ---
 
@@ -153,41 +255,19 @@ GET /jobs?location=Singapore&jobType=remote&page=1&limit=10
 
 **GET** `/jobs/:id`
 
-### Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "id": "uuid",
-    "title": "Backend Developer",
-    "location": "Remote",
-    "salaryMin": 5000,
-    "salaryMax": 8000
-  }
-}
-```
-
 ---
 
 ## Create Job
 
 **POST** `/jobs`
 
-### Request
-
 ```json
 {
   "title": "Backend Developer",
   "location": "Remote",
-  "jobType": "full_time",
-  "description": "Node developer",
-  "salaryMin": 5000,
-  "salaryMax": 8000
+  "jobType": "full_time"
 }
 ```
-
-Status: **201 Created**
 
 ---
 
@@ -195,15 +275,11 @@ Status: **201 Created**
 
 **PUT** `/jobs/:id`
 
-Updates an existing job post.
-
 ---
 
 ## Delete Job
 
 **DELETE** `/jobs/:id`
-
-Deletes a job posting.
 
 ---
 
@@ -213,16 +289,11 @@ Deletes a job posting.
 
 **POST** `/jobs/:id/applications`
 
-### Response
-
 ```json
 {
-  "success": true,
-  "message": "Application submitted"
+  "coverLetter": "I am interested in this role"
 }
 ```
-
-Users cannot apply to the same job twice.
 
 ---
 
@@ -230,86 +301,23 @@ Users cannot apply to the same job twice.
 
 **GET** `/applications/me`
 
-Returns jobs the logged-in user applied to.
-
 ---
 
-## Get Applicants for Job
+## Get Applicants
 
 **GET** `/jobs/:id/applications`
 
-Used by company/HR to view applicants.
-
 ---
 
-## Update Application Status
+## Update Application
 
 **PATCH** `/applications/:id`
-
-### Request
 
 ```json
 {
   "status": "reviewed"
 }
 ```
-
-### Allowed Status Values
-
-* pending
-* reviewed
-* accepted
-* rejected
-
----
-
-# Resume Upload
-
-**POST** `/users/resume`
-
-Content-Type
-
-```
-multipart/form-data
-```
-
-Uploads a user resume file.
-
----
-
-# Standard API Response Format
-
-## Success
-
-```json
-{
-  "success": true,
-  "data": {}
-}
-```
-
-## Error
-
-```json
-{
-  "success": false,
-  "message": "Error description"
-}
-```
-
----
-
-# HTTP Status Codes
-
-| Code | Meaning          |
-| ---- | ---------------- |
-| 200  | Success          |
-| 201  | Created          |
-| 400  | Validation Error |
-| 401  | Unauthorized     |
-| 403  | Forbidden        |
-| 404  | Not Found        |
-| 500  | Server Error     |
 
 ---
 
@@ -321,6 +329,18 @@ POST   /auth/register
 POST   /auth/login
 POST   /auth/logout
 GET    /auth/me
+
+USERS
+GET    /users/profile
+PUT    /users/profile
+POST   /users/avatar
+POST   /users/resume
+
+COMPANIES
+POST   /companies
+GET    /companies/:id
+PUT    /companies/:id
+POST   /companies/:id/logo
 
 JOBS
 GET    /jobs
@@ -334,7 +354,4 @@ POST   /jobs/:id/applications
 GET    /applications/me
 GET    /jobs/:id/applications
 PATCH  /applications/:id
-
-FILES
-POST   /users/resume
 ```
