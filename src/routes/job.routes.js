@@ -28,6 +28,7 @@ const createJobSchema = z.object({
   salaryMin: z.number().min(0),
   salaryMax: z.number().min(0),
 });
+const updateJobSchema = createJobSchema.partial(); // All fields are optional for update
 router.post(
   "/create",
   protect,
@@ -35,7 +36,13 @@ router.post(
   authorize("company_admin"),
   createJobController,
 );
-router.put("/:id", protect, authorize("company_admin"), updateJobController);
+router.put(
+  "/:id",
+  protect,
+  validate(updateJobSchema),
+  authorize("company_admin"),
+  updateJobController,
+);
 router.delete("/:id", protect, authorize("company_admin"), deleteJobController);
 
 router.get("/", getJobsController);

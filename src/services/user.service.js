@@ -85,7 +85,7 @@ const updateProfile = async (data, id) => {
       id,
     },
     data: {
-      name: data.name || user.name,
+      name: data.name || user.name, // Allow updating name, but keep existing if not provided
       email: data.email || user.email,
       headline: data.headline || user.headline,
       bio: data.bio || user.bio,
