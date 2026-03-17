@@ -16,6 +16,7 @@ const createProfile = async (data, id) => {
     where: {
       id,
     },
+    // Update the user's profile information, but keep existing values if not provided in the update data
     data: {
       headline: data.headline || user.headline,
       bio: data.bio || user.bio,
@@ -49,6 +50,7 @@ const getProfile = async (id) => {
     where: {
       id,
     },
+    // Only select the fields that are relevant for the profile
     select: {
       id: true,
       name: true,

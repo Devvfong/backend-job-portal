@@ -129,14 +129,14 @@ const updateJob = async (id, data, user) => {
   return prisma.job.update({
     where: { id },
     data: {
-      title: data.title,
-      location: data.location,
-      jobType: data.jobType,
-      description: data.description,
-      requirements: data.requirements,
-      benefits: data.benefits,
-      salaryMin: data.salaryMin,
-      salaryMax: data.salaryMax,
+      title: data.title || job.title,
+      location: data.location || job.location,
+      jobType: data.jobType || job.jobType,
+      description: data.description || job.description,
+      requirements: data.requirements || job.requirements,
+      benefits: data.benefits || job.benefits,
+      salaryMin: data.salaryMin || job.salaryMin,
+      salaryMax: data.salaryMax || job.salaryMax,
       companyId: user.companyId,
     },
   });

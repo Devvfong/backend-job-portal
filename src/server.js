@@ -1,11 +1,14 @@
 import express from "express";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
+import session from "express-session";
+import passport from "./config/passport.js";
 import { apiReference } from "@scalar/express-api-reference";
 import { connectDB, disconnectDB } from "./config/db.js";
 import authRoutes from "./routes/auth.routes.js";
 import jobroutes from "./routes/job.routes.js";
 import userroutes from "./routes/user.routes.js";
+import githubAuthRoutes from "./routes/github.routes.js";
 import openApiDocument from "./utils/openapi.js";
 
 dotenv.config(); // Load environment variables from .env file
@@ -14,9 +17,19 @@ const app = express(); // Create an Express application
 const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(cookieParser()); // Middleware to parse cookies from incoming requests
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || "supersecret",
+    resave: false,
+    saveUninitialized: false,
+  }),
+);
+app.use(passport.initialize());
+app.use(passport.session());
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/jobs", jobroutes);
 app.use("/api/v1/users", userroutes);
+app.use("/auth", githubAuthRoutes);
 app.get("/openapi.json", (req, res) => {
   res.status(200).json(openApiDocument);
 });
