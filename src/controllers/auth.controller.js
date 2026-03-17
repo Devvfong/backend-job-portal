@@ -97,6 +97,7 @@ const getMe = async (req, res) => {
     return res.status(200).json({
       status: "success",
       data: {
+        id: req.user.id,
         name: req.user.name,
         email: req.user.email,
       },
