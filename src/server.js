@@ -5,6 +5,7 @@ import { apiReference } from "@scalar/express-api-reference";
 import { connectDB, disconnectDB } from "./config/db.js";
 import authRoutes from "./routes/auth.routes.js";
 import jobroutes from "./routes/job.routes.js";
+import userroutes from "./routes/user.routes.js";
 import openApiDocument from "./utils/openapi.js";
 
 dotenv.config(); // Load environment variables from .env file
@@ -15,7 +16,7 @@ app.use(express.json());
 app.use(cookieParser()); // Middleware to parse cookies from incoming requests
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/jobs", jobroutes);
-
+app.use("/api/v1/users", userroutes);
 app.get("/openapi.json", (req, res) => {
   res.status(200).json(openApiDocument);
 });

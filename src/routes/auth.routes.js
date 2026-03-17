@@ -22,6 +22,7 @@ const loginSchema = z.object({
   password: z.string().min(1),
 });
 
+
 router.post("/register", validate(registerSchema), register); // validate middleware will validate the request body against the registerSchema before calling the register controller
 router.post("/login", validate(loginSchema), login); // validate middleware will validate the request body against the loginSchema before calling the login controller
 router.post("/logout", logout);

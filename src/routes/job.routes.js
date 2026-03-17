@@ -1,6 +1,8 @@
 import express from "express";
+import { z } from "zod";
 import protect from "../middlewares/protect.middleware.js";
 import authorize from "../middlewares/authorize.middleware.js";
+import validate from "../middlewares/validate.middleware.js";
 import {
   createJobController,
   getJobsController,
@@ -10,10 +12,26 @@ import {
 } from "../controllers/job.controller.js";
 
 const router = express.Router();
-
+const createJobSchema = z.object({
+  title: z.string().min(1),
+  description: z.string().min(1),
+  location: z.string().min(1),
+  jobType: z.enum([
+    "full_time",
+    "part_time",
+    "contract",
+    "internship",
+    "remote",
+  ]),
+  requirements: z.string().min(1),
+  benefits: z.string().min(1),
+  salaryMin: z.number().min(0),
+  salaryMax: z.number().min(0),
+});
 router.post(
   "/create",
   protect,
+  validate(createJobSchema),
   authorize("company_admin"),
   createJobController,
 );
