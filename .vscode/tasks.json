@@ -6,6 +6,18 @@
 			"type": "shell",
 			"command": "git add . && git commit -m \"add github oauth persistence and upload middleware\" && git push origin main",
 			"isBackground": false
+		},
+		{
+			"label": "git-commit-push-2",
+			"type": "shell",
+			"command": "git add package.json package-lock.json src/server.js src/config/passport.js src/routes/github.routes.js src/middlewares/upload.middleware.js src/services/job.service.js src/services/user.service.js && git commit -m oauth-persistence-upload && git push origin main",
+			"isBackground": false
+		},
+		{
+			"label": "git-status-check",
+			"type": "shell",
+			"command": "git status --short --branch && git log --oneline -n 1 && git push origin main",
+			"isBackground": false
 		}
 	]
 }

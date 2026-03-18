@@ -12,7 +12,7 @@ const createProfile = async (data, id) => {
     throw new Error("User not found");
   }
 
-  return prisma.user.update({
+  return prisma.user.create({
     where: {
       id,
     },
