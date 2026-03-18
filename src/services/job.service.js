@@ -142,7 +142,7 @@ const updateJob = async (id, data, user) => {
   });
 };
 
-const deletJob = async (id, user) => {
+const deleteJob = async (id, user) => {
   const job = await prisma.job.findUnique({
     where: { id },
   });
@@ -160,4 +160,4 @@ const deletJob = async (id, user) => {
   });
 };
 
-export { createJobService, getJobs, getJobById, updateJob, deletJob };
+export { createJobService, getJobs, getJobById, updateJob, deleteJob };

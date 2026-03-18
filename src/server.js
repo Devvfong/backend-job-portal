@@ -8,6 +8,7 @@ import { connectDB, disconnectDB } from "./config/db.js";
 import authRoutes from "./routes/auth.routes.js";
 import jobroutes from "./routes/job.routes.js";
 import userroutes from "./routes/user.routes.js";
+import companyroutes from "./routes/company.routes.js";
 import githubAuthRoutes from "./routes/github.routes.js";
 import openApiDocument from "./utils/openapi.js";
 
@@ -29,6 +30,7 @@ app.use(passport.session());
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/jobs", jobroutes);
 app.use("/api/v1/users", userroutes);
+app.use("/api/v1/companies", companyroutes);
 app.use("/auth", githubAuthRoutes);
 app.get("/openapi.json", (req, res) => {
   res.status(200).json(openApiDocument);

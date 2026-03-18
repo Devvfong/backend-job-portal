@@ -3,7 +3,7 @@ import {
   getJobs,
   getJobById,
   updateJob,
-  deletJob,
+  deleteJob,
 } from "../services/job.service.js";
 
 const createJobController = async (req, res) => {
@@ -92,24 +92,24 @@ const updateJobController = async (req, res) => {
 const deleteJobController = async (req, res) => {
   try {
     const id = Number(req.params.id);
-    await deletJob(id, req.user);
+    await deleteJob(id, req.user);
 
     return res.status(200).json({
       status: "success",
       message: "Job deleted successfully",
     });
-  } catch (e) {
-    console.error(e);
+  } catch (error) {
+    console.error(error);
 
-    if (e.message === "Forbidden") {
+    if (error.message === "Forbidden") {
       return res.status(403).json({ message: "Forbidden" });
     }
 
-    if (e.message === "Job not found") {
+    if (error.message === "Job not found") {
       return res.status(404).json({ message: "Job not found" });
     }
 
-    return res.status(500).json({ error: e.message });
+    return res.status(500).json({ error: error.message });
   }
 };
 
