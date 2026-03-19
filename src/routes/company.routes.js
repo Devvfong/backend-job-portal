@@ -2,6 +2,7 @@ import express from "express";
 import {
   createCompanyController,
   getCompanyController,
+  getCompanyControllerById,
   updateCompanyController,
   deleteCompanyController,
 } from "../controllers/company.controller.js";
@@ -21,7 +22,8 @@ const createCompanySchema = z.object({
 });
 const updateCompanySchema = createCompanySchema.partial(); // All fields are optional for update
 
-router.get("/:id", getCompanyController);
+router.get("/:id", getCompanyControllerById);
+router.get("/", getCompanyController);
 router.put(
   "/:id",
   protect,

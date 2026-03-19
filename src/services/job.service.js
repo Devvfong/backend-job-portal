@@ -48,7 +48,7 @@ const getJobs = async (query) => {
   if (search) {
     where.title = {
       contains: String(search),
-      mode: "insensitive",
+      mode: "insensitive", // Case-insensitive search
     };
   }
 

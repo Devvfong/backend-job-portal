@@ -1,6 +1,7 @@
 import {
   createCompanyService,
   getCompanyService,
+  getCompanyServiceById,
   updateCompanyService,
   deleteCompanyService,
 } from "../services/company.service.js";
@@ -19,7 +20,20 @@ const createCompanyController = async (req, res) => {
 };
 const getCompanyController = async (req, res) => {
   try {
-    const company = await getCompanyService(Number(req.params.id));
+    const companies = await getCompanyService(req.query);
+    return res.status(200).json({
+      status: "success",
+      data: companies,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+const getCompanyControllerById = async (req, res) => {
+  try {
+    const company = await getCompanyServiceById(Number(req.params.id));
     if (!company) {
       return res.status(404).json({ message: "Company not found" });
     }
@@ -75,6 +89,7 @@ const deleteCompanyController = async (req, res) => {
 export {
   createCompanyController,
   getCompanyController,
+  getCompanyControllerById,
   updateCompanyController,
   deleteCompanyController,
 };
