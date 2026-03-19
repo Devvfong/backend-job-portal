@@ -17,6 +17,8 @@ import authorize from "./middlewares/authorize.middleware.js";
 dotenv.config(); // Load environment variables from .env file
 connectDB(); // Connect to the database when the server starts
 const app = express(); // Create an Express application
+// Serve static files from the public directory
+app.use(express.static("public"));
 const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(cookieParser()); // Middleware to parse cookies from incoming requests
@@ -295,6 +297,7 @@ app.get("/", (req, res) => {
     </style>
   </head>
   <body>
+    <audio id="bgMusic" src="/bg-s.mp3" loop></audio>
     <main>
       <section class="card">
         <h1>Job Portal Backend Is Live</h1>
@@ -335,7 +338,10 @@ app.get("/", (req, res) => {
         const submitBtn = document.getElementById('submitBtn');
         const links = document.querySelectorAll('.protected-link');
         let targetEndpoint = '';
-
+        const audio = document.getElementById('bgMusic');
+        document.addEventListener("click", () => {
+          audio.play();
+        }, { once: true });
         const openModal = (target) => {
           targetEndpoint = target;
           errorMsg.textContent = '';
