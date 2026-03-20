@@ -1,24 +1,41 @@
 import multer from 'multer';
 import path from 'path';
 
-// Allowed file extensions for resumes
-const allowedExtensions = ['.pdf', '.doc', '.docx'];
-
 const storage = multer.memoryStorage();
 
-const fileFilter = (req, file, cb) => {
-	const ext = path.extname(file.originalname).toLowerCase();
-	if (allowedExtensions.includes(ext)) {
-		cb(null, true);
-	} else {
-		cb(new Error('Only PDF, DOC, and DOCX files are allowed for resumes.'));
-	}
+// ─── Avatar ────────────────────────────────────────────────────────────────
+const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp'];
+
+const avatarFileFilter = (req, file, cb) => {
+  if (allowedImageTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Only JPEG, PNG, and WebP images are allowed for avatars.'));
+  }
+};
+
+const uploadAvatar = multer({
+  storage,
+  fileFilter: avatarFileFilter,
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB limit
+});
+
+// ─── Resume ────────────────────────────────────────────────────────────────
+const allowedResumeExtensions = ['.pdf', '.doc', '.docx'];
+
+const resumeFileFilter = (req, file, cb) => {
+  const ext = path.extname(file.originalname).toLowerCase();
+  if (allowedResumeExtensions.includes(ext)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Only PDF, DOC, and DOCX files are allowed for resumes.'));
+  }
 };
 
 const uploadResume = multer({
-	storage,
-	fileFilter,
-	limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  storage,
+  fileFilter: resumeFileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
 });
 
-export default uploadResume;
+export { uploadAvatar, uploadResume };

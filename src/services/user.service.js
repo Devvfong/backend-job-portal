@@ -116,4 +116,30 @@ const updateProfile = async (data, id) => {
   });
 };
 
-export { getProfile, updateProfile, createProfile };
+const updateUserAvatar = async (userId, avatarUrl) => {
+  return prisma.user.update({
+    where: { id: userId },
+    data: { avatar: avatarUrl },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      avatar: true,
+    },
+  });
+};
+
+const updateUserResume = async (userId, resumeUrl) => {
+  return prisma.user.update({
+    where: { id: userId },
+    data: { resume: resumeUrl },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      resume: true,
+    },
+  });
+};
+
+export { getProfile, updateProfile, createProfile, updateUserAvatar, updateUserResume };
