@@ -1,5 +1,6 @@
 import express from "express";
 import { z } from "zod";
+import multer from "multer";
 import protect from "../middlewares/protect.middleware.js";
 import validate from "../middlewares/validate.middleware.js";
 import { uploadAvatar, uploadResume } from "../middlewares/upload.middleware.js";
@@ -26,14 +27,30 @@ const createProfileSchema = z.object({
 });
 const updateProfileSchema = createProfileSchema.partial();
 
+// Wraps a multer .single() call and returns a clean JSON error on failure
+const handleUploadError = (multerMiddleware) => (req, res, next) => {
+  multerMiddleware(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      // e.g. file too large
+      return res.status(400).json({ status: "error", message: err.message });
+    }
+    if (err) {
+      // fileFilter rejection (wrong file type)
+      return res.status(400).json({ status: "error", message: err.message });
+    }
+    next();
+  });
+};
+
 // ─── Profile ───────────────────────────────────────────────────────────────
 router.get("/profile", protect, getProfileController);
 router.post("/profile", protect, validate(createProfileSchema), createProfileController);
 router.put("/profile", protect, validate(updateProfileSchema), updateProfileController);
 
 // ─── Uploads ───────────────────────────────────────────────────────────────
-router.post("/avatar", protect, uploadAvatar.single("avatar"), uploadAvatarController);
-router.post("/resume", protect, uploadResume.single("resume"), uploadResumeController);
+router.post("/avatar", protect, handleUploadError(uploadAvatar.single("avatar")), uploadAvatarController);
+router.post("/resume", protect, handleUploadError(uploadResume.single("resume")), uploadResumeController);
 
 export default router;
+
 
