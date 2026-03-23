@@ -13,12 +13,17 @@ import {
 const createProfileController = async (req, res) => {
   try {
     const profile = await createProfile(req.body, req.user.id);
-    return res.status(201).json({
+    return res.status(200).json({
       status: "success",
       data: profile,
     });
   } catch (e) {
     console.error(e);
+
+    if (e.message === "User not found") {
+      return res.status(404).json({ message: "User not found" });
+    }
+
     return res.status(500).json({ error: e.message });
   }
 };

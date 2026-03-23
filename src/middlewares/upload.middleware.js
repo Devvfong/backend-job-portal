@@ -3,14 +3,13 @@ import path from 'path';
 
 const storage = multer.memoryStorage();
 
-// ─── Avatar ────────────────────────────────────────────────────────────────
-const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp'];
+const allowedImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic'];
 
 const avatarFileFilter = (req, file, cb) => {
   if (allowedImageTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('Only JPEG, PNG, and WebP images are allowed for avatars.'));
+    cb(new Error('Only JPG, JPEG, PNG, HEIC and WebP images are allowed for avatars.'));
   }
 };
 

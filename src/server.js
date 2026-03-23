@@ -15,7 +15,7 @@ import protect from "./middlewares/protect.middleware.js";
 import authorize from "./middlewares/authorize.middleware.js";
 
 dotenv.config(); // Load environment variables from .env file
-connectDB(); // Connect to the database when the server starts
+await connectDB(); // Connect to the database when the server starts
 const app = express(); // Create an Express application
 // Serve static files from the public directory
 app.use(express.static("public"));
@@ -440,10 +440,10 @@ app.get("/", (req, res) => {
 // This for unhandle promise rejection, for example when database connection fails
 process.on("unhandledRejection", (err) => {
   console.error("Unhandled Rejection:", err);
-  server.close(async () => {
-    await disconnectDB();
-    process.exit(1);
-  });
+  // server.close(async () => {
+  //   await disconnectDB();
+  //   process.exit(1);
+  // });
 });
 
 // This for uncaught exception, for example when there is an error in the code that is not handled
@@ -454,9 +454,9 @@ process.on("uncaughtException", async (err) => {
 });
 
 // This for graceful shutdown, for example when the server is stopped or restarted
-process.on("SIGINT", async () => {
-  console.log("SIGINT received, shutting down gracefully...");
-  await disconnectDB();
-  process.exit(0);
-});
+// process.on("SIGINT", async () => {
+//   console.log("SIGINT received, shutting down gracefully...");
+//   await disconnectDB();
+//   process.exit(0);
+// });
 // ================================================================================================================

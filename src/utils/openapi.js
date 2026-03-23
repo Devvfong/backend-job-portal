@@ -11,7 +11,7 @@ const openApiDocument = {
       description: "Local development",
     },
   ],
-  tags: [{ name: "Auth" }, { name: "Jobs" }],
+  tags: [{ name: "Auth" }, { name: "Jobs" }, { name: "Users" }],
   components: {
     securitySchemes: {
       bearerAuth: {
@@ -128,6 +128,20 @@ const openApiDocument = {
           salaryMax: { type: "integer", example: 1200 },
         },
       },
+      ProfileRequest: {
+        type: "object",
+        properties: {
+          name: { type: "string", example: "Ly" },
+          email: { type: "string", format: "email", example: "ly@example.com" },
+          headline: { type: "string", example: "Backend Developer" },
+          bio: { type: "string", example: "I build APIs" },
+          location: { type: "string", example: "Cambodia" },
+          phone: { type: "string", example: "+85512345678" },
+          avatar: { type: "string", example: "https://example.com/avatar.jpg" },
+          skills: { type: "array", items: { type: "string" }, example: ["Node.js", "Express"] },
+          resume: { type: "string", example: "https://example.com/resume.pdf" }
+        }
+      }
     },
   },
   paths: {
@@ -459,6 +473,102 @@ const openApiDocument = {
           201: { description: "Job created" },
           401: { description: "Not authorized" },
           403: { description: "Forbidden" },
+        },
+      },
+    },
+    "/api/v1/users/profile": {
+      get: {
+        tags: ["Users"],
+        summary: "Get current user profile (alternative to Auth profile)",
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        responses: {
+          200: { description: "Profile returned" },
+          401: { description: "Not authorized" },
+          404: { description: "User not found" },
+        },
+      },
+      post: {
+        tags: ["Users"],
+        summary: "Initialize user profile",
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/ProfileRequest" },
+            },
+          },
+        },
+        responses: {
+          200: { description: "Profile initialized" },
+          401: { description: "Not authorized" },
+        },
+      },
+      put: {
+        tags: ["Users"],
+        summary: "Update user profile",
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/ProfileRequest" },
+            },
+          },
+        },
+        responses: {
+          200: { description: "Profile updated" },
+          401: { description: "Not authorized" },
+        },
+      },
+    },
+    "/api/v1/users/avatar": {
+      post: {
+        tags: ["Users"],
+        summary: "Upload user avatar via multipart/form-data",
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "multipart/form-data": {
+              schema: {
+                type: "object",
+                properties: {
+                  avatar: { type: "string", format: "binary" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: "Avatar uploaded successfully" },
+          400: { description: "Bad request/Invalid file type" },
+          401: { description: "Not authorized" },
+        },
+      },
+    },
+    "/api/v1/users/resume": {
+      post: {
+        tags: ["Users"],
+        summary: "Upload user resume via multipart/form-data",
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "multipart/form-data": {
+              schema: {
+                type: "object",
+                properties: {
+                  resume: { type: "string", format: "binary" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: "Resume uploaded successfully" },
+          400: { description: "Bad request/Invalid file type" },
+          401: { description: "Not authorized" },
         },
       },
     },
