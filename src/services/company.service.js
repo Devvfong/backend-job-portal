@@ -1,4 +1,5 @@
 import { prisma } from "./../config/db.js";
+import { supabase } from "./../lib/supabase.js";
 
 const createCompanyService = async (data, user) => {
   if (!user || user.role !== "company_admin") {
@@ -26,9 +27,9 @@ const createCompanyService = async (data, user) => {
 
   return prisma.company.create({
     data: {
-      companyName, // yg no need validate bcuz validate pi leu hx hx
+      companyName,
       email,
-      description: data.description ?? null, // Use null if description is not provided
+      description: data.description ?? null,
       website: data.website ?? null,
       location: data.location ?? null,
       logo: data.logo ?? null,
@@ -130,7 +131,7 @@ const getCompanyServiceById = async (id) => {
   });
 };
 const updateCompanyService = async (id, data, user) => {
-  if (!user || user.role !== "company_admin") {
+  if (!user || user.role !== "company_admin" || user.companyId !== id) {
     throw new Error("Unauthorized");
   }
   const company = await prisma.company.findUnique({
@@ -158,16 +159,56 @@ const deleteCompanyService = async (id, user) => {
   if (!company) {
     throw new Error("Company not found");
   }
-
+  const urlParts = company.logo.split("/avatars/");
+  if (urlParts.length > 1) {
+    const filePath = urlParts[1];
+    await supabase.storage.from("avatars").remove([filePath]);
+  }
   return prisma.company.delete({
     where: { id },
   });
+
 };
 
+const updateCompanyLogo = async (companyId, logoUrl) => {
+  return prisma.company.update({
+    where: { id: companyId },
+    data: { logo: logoUrl },
+  });
+};
+const deleteCompanyLogo = async (user,companyId) => {
+  if (!user || user.role !== "company_admin" || user.companyId !== companyId) {
+    throw new Error("Unauthorized");
+  }
+  const company = await prisma.company.findUnique({
+    where: { id: companyId },
+  });
+
+  if (!company) {
+    throw new Error("Company not found");
+  }
+
+  if (!company.logo) {
+    throw new Error("No logo found");
+  }
+
+  const urlParts = company.logo.split("/avatars/");
+  if (urlParts.length > 1) {
+    const filePath = urlParts[1];
+    await supabase.storage.from("avatars").remove([filePath]);
+  }
+
+  return prisma.company.update({
+    where: { id: companyId },
+    data: { logo: null },
+  });
+};
 export {
   createCompanyService,
   getCompanyService,
   getCompanyServiceById,
   updateCompanyService,
   deleteCompanyService,
+  updateCompanyLogo,
+  deleteCompanyLogo,
 };

@@ -4,7 +4,10 @@ import {
   getCompanyServiceById,
   updateCompanyService,
   deleteCompanyService,
+  updateCompanyLogo,
+  deleteCompanyLogo
 } from "../services/company.service.js";
+import { uploadLogo as uploadLogoToSupabase } from "../services/upload.service.js";
 
 const createCompanyController = async (req, res) => {
   try {
@@ -86,10 +89,63 @@ const deleteCompanyController = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+const uploadLogoController = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "No logo file provided" });
+    }
+
+    // Since users must be company_admin and have a companyId to update, 
+    // we use req.user.companyId
+    if (!req.user.companyId) {
+      return res.status(403).json({ message: "Forbidden: No company associated" });
+    }
+
+    const publicUrl = await uploadLogoToSupabase(
+      req.file.buffer,
+      req.file.mimetype,
+      req.file.originalname,
+      req.user.companyId,
+    );
+
+    const company = await updateCompanyLogo(req.user.companyId, publicUrl);
+
+    return res.status(200).json({
+      status: "success",
+      message: "Logo uploaded successfully",
+      data: company,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: error.message });
+  }
+};
+const deleteLogoController = async (req, res) => {
+  try {
+    if (!req.user.companyId) {
+      return res
+        .status(403)
+        .json({ message: "Forbidden: No company associated" });
+    }
+
+    const company = await deleteCompanyLogo(req.user, req.user.companyId);
+
+    return res.status(200).json({
+      status: "success",
+      message: "Logo deleted successfully",
+      data: company,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: error.message });
+  }
+};
 export {
   createCompanyController,
   getCompanyController,
   getCompanyControllerById,
   updateCompanyController,
   deleteCompanyController,
+  uploadLogoController,
+  deleteLogoController,
 };

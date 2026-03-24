@@ -572,6 +572,32 @@ const openApiDocument = {
         },
       },
     },
+    "/api/v1/companies/logo": {
+      post: {
+        tags: ["Companies"],
+        summary: "Upload company logo via multipart/form-data",
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "multipart/form-data": {
+              schema: {
+                type: "object",
+                properties: {
+                  logo: { type: "string", format: "binary" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: "Logo uploaded successfully" },
+          400: { description: "Bad request/No file provided" },
+          401: { description: "Not authorized" },
+          403: { description: "Forbidden/No company associated" },
+        },
+      },
+    },
   },
 };
 

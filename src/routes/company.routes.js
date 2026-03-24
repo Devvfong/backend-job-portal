@@ -5,8 +5,12 @@ import {
   getCompanyControllerById,
   updateCompanyController,
   deleteCompanyController,
+  uploadLogoController,
+  deleteLogoController
 } from "../controllers/company.controller.js";
 import protect from "../middlewares/protect.middleware.js";
+import authorize from "../middlewares/authorize.middleware.js";
+import { uploadLogo } from "../middlewares/upload.middleware.js";
 const router = express.Router();
 import validate from "../middlewares/validate.middleware.js";
 import { z } from "zod";
@@ -22,8 +26,31 @@ const createCompanySchema = z.object({
 });
 const updateCompanySchema = createCompanySchema.partial(); // All fields are optional for update
 
-router.get("/:id", getCompanyControllerById);
 router.get("/", getCompanyController);
+
+router.post(
+  "/logo",
+  protect,
+  authorize("company_admin"),
+  uploadLogo.single("logo"),
+  uploadLogoController,
+);
+
+router.delete(
+  "/logo",
+  protect,
+  authorize("company_admin"),
+  deleteLogoController,
+);
+
+router.post(
+  "/create",
+  protect,
+  validate(createCompanySchema),
+  createCompanyController,
+);
+
+router.get("/:id", getCompanyControllerById);
 router.put(
   "/:id",
   protect,
@@ -31,10 +58,5 @@ router.put(
   updateCompanyController,
 );
 router.delete("/:id", protect, deleteCompanyController);
-router.post(
-  "/create",
-  protect,
-  validate(createCompanySchema),
-  createCompanyController,
-);
+
 export default router;

@@ -37,4 +37,11 @@ const uploadResume = multer({
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
 });
 
-export { uploadAvatar, uploadResume };
+// ─── Company Logo ──────────────────────────────────────────────────────────
+const uploadLogo = multer({
+  storage,
+  fileFilter: avatarFileFilter, // Same image types as avatar
+  limits: { fileSize: 3 * 1024 * 1024 }, // 3MB limit
+});
+
+export { uploadAvatar, uploadResume, uploadLogo };

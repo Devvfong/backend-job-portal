@@ -25,7 +25,7 @@ const loginSchema = z.object({
 
 router.post("/register", validate(registerSchema), register); // validate middleware will validate the request body against the registerSchema before calling the register controller
 router.post("/login", validate(loginSchema), login); // validate middleware will validate the request body against the loginSchema before calling the login controller
-router.get("/", protect, authorize("company_admin"), (req, res) => {
+router.get("/", protect, authorize("company_admin"), (req, res) => { // protect middleware will check if the user is authenticated and authorize middleware will check if the user has the required role
   return res.status(200).json({
     status: "success",
     message: "Authenticated auth endpoint",

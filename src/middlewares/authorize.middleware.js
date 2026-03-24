@@ -1,4 +1,4 @@
-const authorize = (...roles) => {
+const authorize = (...roles) => { // this for check role of user
   return (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({ message: "Not authenticated" });
