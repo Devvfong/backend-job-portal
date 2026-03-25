@@ -107,12 +107,7 @@ const getJobService = async (query) => {
 };
 
 
-// // Before
-// const getJobById = async (id) => {
-//   return prisma.job.findFirst({
-//     where: { id: id, status: "open" },
-//   });
-// };
+
 
 // After (Adding the Company details)
 const getJobByIdService = async (id) => {

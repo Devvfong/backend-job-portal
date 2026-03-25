@@ -62,8 +62,14 @@ app.get("/", (req, res) => {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Job Portal</title>
-    <link rel="icon" type="image/png" href="/favicon.png?v=2" />    
+    <title>Job Portal | Find Your Dream Career</title>
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
+    <meta name="description" content="A premium job portal to connect top talent with best companies." />
+    <meta property="og:title" content="Job Portal" />
+    <meta property="og:description" content="Find your next career move." />
+    <meta property="og:image" content="/favicon.png" />
+    <meta name="theme-color" content="#5bc8af" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

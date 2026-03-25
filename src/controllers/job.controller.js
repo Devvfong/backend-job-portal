@@ -33,7 +33,7 @@ const createJobController = async (req, res) => {
 
 const getJobsController = async (req, res) => {
   try {
-    const result = await getJobs(req.query);
+    const result = await getJobService(req.query);
 
     return res.status(200).json({
       status: "success",
@@ -49,7 +49,7 @@ const getJobsController = async (req, res) => {
 const getJobByIdController = async (req, res) => {
   try {
     const id = Number(req.params.id);
-    const job = await getJobById(id);
+    const job = await getJobByIdService(id);
 
     if (!job) {
       return res.status(404).json({ message: "Job not found" });
@@ -68,7 +68,7 @@ const getJobByIdController = async (req, res) => {
 const updateJobController = async (req, res) => {
   try {
     const id = Number(req.params.id);
-    const job = await updateJob(id, req.body, req.user);
+    const job = await updateJobService(id, req.body, req.user);
 
     return res.status(200).json({
       status: "success",
@@ -92,7 +92,7 @@ const updateJobController = async (req, res) => {
 const deleteJobController = async (req, res) => {
   try {
     const id = Number(req.params.id);
-    await deleteJob(id, req.user);
+    await deleteJobService(id, req.user);
 
     return res.status(200).json({
       status: "success",
