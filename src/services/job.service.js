@@ -24,7 +24,8 @@ const createJobService = async (data, user) => {
   });
 };
 
-const getJobs = async (query) => {
+// Get all jobs with filters and pagination
+const getJobService = async (query) => {
   const {
     search,
     location,
@@ -37,8 +38,8 @@ const getJobs = async (query) => {
     order = "desc",
   } = query;
 
-  const pageNumber = Math.max(1, Number(page) || 1); // Ensure page is at least 1
-  const limitNumber = Math.min(100, Math.max(1, Number(limit) || 10)); // Ensure limit is between 1 and 100
+  const pageNumber = Math.max(1, Number(page) || 1);
+  const limitNumber = Math.min(100, Math.max(1, Number(limit) || 10));
   const skip = (pageNumber - 1) * limitNumber;
 
   const where = {
@@ -48,7 +49,7 @@ const getJobs = async (query) => {
   if (search) {
     where.title = {
       contains: String(search),
-      mode: "insensitive", // Case-insensitive search
+      mode: "insensitive",
     };
   }
 
@@ -65,14 +66,8 @@ const getJobs = async (query) => {
 
   if (minSalary || maxSalary) {
     where.salaryMin = {};
-
-    if (minSalary) {
-      where.salaryMin.gte = Number(minSalary);
-    }
-
-    if (maxSalary) {
-      where.salaryMin.lte = Number(maxSalary);
-    }
+    if (minSalary) where.salaryMin.gte = Number(minSalary);
+    if (maxSalary) where.salaryMin.lte = Number(maxSalary);
   }
 
   const allowedSortFields = ["createdAt", "salaryMin", "salaryMax"];
@@ -82,9 +77,16 @@ const getJobs = async (query) => {
   const [jobs, total] = await Promise.all([
     prisma.job.findMany({
       where,
-      orderBy: {
-        [sortField]: sortOrder,
+      include: {
+        company: {
+          select: {
+            companyName: true,
+            logo: true,
+            location: true,
+          },
+        },
       },
+      orderBy: { [sortField]: sortOrder },
       skip,
       take: limitNumber,
     }),
@@ -104,16 +106,34 @@ const getJobs = async (query) => {
   };
 };
 
-const getJobById = async (id) => {
+
+// // Before
+// const getJobById = async (id) => {
+//   return prisma.job.findFirst({
+//     where: { id: id, status: "open" },
+//   });
+// };
+
+// After (Adding the Company details)
+const getJobByIdService = async (id) => {
   return prisma.job.findFirst({
-    where: {
-      id: id,
-      status: "open",
-    },
+    where: { id: id, status: "open" },
+    include: {
+      company: {
+        select: {
+          id: true,
+          companyName: true,
+          logo: true,
+          industry: true,
+          location: true,
+        }
+      }
+    }
   });
 };
 
-const updateJob = async (id, data, user) => {
+
+const updateJobService = async (id, data, user) => {
   const job = await prisma.job.findUnique({
     where: { id },
   });
@@ -142,7 +162,7 @@ const updateJob = async (id, data, user) => {
   });
 };
 
-const deleteJob = async (id, user) => {
+const deleteJobService = async (id, user) => {
   const job = await prisma.job.findUnique({
     where: { id },
   });
@@ -160,4 +180,4 @@ const deleteJob = async (id, user) => {
   });
 };
 
-export { createJobService, getJobs, getJobById, updateJob, deleteJob };
+export { createJobService, getJobService, getJobByIdService, updateJobService, deleteJobService };

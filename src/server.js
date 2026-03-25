@@ -9,6 +9,7 @@ import authRoutes from "./routes/auth.routes.js";
 import jobroutes from "./routes/job.routes.js";
 import userroutes from "./routes/user.routes.js";
 import companyroutes from "./routes/company.routes.js";
+import applicationRoute from "./routes/application.route.js";
 import githubAuthRoutes from "./routes/github.routes.js";
 import openApiDocument from "./utils/openapi.js";
 import protect from "./middlewares/protect.middleware.js";
@@ -35,6 +36,7 @@ app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/jobs", jobroutes);
 app.use("/api/v1/users", userroutes);
 app.use("/api/v1/companies", companyroutes);
+app.use("/api/v1/applications", applicationRoute);
 app.use("/auth", githubAuthRoutes);
 app.get("/openapi.json", protect, authorize("company_admin"), (req, res) => {
   res.status(200).json(openApiDocument);
@@ -61,7 +63,7 @@ app.get("/", (req, res) => {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Job Portal</title>
-    <link rel="icon" type="image/png" href="/favicon.png?v=2" />  
+    <link rel="icon" type="image/png" href="/favicon.png?v=2" />    
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

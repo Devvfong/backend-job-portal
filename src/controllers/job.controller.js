@@ -1,9 +1,9 @@
 import {
   createJobService,
-  getJobs,
-  getJobById,
-  updateJob,
-  deleteJob,
+  getJobService,
+  getJobByIdService,
+  updateJobService,
+  deleteJobService,
 } from "../services/job.service.js";
 
 const createJobController = async (req, res) => {

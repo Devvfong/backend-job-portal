@@ -1,7 +1,11 @@
 import { PrismaClient } from "@prisma/client";
 
-//make instance
-const prisma = new PrismaClient();
+// Make instance, explicitly passing env DATABASE_URL
+const prisma = new PrismaClient({
+  datasources: {
+    db: { url: process.env.DATABASE_URL } // <-- use the env variable
+  }
+});
 
 const connectDB = async () => {
   try {
@@ -9,7 +13,7 @@ const connectDB = async () => {
     console.log("Database connected successfully");
   } catch (error) {
     console.error("Database connection failed:", error);
-    throw error; // Rethrow the error to be handled by the caller
+    throw error;
   }
 };
 

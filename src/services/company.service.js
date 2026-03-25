@@ -44,10 +44,12 @@ const getCompanyService = async (query = {}) => {
     search,
     companyName,
     location,
+    industry,
+    size,
     page = 1,
     limit = 10,
     sort = "createdAt",
-    order = "asc",
+    order = "desc",
   } = query;
 
   const pageNumber = Math.max(1, Number(page) || 1);
@@ -62,6 +64,7 @@ const getCompanyService = async (query = {}) => {
       { companyName: { contains: text, mode: "insensitive" } },
       { location: { contains: text, mode: "insensitive" } },
       { industry: { contains: text, mode: "insensitive" } },
+      { description: { contains: text, mode: "insensitive" } },
     ];
   }
 
@@ -79,9 +82,20 @@ const getCompanyService = async (query = {}) => {
     };
   }
 
-  const allowedSortFields = ["createdAt", "companyName", "location"];
+  if (industry) {
+    where.industry = {
+      contains: String(industry),
+      mode: "insensitive",
+    };
+  }
+
+  if (size) {
+    where.size = String(size);
+  }
+
+  const allowedSortFields = ["createdAt", "companyName", "location", "industry"];
   const sortField = allowedSortFields.includes(sort) ? sort : "createdAt";
-  const sortOrder = order === "desc" ? "desc" : "asc"; // Default to ascending order
+  const sortOrder = order === "asc" ? "asc" : "desc"; // Default to descending order
 
   const [companies, total] = await Promise.all([
     prisma.company.findMany({
