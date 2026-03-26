@@ -28,10 +28,10 @@
     "passport": "^0.7.0",
     "passport-github2": "^0.1.12",
     "swagger-jsdoc": "^6.2.8",
+    "express": "^5.2.1",
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "express": "^5.2.1",
     "nodemon": "^3.1.14",
     "prisma": "^6.7.0"
   }

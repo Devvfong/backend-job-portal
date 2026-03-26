@@ -1,30 +1,28 @@
-# Step 1: Builder stage
-FROM node:20-slim AS builder
+FROM node:22-alpine
 
+# Install openssl for Prisma (necessary for some alpine builds)
+RUN apk add --no-cache openssl
+
+# Create and set the working directory
 WORKDIR /app
 
-# Install openssl for Prisma (needed on slim images)
-RUN apt-get update && apt-get install -y openssl
-
+# Copy package.json and package-lock.json
 COPY package*.json ./
+
+# Copy prisma schema first to generate client early
 COPY prisma ./prisma/
 
+# Install dependencies (use npm ci for more reliable builds)
 RUN npm install
-
-COPY . .
 
 # Generate Prisma Client
 RUN npx prisma generate
 
-# Step 2: Runtime stage
-FROM node:20-slim
-WORKDIR /app
+# Copy the rest of the application code
+COPY . .
 
-# Install openssl for Prisma runtime
-RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
-
-COPY --from=builder /app ./
-
+# Expose the application port
 EXPOSE 3000
 
-CMD ["npm", "run", "start"]
+# Command to run for development with nodemon
+CMD ["npm", "run", "dev"]
