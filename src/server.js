@@ -18,10 +18,12 @@ import authorize from "./middlewares/authorize.middleware.js";
 dotenv.config(); // Load environment variables from .env file
 await connectDB(); // Connect to the database when the server starts
 const app = express(); // Create an Express application
+const helmet = require('helmet');
+app.use(helmet());
 // Serve static files from the public directory
 app.use(express.static("public"));
 const PORT = process.env.PORT || 3000;
-app.use(express.json());
+app.use(express.json());	
 app.use(cookieParser()); // Middleware to parse cookies from incoming requests
 app.use(
   session({
