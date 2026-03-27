@@ -1,5 +1,4 @@
 
-
 services:
   db:
     image: postgres:16-alpine
@@ -32,8 +31,10 @@ services:
       - .env
     environment:
       - NODE_ENV=production
-      # This URL overrides the one in .env to use the internal Docker network for the DB
+      # Overrides DATABASE_URL to use the 'db' service name inside the Docker network
       - DATABASE_URL=postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:-admin123}@db:5432/${POSTGRES_DB:-job_portal}?schema=public
+    expose:
+      - "3000"
     # Ensures migrations are applied whenever the container starts in production
     command: sh -c "npx prisma migrate deploy && npm start"
     networks:
@@ -45,8 +46,10 @@ services:
     restart: always
     ports:
       - "80:80"
+      - "443:443"
     volumes:
       - ./nginx:/etc/nginx/conf.d:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       - backend
     networks:
