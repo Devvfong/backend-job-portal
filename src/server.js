@@ -3,6 +3,7 @@ import helmet from "helmet";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import session from "express-session";
+import pgSimple from "connect-pg-simple";
 import passport from "./config/passport.js";
 import { apiReference } from "@scalar/express-api-reference";
 import { connectDB, disconnectDB } from "./config/db.js";
@@ -25,11 +26,21 @@ app.use(express.static("public"));
 const PORT = process.env.PORT || 3000;
 app.use(express.json());	
 app.use(cookieParser()); // Middleware to parse cookies from incoming requests
+const pgSession = pgSimple(session);
+
 app.use(
   session({
+    store: new pgSession({
+      conString: process.env.DATABASE_URL,
+      tableName: "session",
+    }),
     secret: process.env.SESSION_SECRET || "supersecret",
     resave: false,
     saveUninitialized: false,
+    cookie: {
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      secure: process.env.NODE_ENV === "production",
+    },
   }),
 );
 app.use(passport.initialize());
