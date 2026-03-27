@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: job-portal-db
+    restart: always
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-admin}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-admin123}
+      - POSTGRES_DB=${POSTGRES_DB:-job_portal}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - job-portal-net
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    container_name: job-portal-backend
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      # This URL overrides the one in .env to use the internal Docker network for the DB
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:-admin123}@db:5432/${POSTGRES_DB:-job_portal}?schema=public
+    # Ensures migrations are applied whenever the container starts in production
+    command: sh -c "npx prisma migrate deploy && npm start"
+    networks:
+      - job-portal-net
+
+  nginx:
+    image: nginx:stable-alpine
+    container_name: job-portal-proxy
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx:/etc/nginx/conf.d:ro
+    depends_on:
+      - backend
+    networks:
+      - job-portal-net
+
+networks:
+  job-portal-net:
+    driver: bridge
+
+volumes:
+  pgdata:

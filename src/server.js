@@ -1,4 +1,5 @@
 import express from "express";
+import helmet from "helmet";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import session from "express-session";
@@ -18,7 +19,6 @@ import authorize from "./middlewares/authorize.middleware.js";
 dotenv.config(); // Load environment variables from .env file
 await connectDB(); // Connect to the database when the server starts
 const app = express(); // Create an Express application
-const helmet = require('helmet');
 app.use(helmet());
 // Serve static files from the public directory
 app.use(express.static("public"));
