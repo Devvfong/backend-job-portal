@@ -65,10 +65,6 @@ app.get(
   }),
 );
 
-const server = app.listen(PORT || 3000, "0.0.0.0", () => {
-  console.log(`Server is running on port ${PORT}`);
-});
-
 app.get("/", (req, res) => {
   res.status(200).send(`<!doctype html>
 <html lang="en">
@@ -151,9 +147,9 @@ app.get("/", (req, res) => {
         width: min(760px, 100%);
         border: 2px solid rgba(17, 38, 45, 0.14);
         border-radius: 24px;
-        // background: rgba(255, 255, 255, 0.68);
+        /* background: rgba(255, 255, 255, 0.68); */
         backdrop-filter: blur(20px);
-        // box-shadow: 0 20px 50px rgba(17, 38, 45, 0.18);
+        /* box-shadow: 0 20px 50px rgba(17, 38, 45, 0.18); */
         padding: clamp(24px, 4vw, 44px);
         animation: popIn 700ms cubic-bezier(0.2, 0.8, 0.2, 1);
       }
@@ -360,101 +356,71 @@ app.get("/", (req, res) => {
         const submitBtn = document.getElementById('submitBtn');
         const links = document.querySelectorAll('.protected-link');
         let targetEndpoint = '';
+
         const audio = document.getElementById('bgMusic');
         document.addEventListener("click", () => {
           audio.play();
         }, { once: true });
-        const openModal = (target) => {
-          targetEndpoint = target;
-          errorMsg.textContent = '';
-          tokenInput.value = '';
-          modal.classList.add('show');
-          tokenInput.focus();
+
+        const openResponseInNewTab = (endpoint, token) => {
+          // Set cookie so browser sends it on the next request
+          const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+          document.cookie = "jwt=" + token + "; path=/; max-age=86400; SameSite=Lax" + secure;
+          
+          // Open the link directly (synchronous to avoid popup blocker)
+          const popup = window.open(endpoint, '_blank');
+          if (!popup) {
+            throw new Error('Popup blocked! Please allow popups for this site and try again.');
+          }
         };
 
         const closeModal = () => {
           modal.classList.remove('show');
           targetEndpoint = '';
+          tokenInput.value = '';
+          errorMsg.textContent = '';
         };
 
-        const openResponseInNewTab = async (endpoint, token) => {
-          const res = await fetch(endpoint, {
-            method: 'GET',
-            headers: {
-              Authorization: 'Bearer ' + token,
-            },
-          });
-
-          if (!res.ok) {
-            const text = await res.text();
-            const randomStatuses = [401, 403, 404, 418, 429];
-            const randomMessages = [
-              'Access denied',
-              'khom mes ah chkae nis',
-              'khom nas ah jmr',
-              'Request blocked',
-              'jes hot ot?',
-            ];
-            const status = randomStatuses[Math.floor(Math.random() * randomStatuses.length)];
-            const message = randomMessages[Math.floor(Math.random() * randomMessages.length)];
-            throw new Error(message + ' (' + status + ').');
-          }
-
-          const type = res.headers.get('content-type') || '';
-          const popup = window.open('', '_blank');
-          if (!popup) {
-            throw new Error('Popup blocked by browser. Allow popups and retry.');
-          }
-
-          if (type.includes('application/json')) {
-            const json = await res.json();
-            popup.document.write('<pre style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap;">' + JSON.stringify(json, null, 2) + '</pre>');
-          } else {
-            const html = await res.text();
-            popup.document.open();
-            popup.document.write(html);
-            popup.document.close();
-          }
-        };
-
-        links.forEach((btn) => {
-          btn.addEventListener('click', () => {
-            openModal(btn.getAttribute('data-target'));
+        links.forEach(link => {
+          link.addEventListener('click', (e) => {
+            e.preventDefault();
+            // Get target from data-target if exists, else href
+            targetEndpoint = link.getAttribute('data-target') || link.getAttribute('href');
+            modal.classList.add('show');
+            tokenInput.focus();
           });
         });
 
         cancelBtn.addEventListener('click', closeModal);
 
-        modal.addEventListener('click', (event) => {
-          if (event.target === modal) {
-            closeModal();
-          }
-        });
-
-        submitBtn.addEventListener('click', async () => {
+        submitBtn.addEventListener('click', () => {
           const token = tokenInput.value.trim();
-
           if (!token) {
             errorMsg.textContent = 'Token is required.';
             return;
           }
 
-          errorMsg.textContent = '';
-          submitBtn.disabled = true;
-
           try {
-            await openResponseInNewTab(targetEndpoint, token);
+            openResponseInNewTab(targetEndpoint, token);
             closeModal();
           } catch (error) {
             errorMsg.textContent = error.message;
-          } finally {
-            submitBtn.disabled = false;
+          }
+        });
+
+        window.addEventListener('click', (e) => {
+          if (e.target === modal) {
+            closeModal();
           }
         });
       })();
     </script>
   </body>
 </html>`);
+});
+
+const server = app.listen(PORT || 3000, "0.0.0.0", () => {
+  console.log(`Server is running on port ${PORT}`);
 });
 // =========================================================================================================
 

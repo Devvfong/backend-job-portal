@@ -1,6 +1,6 @@
 # Node dependencies
 node_modules/
-
+DNSSEC.md
 # Environment variables
 .env
 .env.*          # ignore all env files
