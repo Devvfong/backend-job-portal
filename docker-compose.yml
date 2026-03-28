@@ -1,4 +1,3 @@
-
 services:
   db:
     image: postgres:16-alpine
@@ -30,19 +29,10 @@ services:
     env_file:
       - .env
     environment:
-<<<<<<< HEAD
-      - NODE_ENV=production
-      # Overrides DATABASE_URL to use the 'db' service name inside the Docker network
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:-admin123}@db:5432/${POSTGRES_DB:-job_portal}?schema=public
-    expose:
-      - "3000"
-    # Ensures migrations are applied whenever the container starts in production
-=======
       NODE_ENV: production
       DATABASE_URL: postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:-admin123}@db:5432/${POSTGRES_DB:-job_portal}?schema=public
     expose:
       - "3000"
->>>>>>> b406539 (fix: remove some junk)
     command: sh -c "npx prisma migrate deploy && npm start"
     networks:
       - job-portal-net
@@ -51,15 +41,6 @@ services:
     image: nginx:stable-alpine
     container_name: job-portal-proxy
     restart: always
-<<<<<<< HEAD
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx:/etc/nginx/conf.d:ro
-      - /etc/letsencrypt:/etc/letsencrypt:ro
-=======
->>>>>>> b406539 (fix: remove some junk)
     depends_on:
       - backend
     ports:
