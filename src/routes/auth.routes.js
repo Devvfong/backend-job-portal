@@ -9,6 +9,18 @@ import {
 import validate from "../middlewares/validate.middleware.js";
 import protect from "../middlewares/protect.middleware.js";
 import authorize from "../middlewares/authorize.middleware.js";
+import { rateLimit } from "express-rate-limit";
+
+const authRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // limit each IP to 10 requests per windowMs
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  message: {
+    status: "fail",
+    message: "Too many login attempts, please try again after 15 minutes",
+  },
+});
 
 const router = express.Router();
 // Validation schemas for registration and login
@@ -23,8 +35,8 @@ const loginSchema = z.object({
   password: z.string().min(1),
 });
 
-router.post("/register", validate(registerSchema), register); // validate middleware will validate the request body against the registerSchema before calling the register controller
-router.post("/login", validate(loginSchema), login); // validate middleware will validate the request body against the loginSchema before calling the login controller
+router.post("/register",authRateLimiter,validate(registerSchema), register); // validate middleware will validate the request body against the registerSchema before calling the register controller
+router.post("/login", authRateLimiter,validate(loginSchema), login); // validate middleware will validate the request body against the loginSchema before calling the login controller
 router.get("/", protect, authorize("company_admin"), (req, res) => { // protect middleware will check if the user is authenticated and authorize middleware will check if the user has the required role
   return res.status(200).json({
     status: "success",

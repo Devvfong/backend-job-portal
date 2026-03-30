@@ -5,8 +5,9 @@ const createJobService = async (data, user) => {
     throw new Error("Forbidden");
   }
 
-  if (!user.companyId) {
-    throw new Error("Admin account is not linked to a company");
+  const companyId = data.companyId || user.companyId;
+  if (!companyId) {
+    throw new Error("A companyId must be provided in the request body or linked to your account");
   }
 
   return prisma.job.create({
@@ -19,7 +20,7 @@ const createJobService = async (data, user) => {
       benefits: data.benefits,
       salaryMin: data.salaryMin,
       salaryMax: data.salaryMax,
-      companyId: user.companyId, // from DB user only
+      companyId: Number(companyId),
     },
   });
 };

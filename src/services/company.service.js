@@ -25,17 +25,27 @@ const createCompanyService = async (data, user) => {
     throw new Error("Company already exists");
   }
 
-  return prisma.company.create({
-    data: {
-      companyName,
-      email,
-      description: data.description ?? null,
-      website: data.website ?? null,
-      location: data.location ?? null,
-      logo: data.logo ?? null,
-      industry: data.industry ?? null,
-      size: data.size ?? null,
-    },
+  return prisma.$transaction(async (tx) => {
+    const company = await tx.company.create({
+      data: {
+        companyName,
+        email,
+        description: data.description ?? null,
+        website: data.website ?? null,
+        location: data.location ?? null,
+        logo: data.logo ?? null,
+        industry: data.industry ?? null,
+        size: data.size ?? null,
+      },
+    });
+
+    // Automatically link the admin to the created company
+    await tx.user.update({
+      where: { id: user.id },
+      data: { companyId: company.id },
+    });
+
+    return company;
   });
 };
 

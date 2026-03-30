@@ -27,6 +27,7 @@ const createJobSchema = z.object({
   benefits: z.string().min(1),
   salaryMin: z.number().min(0),
   salaryMax: z.number().min(0),
+  companyId: z.number().optional(),
 });
 const updateJobSchema = createJobSchema.partial(); // All fields are optional for update
 router.post(

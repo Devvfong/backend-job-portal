@@ -96,6 +96,7 @@ const updateProfile = async (data, id) => {
       avatar: data.avatar || user.avatar,
       skills: data.skills || user.skills,
       resume: data.resume || user.resume,
+      companyId: data.companyId || user.companyId,
     },
     select: {
       id: true,
