@@ -20,6 +20,7 @@ import authorize from "./middlewares/authorize.middleware.js";
 dotenv.config(); // Load environment variables from .env file
 await connectDB(); // Connect to the database when the server starts
 const app = express(); // Create an Express application
+app.set("trust proxy", 1);
 app.use(helmet());
 // Serve static files from the public directory
 app.use(express.static("public"));
