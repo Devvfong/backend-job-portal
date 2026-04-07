@@ -3,7 +3,7 @@ const openApiDocument = {
   info: {
     title: "Job Portal Backend API",
     version: "1.0.0",
-    description: "API documentation for auth and job endpoints.",
+    description: "API documentation for the Web-Based Job Finder System. Includes endpoints for Job Seekers and Company Admins.",
   },
   servers: [
     {
@@ -11,7 +11,14 @@ const openApiDocument = {
       description: "Local development",
     },
   ],
-  tags: [{ name: "Auth" }, { name: "Jobs" }, { name: "Users" }],
+  tags: [
+    { name: "System", description: "Health and documentation" },
+    { name: "Auth", description: "Authentication and Authorization" },
+    { name: "Jobs", description: "Job postings management" },
+    { name: "Users", description: "User profile and resume management" },
+    { name: "Companies", description: "Company profiles and logo management" },
+    { name: "Applications", description: "Job application submissions and status tracking" }
+  ],
   components: {
     securitySchemes: {
       bearerAuth: {
@@ -30,34 +37,37 @@ const openApiDocument = {
         type: "object",
         properties: {
           status: { type: "string", example: "success" },
-          message: {
-            type: "string",
-            example: "Operation completed successfully",
-          },
+          message: { type: "string", example: "Operation completed successfully" },
         },
       },
       ErrorMessage: {
         type: "object",
         properties: {
-          message: { type: "string", example: "Forbidden" },
+          status: { type: "string", example: "fail" },
+          message: { type: "string", example: "Error description" },
         },
       },
-      UserProfile: {
+      User: {
         type: "object",
         properties: {
           id: { type: "integer", example: 1 },
-          name: { type: "string", example: "devqii" },
-          email: {
-            type: "string",
-            format: "email",
-            example: "devqii@gmail.com",
-          },
-          role: {
-            type: "string",
-            enum: ["job_seeker", "company_admin"],
-            example: "company_admin",
-          },
-          companyId: { type: "integer", nullable: true, example: 1 },
+          name: { type: "string", example: "John Doe" },
+          email: { type: "string", format: "email", example: "john@example.com" },
+          role: { type: "string", enum: ["job_seeker", "company_admin"], example: "job_seeker" },
+        },
+      },
+      Company: {
+        type: "object",
+        properties: {
+          id: { type: "integer", example: 1 },
+          companyName: { type: "string", example: "Tech Innovators Inc." },
+          description: { type: "string", example: "A leading tech company." },
+          location: { type: "string", example: "New York, NY" },
+          website: { type: "string", example: "https://techinnovators.com" },
+          industry: { type: "string", example: "Software" },
+          size: { type: "string", example: "50-200" },
+          logo: { type: "string", example: "https://storage.example.com/logo.png" },
+          email: { type: "string", example: "contact@techinnovators.com" },
         },
       },
       Job: {
@@ -65,26 +75,27 @@ const openApiDocument = {
         properties: {
           id: { type: "integer", example: 1 },
           title: { type: "string", example: "Backend Engineer" },
-          location: { type: "string", example: "Singapore" },
-          jobType: {
-            type: "string",
-            enum: [
-              "full_time",
-              "part_time",
-              "contract",
-              "internship",
-              "remote",
-            ],
-            example: "full_time",
-          },
-          description: { type: "string", example: "Develop APIs" },
-          requirements: { type: "string", example: "Node.js, Prisma" },
-          benefits: { type: "string", example: "Remote work" },
-          salaryMin: { type: "integer", example: 1000 },
-          salaryMax: { type: "integer", example: 3000 },
+          location: { type: "string", example: "Remote" },
+          jobType: { type: "string", enum: ["full_time", "part_time", "contract", "internship", "remote"], example: "full_time" },
+          description: { type: "string", example: "Develop APIs using Node.js" },
+          requirements: { type: "string", example: "3+ years of experience with Express and Prisma" },
+          benefits: { type: "string", example: "Health insurance, 401k" },
+          salaryMin: { type: "integer", example: 80000 },
+          salaryMax: { type: "integer", example: 120000 },
           status: { type: "string", enum: ["open", "closed"], example: "open" },
           companyId: { type: "integer", example: 1 },
         },
+      },
+      Application: {
+        type: "object",
+        properties: {
+          id: { type: "integer", example: 1 },
+          status: { type: "string", enum: ["pending", "reviewing", "shortlisted", "rejected", "accepted"], example: "pending" },
+          userId: { type: "integer", example: 1 },
+          jobId: { type: "integer", example: 1 },
+          resumeId: { type: "integer", example: 1 },
+          appliedAt: { type: "string", format: "date-time", example: "2023-10-01T12:00:00Z" }
+        }
       },
       RegisterRequest: {
         type: "object",
@@ -105,27 +116,17 @@ const openApiDocument = {
       },
       CreateJobRequest: {
         type: "object",
-        required: ["title", "location", "jobType"],
+        required: ["title", "description", "location", "jobType", "requirements", "benefits", "salaryMin", "salaryMax"],
         properties: {
           title: { type: "string", example: "Backend Engineer" },
+          description: { type: "string", example: "Node.js + Prisma + PostgreSQL" },
           location: { type: "string", example: "Phnom Penh" },
-          jobType: {
-            type: "string",
-            enum: [
-              "full_time",
-              "part_time",
-              "contract",
-              "internship",
-              "remote",
-            ],
-            example: "full_time",
-          },
-          description: {
-            type: "string",
-            example: "Node.js + Prisma + PostgreSQL",
-          },
+          jobType: { type: "string", enum: ["full_time", "part_time", "contract", "internship", "remote"], example: "full_time" },
+          requirements: { type: "string", example: "Node.js, Express, Postgres" },
+          benefits: { type: "string", example: "13th month salary" },
           salaryMin: { type: "integer", example: 400 },
           salaryMax: { type: "integer", example: 1200 },
+          companyId: { type: "integer", nullable: true, example: 1 }
         },
       },
       ProfileRequest: {
@@ -141,40 +142,45 @@ const openApiDocument = {
           skills: { type: "array", items: { type: "string" }, example: ["Node.js", "Express"] },
           resume: { type: "string", example: "https://example.com/resume.pdf" }
         }
+      },
+      CreateCompanyRequest: {
+        type: "object",
+        required: ["companyName", "description", "location", "industry", "size", "email"],
+        properties: {
+          companyName: { type: "string", example: "Tech Corp" },
+          description: { type: "string", example: "Software Development Company" },
+          location: { type: "string", example: "Singapore" },
+          website: { type: "string", example: "https://techcorp.com" },
+          industry: { type: "string", example: "Software" },
+          size: { type: "string", example: "10-50" },
+          logo: { type: "string", example: "https://techcorp.com/logo.png" },
+          email: { type: "string", format: "email", example: "contact@techcorp.com" }
+        }
       }
     },
   },
   paths: {
+    // -------------------------------- SYSTEM --------------------------------
     "/": {
       get: {
-        tags: ["Auth"],
-        summary: "Health/welcome endpoint",
+        tags: ["System"],
+        summary: "API Health & Landing Page",
         responses: {
           200: {
-            description: "Welcome message",
-            content: {
-              "text/plain": {
-                schema: {
-                  type: "string",
-                  example: "Welcome to the Job Portal API",
-                },
-              },
-            },
+            description: "HTML Landing Page",
           },
         },
       },
     },
+
+    // -------------------------------- AUTH --------------------------------
     "/api/v1/auth/register": {
       post: {
         tags: ["Auth"],
         summary: "Register a new user",
         requestBody: {
           required: true,
-          content: {
-            "application/json": {
-              schema: { $ref: "#/components/schemas/RegisterRequest" },
-            },
-          },
+          content: { "application/json": { schema: { $ref: "#/components/schemas/RegisterRequest" } } },
         },
         responses: {
           201: { description: "User registered successfully" },
@@ -188,11 +194,7 @@ const openApiDocument = {
         summary: "Login and receive JWT cookie",
         requestBody: {
           required: true,
-          content: {
-            "application/json": {
-              schema: { $ref: "#/components/schemas/LoginRequest" },
-            },
-          },
+          content: { "application/json": { schema: { $ref: "#/components/schemas/LoginRequest" } } },
         },
         responses: {
           200: { description: "Login successful" },
@@ -204,398 +206,230 @@ const openApiDocument = {
       post: {
         tags: ["Auth"],
         summary: "Logout current user",
-        responses: {
-          200: {
-            description: "Logged out successfully",
-            content: {
-              "application/json": {
-                schema: { $ref: "#/components/schemas/SuccessMessage" },
-              },
-            },
-          },
-        },
-      },
-    },
-    "/api/v1/auth/profile": {
-      get: {
-        tags: ["Auth"],
-        summary: "Get current user profile",
         security: [{ cookieAuth: [] }, { bearerAuth: [] }],
         responses: {
-          200: {
-            description: "Profile returned",
-            content: {
-              "application/json": {
-                schema: {
-                  type: "object",
-                  properties: {
-                    status: { type: "string", example: "success" },
-                    data: {
-                      type: "object",
-                      properties: {
-                        user: { $ref: "#/components/schemas/UserProfile" },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-          401: {
-            description: "Not authorized",
-            content: {
-              "application/json": {
-                schema: { $ref: "#/components/schemas/ErrorMessage" },
-              },
-            },
-          },
+          200: { description: "Logged out successfully" },
         },
       },
     },
+    "/api/v1/auth/me": {
+      get: {
+        tags: ["Auth"],
+        summary: "Get current authenticated user info",
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        responses: {
+          200: { description: "User details returned" },
+          401: { description: "Not authorized" },
+        },
+      },
+    },
+    "/api/v1/auth": {
+      get: {
+        tags: ["Auth"],
+        summary: "Test protected admin route",
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        responses: {
+          200: { description: "Authenticated" },
+          401: { description: "Not authorized" },
+          403: { description: "Forbidden - Requires company_admin role" },
+        },
+      },
+    },
+
+    // -------------------------------- JOBS --------------------------------
     "/api/v1/jobs": {
       get: {
         tags: ["Jobs"],
-        summary: "Get all jobs",
-        parameters: [
-          {
-            name: "search",
-            in: "query",
-            required: false,
-            schema: { type: "string" },
-            description: "Search by job title",
-          },
-          {
-            name: "location",
-            in: "query",
-            required: false,
-            schema: { type: "string" },
-            description: "Filter by location",
-          },
-          {
-            name: "jobType",
-            in: "query",
-            required: false,
-            schema: {
-              type: "string",
-              enum: [
-                "full_time",
-                "part_time",
-                "contract",
-                "internship",
-                "remote",
-              ],
-            },
-            description: "Filter by job type",
-          },
-          {
-            name: "minSalary",
-            in: "query",
-            required: false,
-            schema: { type: "integer" },
-            description: "Minimum salary",
-          },
-          {
-            name: "maxSalary",
-            in: "query",
-            required: false,
-            schema: { type: "integer" },
-            description: "Maximum salary",
-          },
-          {
-            name: "page",
-            in: "query",
-            required: false,
-            schema: { type: "integer", default: 1 },
-            description: "Page number",
-          },
-          {
-            name: "limit",
-            in: "query",
-            required: false,
-            schema: { type: "integer", default: 10 },
-            description: "Items per page",
-          },
-          {
-            name: "sort",
-            in: "query",
-            required: false,
-            schema: {
-              type: "string",
-              enum: ["createdAt", "salaryMin", "salaryMax"],
-              default: "createdAt",
-            },
-            description: "Sort field",
-          },
-          {
-            name: "order",
-            in: "query",
-            required: false,
-            schema: { type: "string", enum: ["asc", "desc"], default: "desc" },
-            description: "Sort order",
-          },
-        ],
+        summary: "Get all jobs with pagination & filtering",
         responses: {
-          200: {
-            description: "Job list",
-            content: {
-              "application/json": {
-                schema: {
-                  type: "object",
-                  properties: {
-                    status: { type: "string", example: "success" },
-                    data: {
-                      type: "array",
-                      items: { $ref: "#/components/schemas/Job" },
-                    },
-                    meta: {
-                      type: "object",
-                      properties: {
-                        total: { type: "integer", example: 42 },
-                        page: { type: "integer", example: 1 },
-                        limit: { type: "integer", example: 10 },
-                        totalPages: { type: "integer", example: 5 },
-                        sort: { type: "string", example: "createdAt" },
-                        order: { type: "string", example: "desc" },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
+          200: { description: "List of jobs returned" },
         },
       },
     },
     "/api/v1/jobs/{id}": {
       get: {
         tags: ["Jobs"],
-        summary: "Get job by id",
-        parameters: [
-          {
-            name: "id",
-            in: "path",
-            required: true,
-            schema: { type: "string" },
-          },
-        ],
+        summary: "Get specific job by ID",
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
         responses: {
-          200: {
-            description: "Job details",
-            content: {
-              "application/json": {
-                schema: {
-                  type: "object",
-                  properties: {
-                    status: { type: "string", example: "success" },
-                    data: { $ref: "#/components/schemas/Job" },
-                  },
-                },
-              },
-            },
-          },
-          404: {
-            description: "Job not found",
-            content: {
-              "application/json": {
-                schema: { $ref: "#/components/schemas/ErrorMessage" },
-              },
-            },
-          },
+          200: { description: "Job details returned" },
+          404: { description: "Job not found" },
         },
       },
       put: {
         tags: ["Jobs"],
-        summary: "Update job (company admin only)",
+        summary: "Update job listing",
         security: [{ cookieAuth: [] }, { bearerAuth: [] }],
-        parameters: [
-          {
-            name: "id",
-            in: "path",
-            required: true,
-            schema: { type: "string" },
-          },
-        ],
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": {
-              schema: { $ref: "#/components/schemas/CreateJobRequest" },
-            },
-          },
-        },
-        responses: {
-          200: { description: "Job updated" },
-          401: { description: "Not authorized" },
-          403: { description: "Forbidden" },
-        },
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        requestBody: { content: { "application/json": { schema: { $ref: "#/components/schemas/CreateJobRequest" } } } },
+        responses: { 200: { description: "Job updated" } },
       },
       delete: {
         tags: ["Jobs"],
-        summary: "Delete job (company admin only)",
+        summary: "Delete job listing",
         security: [{ cookieAuth: [] }, { bearerAuth: [] }],
-        parameters: [
-          {
-            name: "id",
-            in: "path",
-            required: true,
-            schema: { type: "string" },
-          },
-        ],
-        responses: {
-          200: {
-            description: "Job deleted",
-            content: {
-              "application/json": {
-                schema: { $ref: "#/components/schemas/SuccessMessage" },
-              },
-            },
-          },
-          401: { description: "Not authorized" },
-          403: { description: "Forbidden" },
-          404: { description: "Job not found" },
-        },
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        responses: { 200: { description: "Job deleted" } },
       },
     },
     "/api/v1/jobs/create": {
       post: {
         tags: ["Jobs"],
-        summary: "Create a job (company admin only)",
+        summary: "Create a new job posting",
         security: [{ cookieAuth: [] }, { bearerAuth: [] }],
         requestBody: {
           required: true,
-          content: {
-            "application/json": {
-              schema: { $ref: "#/components/schemas/CreateJobRequest" },
-            },
-          },
+          content: { "application/json": { schema: { $ref: "#/components/schemas/CreateJobRequest" } } },
         },
-        responses: {
-          201: { description: "Job created" },
-          401: { description: "Not authorized" },
-          403: { description: "Forbidden" },
-        },
+        responses: { 201: { description: "Job created" } },
       },
     },
+
+    // -------------------------------- USERS (PROFILES) --------------------------------
     "/api/v1/users/profile": {
       get: {
         tags: ["Users"],
-        summary: "Get current user profile (alternative to Auth profile)",
+        summary: "Get current user profile",
         security: [{ cookieAuth: [] }, { bearerAuth: [] }],
-        responses: {
-          200: { description: "Profile returned" },
-          401: { description: "Not authorized" },
-          404: { description: "User not found" },
-        },
+        responses: { 200: { description: "Profile returned" } },
       },
       post: {
         tags: ["Users"],
         summary: "Initialize user profile",
         security: [{ cookieAuth: [] }, { bearerAuth: [] }],
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": {
-              schema: { $ref: "#/components/schemas/ProfileRequest" },
-            },
-          },
-        },
-        responses: {
-          200: { description: "Profile initialized" },
-          401: { description: "Not authorized" },
-        },
+        requestBody: { required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/ProfileRequest" } } } },
+        responses: { 201: { description: "Profile created" } },
       },
       put: {
         tags: ["Users"],
         summary: "Update user profile",
         security: [{ cookieAuth: [] }, { bearerAuth: [] }],
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": {
-              schema: { $ref: "#/components/schemas/ProfileRequest" },
-            },
-          },
-        },
-        responses: {
-          200: { description: "Profile updated" },
-          401: { description: "Not authorized" },
-        },
+        requestBody: { required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/ProfileRequest" } } } },
+        responses: { 200: { description: "Profile updated" } },
       },
     },
     "/api/v1/users/avatar": {
       post: {
         tags: ["Users"],
-        summary: "Upload user avatar via multipart/form-data",
+        summary: "Upload user avatar image",
         security: [{ cookieAuth: [] }, { bearerAuth: [] }],
         requestBody: {
           required: true,
-          content: {
-            "multipart/form-data": {
-              schema: {
-                type: "object",
-                properties: {
-                  avatar: { type: "string", format: "binary" },
-                },
-              },
-            },
-          },
+          content: { "multipart/form-data": { schema: { type: "object", properties: { avatar: { type: "string", format: "binary" } } } } },
         },
-        responses: {
-          200: { description: "Avatar uploaded successfully" },
-          400: { description: "Bad request/Invalid file type" },
-          401: { description: "Not authorized" },
-        },
+        responses: { 200: { description: "Avatar uploaded" } },
       },
     },
     "/api/v1/users/resume": {
       post: {
         tags: ["Users"],
-        summary: "Upload user resume via multipart/form-data",
+        summary: "Upload user resume file",
         security: [{ cookieAuth: [] }, { bearerAuth: [] }],
         requestBody: {
           required: true,
-          content: {
-            "multipart/form-data": {
-              schema: {
-                type: "object",
-                properties: {
-                  resume: { type: "string", format: "binary" },
-                },
-              },
-            },
-          },
+          content: { "multipart/form-data": { schema: { type: "object", properties: { resume: { type: "string", format: "binary" } } } } },
         },
-        responses: {
-          200: { description: "Resume uploaded successfully" },
-          400: { description: "Bad request/Invalid file type" },
-          401: { description: "Not authorized" },
-        },
+        responses: { 200: { description: "Resume uploaded" } },
+      },
+    },
+
+    // -------------------------------- COMPANIES --------------------------------
+    "/api/v1/companies": {
+      get: {
+        tags: ["Companies"],
+        summary: "Get all companies",
+        responses: { 200: { description: "List of companies returned" } },
+      },
+    },
+    "/api/v1/companies/create": {
+      post: {
+        tags: ["Companies"],
+        summary: "Create a new company profile",
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        requestBody: { required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/CreateCompanyRequest" } } } },
+        responses: { 201: { description: "Company created" } },
+      },
+    },
+    "/api/v1/companies/{id}": {
+      get: {
+        tags: ["Companies"],
+        summary: "Get specific company by ID",
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        responses: { 200: { description: "Company details returned" } },
+      },
+      put: {
+        tags: ["Companies"],
+        summary: "Update company profile",
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        requestBody: { content: { "application/json": { schema: { $ref: "#/components/schemas/CreateCompanyRequest" } } } },
+        responses: { 200: { description: "Company updated" } },
+      },
+      delete: {
+        tags: ["Companies"],
+        summary: "Delete company profile",
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        responses: { 200: { description: "Company deleted" } },
       },
     },
     "/api/v1/companies/logo": {
       post: {
         tags: ["Companies"],
-        summary: "Upload company logo via multipart/form-data",
+        summary: "Upload company logo",
         security: [{ cookieAuth: [] }, { bearerAuth: [] }],
         requestBody: {
           required: true,
-          content: {
-            "multipart/form-data": {
-              schema: {
-                type: "object",
-                properties: {
-                  logo: { type: "string", format: "binary" },
-                },
-              },
-            },
-          },
+          content: { "multipart/form-data": { schema: { type: "object", properties: { logo: { type: "string", format: "binary" } } } } },
         },
-        responses: {
-          200: { description: "Logo uploaded successfully" },
-          400: { description: "Bad request/No file provided" },
-          401: { description: "Not authorized" },
-          403: { description: "Forbidden/No company associated" },
+        responses: { 200: { description: "Logo uploaded" } },
+      },
+      delete: {
+        tags: ["Companies"],
+        summary: "Delete company logo",
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        responses: { 200: { description: "Logo deleted" } },
+      },
+    },
+
+    // -------------------------------- APPLICATIONS --------------------------------
+    "/api/v1/applications/job/{id}/apply": {
+      post: {
+        tags: ["Applications"],
+        summary: "Apply to a job (Job Seeker)",
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" }, description: "Job ID" }],
+        responses: { 201: { description: "Application submitted successfully" } },
+      },
+    },
+    "/api/v1/applications/me": {
+      get: {
+        tags: ["Applications"],
+        summary: "Get jobs applied by the current user (Job Seeker)",
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        responses: { 200: { description: "List of applied jobs" } },
+      },
+    },
+    "/api/v1/applications/job/{id}/applicants": {
+      get: {
+        tags: ["Applications"],
+        summary: "View all applicants for a specific job (Recruiter)",
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" }, description: "Job ID" }],
+        responses: { 200: { description: "List of applicants" } },
+      },
+    },
+    "/api/v1/applications/{id}/status": {
+      patch: {
+        tags: ["Applications"],
+        summary: "Update application status (Recruiter)",
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" }, description: "Application ID" }],
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: { type: "object", properties: { status: { type: "string", enum: ["pending", "reviewing", "shortlisted", "rejected", "accepted"] } } } } },
         },
+        responses: { 200: { description: "Application status updated" } },
       },
     },
   },

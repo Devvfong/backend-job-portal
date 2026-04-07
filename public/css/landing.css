@@ -1,0 +1,217 @@
+:root {
+  --ink: #11262d;
+  --paper: #f6efe1;
+  --mint: #5bc8af;
+  --gold: #f0b429;
+  --coral: #f56f5a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--ink);
+  font-family: "Space Grotesk", sans-serif;
+  background:
+    radial-gradient(circle at 20% 15%, rgba(245, 111, 90, 0.28) 0 12%, transparent 40%),
+    radial-gradient(circle at 85% 70%, rgba(91, 200, 175, 0.34) 0 18%, transparent 45%),
+    linear-gradient(130deg, #fff9ec 0%, var(--paper) 52%, #e9f8f4 100%);
+  overflow: hidden;
+}
+
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  inset: -30%;
+  pointer-events: none;
+}
+
+body::before {
+  background-image:
+    linear-gradient(rgba(17, 38, 45, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(17, 38, 45, 0.06) 1px, transparent 1px);
+  background-size: 42px 42px;
+  animation: drift 18s linear infinite;
+}
+
+body::after {
+  background:
+    radial-gradient(circle, rgba(240, 180, 41, 0.35) 0 2px, transparent 2px) 0 0 / 38px 38px,
+    radial-gradient(circle, rgba(17, 38, 45, 0.16) 0 1px, transparent 1px) 10px 10px / 28px 28px;
+  mix-blend-mode: multiply;
+  animation: driftReverse 24s linear infinite;
+}
+
+main {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.card {
+  width: min(760px, 100%);
+  border: 2px solid rgba(17, 38, 45, 0.14);
+  border-radius: 24px;
+  backdrop-filter: blur(20px);
+  padding: clamp(24px, 4vw, 44px);
+  animation: popIn 700ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(1.9rem, 3.4vw, 3rem);
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+}
+
+p {
+  margin-top: 12px;
+  max-width: 62ch;
+  line-height: 1.58;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.btn {
+  display: inline-block;
+  cursor: pointer;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  padding: 10px 16px;
+  background: #fff;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 0 rgba(17, 38, 45, 0.16);
+}
+
+.btn.docs {
+  background: var(--mint);
+}
+
+.btn.openapi {
+  background: var(--gold);
+}
+
+.btn.auth {
+  background: var(--coral);
+}
+
+.hint {
+  margin-top: 14px;
+  font-size: 0.85rem;
+  opacity: 0.82;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  display: none;
+  place-items: center;
+  background: rgba(10, 18, 22, 0.45);
+  z-index: 20;
+  padding: 16px;
+}
+
+.modal-backdrop.show {
+  display: grid;
+}
+
+.modal {
+  width: min(460px, 100%);
+  background: #fffef7;
+  border: 2px solid rgba(17, 38, 45, 0.2);
+  border-radius: 16px;
+  box-shadow: 0 16px 34px rgba(17, 38, 45, 0.26);
+  padding: 18px;
+}
+
+.modal h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.field {
+  margin-top: 12px;
+}
+
+.field label {
+  display: block;
+  font-size: 0.85rem;
+  margin-bottom: 6px;
+}
+
+.field input,
+.field select {
+  width: 100%;
+  border: 1px solid rgba(17, 38, 45, 0.34);
+  border-radius: 10px;
+  padding: 10px;
+  font: inherit;
+}
+
+.modal-actions {
+  margin-top: 14px;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.modal-btn {
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: #fff;
+  padding: 8px 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.modal-btn.primary {
+  background: var(--mint);
+}
+
+.error-msg {
+  margin-top: 10px;
+  min-height: 1.25rem;
+  color: #b42318;
+  font-size: 0.84rem;
+}
+
+@keyframes drift {
+  from { transform: translate(0, 0) rotate(0deg); }
+  to { transform: translate(-30px, -26px) rotate(0.3deg); }
+}
+
+@keyframes driftReverse {
+  from { transform: translate(0, 0) rotate(0deg); }
+  to { transform: translate(26px, 30px) rotate(-0.3deg); }
+}
+
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
