@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.prod
-    container_name: job-portal-backend
+    container_name: jp-backend
     restart: always
     env_file:
       - .env
@@ -17,7 +17,7 @@ services:
 
   nginx:
     image: nginx:stable-alpine
-    container_name: job-portal-proxy
+    container_name: jp-proxy
     restart: always
     depends_on:
       - backend
