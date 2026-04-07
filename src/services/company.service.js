@@ -155,7 +155,11 @@ const getCompanyServiceById = async (id) => {
   });
 };
 const updateCompanyService = async (id, data, user) => {
-  if (!user || user.role !== "company_admin" || user.companyId !== id) {
+  // Verify permissions: super_admin bypass or company ownership
+  const isSuperAdmin = user?.role === 'super_admin';
+  const isOwnCompanyAdmin = user?.role === 'company_admin' && user.companyId === id;
+
+  if (!isSuperAdmin && !isOwnCompanyAdmin) {
     throw new Error("Unauthorized");
   }
   const company = await prisma.company.findUnique({
@@ -172,7 +176,11 @@ const updateCompanyService = async (id, data, user) => {
 };
 
 const deleteCompanyService = async (id, user) => {
-  if (!user || user.role !== "company_admin") {
+  // Verify permissions: super_admin bypass or company admin role
+  const isSuperAdmin = user?.role === 'super_admin';
+  const isCompanyAdmin = user?.role === 'company_admin';
+
+  if (!isSuperAdmin && !isCompanyAdmin) {
     throw new Error("Unauthorized");
   }
 
@@ -201,7 +209,11 @@ const updateCompanyLogo = async (companyId, logoUrl) => {
   });
 };
 const deleteCompanyLogo = async (user,companyId) => {
-  if (!user || user.role !== "company_admin" || user.companyId !== companyId) {
+  // Verify permissions: super_admin bypass or company ownership
+  const isSuperAdmin = user?.role === 'super_admin';
+  const isOwnCompanyAdmin = user?.role === 'company_admin' && user.companyId === companyId;
+
+  if (!isSuperAdmin && !isOwnCompanyAdmin) {
     throw new Error("Unauthorized");
   }
   const company = await prisma.company.findUnique({

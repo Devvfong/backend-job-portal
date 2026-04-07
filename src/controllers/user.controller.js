@@ -48,7 +48,7 @@ const getProfileController = async (req, res) => {
 
 const updateProfileController = async (req, res) => {
   try {
-    const profile = await updateProfile(req.body, req.user.id);
+    const profile = await updateProfile(req.body, req.user.id, req.user);
 
     return res.status(200).json({
       status: "success",

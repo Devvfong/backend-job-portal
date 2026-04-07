@@ -71,7 +71,7 @@ const getProfile = async (id) => {
 
   return user;
 };
-const updateProfile = async (data, id) => {
+const updateProfile = async (data, id, currentUser) => {
   const user = await prisma.user.findUnique({
     where: {
       id,
@@ -87,7 +87,9 @@ const updateProfile = async (data, id) => {
       id,
     },
     data: {
-      name: data.name || user.name, // Allow updating name, but keep existing if not provided
+      // Only super_admin can change the role of an account
+      ...(currentUser.role === 'super_admin' && data.role ? { role: data.role } : {}),
+      name: data.name || user.name,
       email: data.email || user.email,
       headline: data.headline || user.headline,
       bio: data.bio || user.bio,
@@ -100,6 +102,7 @@ const updateProfile = async (data, id) => {
     },
     select: {
       id: true,
+      role: true,
       name: true,
       email: true,
       role: true,

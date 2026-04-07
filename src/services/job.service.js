@@ -129,6 +129,8 @@ const getJobByIdService = async (id) => {
 };
 
 
+// File: src/services/job.service.js
+
 const updateJobService = async (id, data, user) => {
   const job = await prisma.job.findUnique({
     where: { id },
@@ -138,7 +140,11 @@ const updateJobService = async (id, data, user) => {
     throw new Error("Job not found");
   }
 
-  if (!user || job.companyId !== user.companyId) {
+  // Verify permissions: super_admin bypass or company ownership
+  const isSuperAdmin = user?.role === 'super_admin';
+  const isCompanyAdmin = user?.role === 'company_admin' && job.companyId === user.companyId;
+
+  if (!isSuperAdmin && !isCompanyAdmin) {
     throw new Error("Forbidden");
   }
 
@@ -151,12 +157,17 @@ const updateJobService = async (id, data, user) => {
       description: data.description || job.description,
       requirements: data.requirements || job.requirements,
       benefits: data.benefits || job.benefits,
-      salaryMin: data.salaryMin || job.salaryMin,
-      salaryMax: data.salaryMax || job.salaryMax,
-      companyId: user.companyId,
+      salaryMin: data.salaryMin ? Number(data.salaryMin) : job.salaryMin,
+      salaryMax: data.salaryMax ? Number(data.salaryMax) : job.salaryMax,
+      status: data.status || job.status,
+      // Fixed: Prisma prefers relationship connect for updates
+      company: {
+        connect: { id: user.companyId }
+      }
     },
   });
 };
+
 
 const deleteJobService = async (id, user) => {
   const job = await prisma.job.findUnique({
@@ -167,7 +178,11 @@ const deleteJobService = async (id, user) => {
     throw new Error("Job not found");
   }
 
-  if (!user || job.companyId !== user.companyId) {
+  // Verify permissions: super_admin bypass or company ownership
+  const isSuperAdmin = user?.role === 'super_admin';
+  const isCompanyAdmin = user?.role === 'company_admin' && job.companyId === user.companyId;
+
+  if (!isSuperAdmin && !isCompanyAdmin) {
     throw new Error("Forbidden");
   }
 
