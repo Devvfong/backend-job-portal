@@ -1,29 +1,46 @@
 import { prisma } from "../config/db.js";
 
-const createJobService = async (data, user) => {
-  if (!user) {
-    throw new Error("Forbidden");
+const createJobService = async (data, user) =>{
+  if (!user){
+    throw new Error("Forbidden user not authenticated");
   }
-
-  const companyId = data.companyId || user.companyId;
-  if (!companyId) {
-    throw new Error("A companyId must be provided in the request body or linked to your account");
+ 
+  const companyId = data.companyId || user.companyId; // this for 
+  if (!companyId){
+    throw new Error ("A companyId must be provided in the request body or linked to your account");
   }
-
-  return prisma.job.create({
-    data: {
+  const duplicated = await prisma.job.findFirst({
+     where: {
+      companyId: Number(companyId),
       title: data.title,
       location: data.location,
       jobType: data.jobType,
       description: data.description,
       requirements: data.requirements,
       benefits: data.benefits,
-      salaryMin: Number(data.salaryMin),
-      salaryMax: Number(data.salaryMax),
-      companyId: Number(companyId),
+      salaryMin: data.salaryMin ? Number(data.salaryMin) : undefined,
+      salaryMax: data.salaryMax ? Number(data.salaryMax) : undefined,
     },
-  });
-};
+  })
+  if(duplicated){
+    throw new Error("A job with identical details already exists for this company");
+  }
+  else if(!duplicated){
+    return prisma.job.create({
+      data: {
+        companyId: Number(companyId),
+        title: data.title,
+        location: data.location,
+        jobType: data.jobType,
+        description: data.description,
+        requirements: data.requirements,
+        benefits: data.benefits,
+        salaryMin: data.salaryMin ? Number(data.salaryMin) : undefined,
+        salaryMax: data.salaryMax ? Number(data.salaryMax) : undefined,
+      },
+    });
+  }
+}
 
 // Get all jobs with filters and pagination
 const getJobService = async (query) => {
