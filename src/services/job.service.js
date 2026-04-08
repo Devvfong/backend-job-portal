@@ -18,8 +18,8 @@ const createJobService = async (data, user) => {
       description: data.description,
       requirements: data.requirements,
       benefits: data.benefits,
-      salaryMin: data.salaryMin,
-      salaryMax: data.salaryMax,
+      salaryMin: Number(data.salaryMin),
+      salaryMax: Number(data.salaryMax),
       companyId: Number(companyId),
     },
   });
@@ -141,30 +141,33 @@ const updateJobService = async (id, data, user) => {
   }
 
   // Verify permissions: super_admin bypass or company ownership
-  const isSuperAdmin = user?.role === 'super_admin';
-  const isCompanyAdmin = user?.role === 'company_admin' && job.companyId === user.companyId;
+  const isSuperAdmin = user?.role === "super_admin";
+  const isCompanyAdmin = user?.role === "company_admin" && job.companyId === user.companyId;
 
   if (!isSuperAdmin && !isCompanyAdmin) {
     throw new Error("Forbidden");
   }
 
+  // Only allow updating companyId if super_admin
+  const updateData = {
+    title: data.title || job.title,
+    location: data.location || job.location,
+    jobType: data.jobType || job.jobType,
+    description: data.description || job.description,
+    requirements: data.requirements || job.requirements,
+    benefits: data.benefits || job.benefits,
+    salaryMin: data.salaryMin ? Number(data.salaryMin) : job.salaryMin,
+    salaryMax: data.salaryMax ? Number(data.salaryMax) : job.salaryMax,
+    status: data.status || job.status,
+  };
+
+  if (isSuperAdmin && data.companyId) {
+    updateData.companyId = Number(data.companyId);
+  }
+
   return prisma.job.update({
     where: { id },
-    data: {
-      title: data.title || job.title,
-      location: data.location || job.location,
-      jobType: data.jobType || job.jobType,
-      description: data.description || job.description,
-      requirements: data.requirements || job.requirements,
-      benefits: data.benefits || job.benefits,
-      salaryMin: data.salaryMin ? Number(data.salaryMin) : job.salaryMin,
-      salaryMax: data.salaryMax ? Number(data.salaryMax) : job.salaryMax,
-      status: data.status || job.status,
-      // Fixed: Prisma prefers relationship connect for updates
-      company: {
-        connect: { id: user.companyId }
-      }
-    },
+    data: updateData,
   });
 };
 

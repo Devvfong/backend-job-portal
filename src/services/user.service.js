@@ -72,9 +72,14 @@ const getProfile = async (id) => {
   return user;
 };
 const updateProfile = async (data, id, currentUser) => {
+  // Check permissions: only the owner or super_admin can update this profile
+  if (currentUser.id !== Number(id) && currentUser.role !== "super_admin") {
+    throw new Error("Forbidden: You cannot update this profile");
+  }
+
   const user = await prisma.user.findUnique({
     where: {
-      id,
+      id: Number(id),
     },
   });
 
@@ -82,27 +87,31 @@ const updateProfile = async (data, id, currentUser) => {
     throw new Error("User not found");
   }
 
+  const updateData = {
+    name: data.name || user.name,
+    email: data.email || user.email,
+    headline: data.headline || user.headline,
+    bio: data.bio || user.bio,
+    location: data.location || user.location,
+    phone: data.phone || user.phone,
+    avatar: data.avatar || user.avatar,
+    skills: data.skills || user.skills,
+    resume: data.resume || user.resume,
+  };
+
+  // Only super_admin can change role or companyId
+  if (currentUser.role === "super_admin") {
+    if (data.role) updateData.role = data.role; // this for change role of user
+    if (data.companyId) updateData.companyId = Number(data.companyId); // this for change company of user
+  }
+
   return prisma.user.update({
     where: {
-      id,
+      id: Number(id),
     },
-    data: {
-      // Only super_admin can change the role of an account
-      ...(currentUser.role === 'super_admin' && data.role ? { role: data.role } : {}),
-      name: data.name || user.name,
-      email: data.email || user.email,
-      headline: data.headline || user.headline,
-      bio: data.bio || user.bio,
-      location: data.location || user.location,
-      phone: data.phone || user.phone,
-      avatar: data.avatar || user.avatar,
-      skills: data.skills || user.skills,
-      resume: data.resume || user.resume,
-      companyId: data.companyId || user.companyId,
-    },
+    data: updateData, // this for update user profile
     select: {
       id: true,
-      role: true,
       name: true,
       email: true,
       role: true,
