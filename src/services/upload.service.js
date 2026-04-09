@@ -65,9 +65,9 @@ const uploadResume = async (fileBuffer, mimetype, originalname, userId) => {
  */
 const uploadLogo = async (fileBuffer, mimetype, originalname, companyId) => {
   const ext = path.extname(originalname).toLowerCase();
-  const fileName = `logos/${companyId}/${Date.now()}${ext}`;
+  const fileName = `${companyId}/${Date.now()}${ext}`;
 
-  const { error } = await supabase.storage.from("avatars").upload(fileName, fileBuffer, {
+  const { error } = await supabase.storage.from("logos").upload(fileName, fileBuffer, {
     contentType: mimetype,
     upsert: true,
   });
@@ -76,7 +76,7 @@ const uploadLogo = async (fileBuffer, mimetype, originalname, companyId) => {
     throw new Error(`Supabase logo upload failed: ${error.message}`);
   }
 
-  const { data } = supabase.storage.from("avatars").getPublicUrl(fileName);
+  const { data } = supabase.storage.from("logos").getPublicUrl(fileName);
   return data.publicUrl;
 };
 

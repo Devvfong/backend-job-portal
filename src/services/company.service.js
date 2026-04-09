@@ -191,10 +191,12 @@ const deleteCompanyService = async (id, user) => {
   if (!company) {
     throw new Error("Company not found");
   }
-  const urlParts = company.logo.split("/avatars/");
-  if (urlParts.length > 1) {
-    const filePath = urlParts[1];
-    await supabase.storage.from("avatars").remove([filePath]);
+  if (company.logo) {
+    const urlParts = company.logo.split("/logos/");
+    if (urlParts.length > 1) {
+      const filePath = urlParts[1];
+      await supabase.storage.from("logos").remove([filePath]);
+    }
   }
   return prisma.company.delete({
     where: { id },
@@ -228,10 +230,12 @@ const deleteCompanyLogo = async (user,companyId) => {
     throw new Error("No logo found");
   }
 
-  const urlParts = company.logo.split("/avatars/");
-  if (urlParts.length > 1) {
-    const filePath = urlParts[1];
-    await supabase.storage.from("avatars").remove([filePath]);
+  if (company.logo) {
+    const urlParts = company.logo.split("/logos/");
+    if (urlParts.length > 1) {
+      const filePath = urlParts[1];
+      await supabase.storage.from("logos").remove([filePath]);
+    }
   }
 
   return prisma.company.update({
