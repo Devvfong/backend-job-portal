@@ -48,6 +48,7 @@ const getProfileController = async (req, res) => {
 
 const updateProfileController = async (req, res) => {
   try {
+    // Current user updating their own profile
     const profile = await updateProfile(req.body, req.user.id, req.user);
 
     return res.status(200).json({
@@ -59,6 +60,31 @@ const updateProfileController = async (req, res) => {
 
     if (e.message === "User not found") {
       return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(500).json({ error: e.message });
+  }
+};
+
+const updateUserController = async (req, res) => {
+  try {
+    const { id } = req.params;
+    // Super admin or owner updating a specific profile by ID
+    const profile = await updateProfile(req.body, id, req.user);
+
+    return res.status(200).json({
+      status: "success",
+      data: profile,
+    });
+  } catch (e) {
+    console.error(e);
+
+    if (e.message === "User not found") {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (e.message.startsWith("Forbidden")) {
+      return res.status(403).json({ message: e.message });
     }
 
     return res.status(500).json({ error: e.message });
@@ -121,6 +147,7 @@ export {
   createProfileController,
   getProfileController,
   updateProfileController,
+  updateUserController,
   uploadAvatarController,
   uploadResumeController,
 };

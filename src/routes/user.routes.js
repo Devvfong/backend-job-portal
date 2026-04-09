@@ -8,9 +8,12 @@ import {
   createProfileController,
   getProfileController,
   updateProfileController,
+  updateUserController,
   uploadAvatarController,
   uploadResumeController,
-} from "../controllers/user.controller.js";
+} 
+from "../controllers/user.controller.js";
+import authorize from "../middlewares/authorize.middleware.js";
 
 const router = express.Router();
 
@@ -46,6 +49,10 @@ const handleUploadError = (multerMiddleware) => (req, res, next) => {
 router.get("/profile", protect, getProfileController);
 router.post("/profile", protect, validate(createProfileSchema), createProfileController);
 router.put("/profile", protect, validate(updateProfileSchema), updateProfileController);
+
+// ─── Admin User Routes ──────────────────────────────────────────────────────
+// Super Admin can manage any user
+router.put("/profile/:id", protect, authorize("super_admin"), validate(updateProfileSchema), updateUserController);
 
 // ─── Uploads ───────────────────────────────────────────────────────────────
 router.post("/avatar", protect, handleUploadError(uploadAvatar.single("avatar")), uploadAvatarController);

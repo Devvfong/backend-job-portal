@@ -1,5 +1,6 @@
 import { prisma } from "../config/db.js";
-
+import dotenv from "dotenv";
+dotenv.config();  
 const createProfile = async (data, id) => {
   // Profile should update existing user, not create a new user row
   const user = await prisma.user.findUnique({
@@ -72,8 +73,8 @@ const getProfile = async (id) => {
   return user;
 };
 const updateProfile = async (data, id, currentUser) => {
-  // Check permissions: only the owner or super_admin can update this profile
-  if (currentUser.id !== Number(id) && currentUser.role !== "super_admin") {
+  // Check permissions: only the owner or a user with the SERVER role can update this profile
+  if (currentUser.id !== Number(id) && currentUser.role !== process.env.SERVER) {
     throw new Error("Forbidden: You cannot update this profile");
   }
 
@@ -99,8 +100,8 @@ const updateProfile = async (data, id, currentUser) => {
     resume: data.resume || user.resume,
   };
 
-  // Only super_admin can change role or companyId
-  if (currentUser.role === "super_admin") {
+  // Only process.env.SERVER can change role or companyId
+  if (currentUser.role === process.env.SERVER) {
     if (data.role) updateData.role = data.role; // this for change role of user
     if (data.companyId) updateData.companyId = Number(data.companyId); // this for change company of user
   }

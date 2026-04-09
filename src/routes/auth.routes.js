@@ -37,7 +37,7 @@ const loginSchema = z.object({
 
 router.post("/register",authRateLimiter,validate(registerSchema), register); // validate middleware will validate the request body against the registerSchema before calling the register controller
 router.post("/login", authRateLimiter,validate(loginSchema), login); // validate middleware will validate the request body against the loginSchema before calling the login controller
-router.get("/me", protect, authorize("company_admin"), getMe);
+router.get("/me", protect, getMe);
 router.post("/logout", protect, logout);
 // router.get("/me", protect, getMe);
 export default router;
