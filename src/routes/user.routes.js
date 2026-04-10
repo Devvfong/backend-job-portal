@@ -9,6 +9,8 @@ import {
   getProfileController,
   updateProfileController,
   updateUserController,
+  getAllUsersController,
+  deleteUserController,
   uploadAvatarController,
   uploadResumeController,
 } 
@@ -52,7 +54,9 @@ router.put("/profile", protect, validate(updateProfileSchema), updateProfileCont
 
 // ─── Admin User Routes ──────────────────────────────────────────────────────
 // Super Admin can manage any user
+router.get("/", protect, authorize("super_admin"), getAllUsersController);
 router.put("/profile/:id", protect, authorize("super_admin"), validate(updateProfileSchema), updateUserController);
+router.delete("/:id", protect, authorize("super_admin"), deleteUserController);
 
 // ─── Uploads ───────────────────────────────────────────────────────────────
 router.post("/avatar", protect, handleUploadError(uploadAvatar.single("avatar")), uploadAvatarController);

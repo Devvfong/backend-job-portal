@@ -4,6 +4,8 @@ import {
   updateProfile,
   updateUserAvatar,
   updateUserResume,
+  getAllUsers,
+  deleteUser,
 } from "../services/user.service.js";
 import {
   uploadAvatar as uploadAvatarToSupabase,
@@ -91,6 +93,39 @@ const updateUserController = async (req, res) => {
   }
 };
 
+const getAllUsersController = async (req, res) => {
+  try {
+    const data = await getAllUsers();
+    return res.status(200).json({
+      status: "success",
+      data: data,
+    });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ error: e.message });
+  }
+};
+
+const deleteUserController = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await deleteUser(id);
+
+    return res.status(200).json({
+      status: "success",
+      message: "User deleted successfully",
+    });
+  } catch (e) {
+    console.error(e);
+
+    if (e.message === "User not found") {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(500).json({ error: e.message });
+  }
+};
+
 const uploadAvatarController = async (req, res) => {
   try {
     if (!req.file) {
@@ -148,6 +183,8 @@ export {
   getProfileController,
   updateProfileController,
   updateUserController,
+  getAllUsersController,
+  deleteUserController,
   uploadAvatarController,
   uploadResumeController,
 };

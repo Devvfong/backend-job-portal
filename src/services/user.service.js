@@ -72,6 +72,64 @@ const getProfile = async (id) => {
 
   return user;
 };
+
+const getAllUsers = async () => {
+  const [user, total] = await Promise.all([
+    prisma.user.findMany({
+      where: {
+        role: {
+          not: process.env.SERVER, // Exclude the high-level admins
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        companyId: true,
+        headline: true,
+        bio: true,
+        location: true,
+        phone: true,
+        avatar: true,
+        skills: true,
+        resume: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    }),
+    prisma.user.count({
+      where: {
+        role: {
+          not: process.env.SERVER,
+        },
+      },
+    }),
+  ]);
+
+  return { user, total };
+};
+
+const deleteUser = async (id) => {
+  const user = await prisma.user.findUnique({
+    where: {
+      id: Number(id),
+    },
+  });
+
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  return prisma.user.delete({
+    where: {
+      id: Number(id),
+    },
+  });
+};
 const updateProfile = async (data, id, currentUser) => {
   // Check permissions: only the owner or a user with the SERVER role can update this profile
   if (currentUser.id !== Number(id) && currentUser.role !== process.env.SERVER) {
@@ -156,4 +214,12 @@ const updateUserResume = async (userId, resumeUrl) => {
   });
 };
 
-export { getProfile, updateProfile, createProfile, updateUserAvatar, updateUserResume };
+export { 
+  getProfile, 
+  updateProfile, 
+  createProfile, 
+  updateUserAvatar, 
+  updateUserResume, 
+  getAllUsers, 
+  deleteUser 
+};

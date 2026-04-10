@@ -176,6 +176,30 @@ Authorization: Bearer <JWT>
 
 ---
 
+## Update User By ID (Admin)
+
+**PUT** `/users/profile/:id`
+
+Special endpoint for `super_admin` to update any user's profile, role, or company link.
+
+---
+
+## Get All Users (Admin)
+
+**GET** `/users`
+
+Returns a paginated list of all users. Restricted to `super_admin`.
+
+---
+
+## Delete User (Admin)
+
+**DELETE** `/users/:id`
+
+Restricted to `super_admin`.
+
+---
+
 ## Upload Avatar
 
 **POST** `/users/avatar`
@@ -283,6 +307,18 @@ Query:
 
 ---
 
+## Save Job
+
+**POST** `/jobs/:id/save`
+
+---
+
+## Get Saved Jobs
+
+**GET** `/jobs/saved`
+
+---
+
 # Applications
 
 ## Apply to Job
@@ -300,6 +336,14 @@ Query:
 ## Get My Applications
 
 **GET** `/applications/me`
+
+---
+
+## Withdraw Application
+
+**DELETE** `/applications/:id`
+
+Allows a job seeker to withdraw their application.
 
 ---
 
@@ -333,6 +377,9 @@ GET    /auth/me
 USERS
 GET    /users/profile
 PUT    /users/profile
+PUT    /users/profile/:id     (Admin)
+GET    /users                 (Admin)
+DELETE /users/:id             (Admin)
 POST   /users/avatar
 POST   /users/resume
 
@@ -341,6 +388,7 @@ POST   /companies
 GET    /companies/:id
 PUT    /companies/:id
 POST   /companies/:id/logo
+GET    /companies/me/stats    (Recruiter)
 
 JOBS
 GET    /jobs
@@ -348,10 +396,13 @@ GET    /jobs/:id
 POST   /jobs
 PUT    /jobs/:id
 DELETE /jobs/:id
+POST   /jobs/:id/save         (Job Seeker)
+GET    /jobs/saved            (Job Seeker)
 
 APPLICATIONS
-POST   /jobs/:id/applications
+POST   /jobs/:id/apply
 GET    /applications/me
-GET    /jobs/:id/applications
+GET    /jobs/:id/applicants
 PATCH  /applications/:id
+DELETE /applications/:id      (Withdraw)
 ```
