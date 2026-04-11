@@ -4,6 +4,8 @@ import {
   getJobByIdService,
   updateJobService,
   deleteJobService,
+  toggleSaveJobService,
+  getSavedJobsService,
 } from "../services/job.service.js";
 
 const createJobController = async (req, res) => {
@@ -113,10 +115,45 @@ const deleteJobController = async (req, res) => {
   }
 };
 
+const toggleSaveJobController = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await toggleSaveJobService(id, req.user);
+
+    return res.status(200).json({
+      status: "success",
+      message: result.message,
+      data: result.data || null,
+    });
+  } catch (e) {
+    console.error(e);
+    if (e.message === "Job not found") {
+      return res.status(404).json({ message: e.message });
+    }
+    return res.status(500).json({ error: e.message });
+  }
+};
+
+const getSavedJobsController = async (req, res) => {
+  try {
+    const jobs = await getSavedJobsService(req.user.id);
+
+    return res.status(200).json({
+      status: "success",
+      data: jobs,
+    });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ error: e.message });
+  }
+};
+
 export {
   createJobController,
   getJobsController,
   getJobByIdController,
   updateJobController,
   deleteJobController,
+  toggleSaveJobController,
+  getSavedJobsController,
 };

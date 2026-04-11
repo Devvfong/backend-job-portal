@@ -187,7 +187,65 @@ const updateJobService = async (id, data, user) => {
     data: updateData,
   });
 };
+const toggleSaveJobService = async (jobId, user) => {
+  const job = await prisma.job.findUnique({
+    where: { id: Number(jobId) },
+  });
 
+  if (!job) {
+    throw new Error("Job not found");
+  }
+
+  // Check if already saved using the compound unique key we made in schema
+  const existingSave = await prisma.savedJob.findUnique({
+    where: {
+      userId_jobId: {
+        userId: user.id, // this is the compound unique key
+        jobId: job.id, // this is the compound unique key
+      },
+    },
+  });
+
+  if (existingSave) {
+    await prisma.savedJob.delete({
+      where: { id: existingSave.id },
+    });
+    return { status: "unsaved", message: "Job removed from saved list" };
+  } else {
+    const savedJob = await prisma.savedJob.create({
+      data: {
+        userId: user.id,
+        jobId: job.id,
+      },
+    });
+    return { status: "saved", data: savedJob };
+  }
+};
+
+const getSavedJobsService = async (userId) => {
+  const savedJobs = await prisma.savedJob.findMany({
+    where: {
+      userId: Number(userId),
+    },
+    include: {
+      job: {
+        include: {
+          company: {
+            select: {
+              companyName: true,
+              logo: true,
+            },
+          },
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+
+  return savedJobs;
+};
 
 const deleteJobService = async (id, user) => {
   const job = await prisma.job.findUnique({
@@ -211,4 +269,12 @@ const deleteJobService = async (id, user) => {
   });
 };
 
-export { createJobService, getJobService, getJobByIdService, updateJobService, deleteJobService };
+export { 
+  createJobService, 
+  getJobService, 
+  getJobByIdService, 
+  updateJobService, 
+  deleteJobService, 
+  toggleSaveJobService, 
+  getSavedJobsService 
+};
