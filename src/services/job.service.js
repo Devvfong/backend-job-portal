@@ -158,7 +158,7 @@ const updateJobService = async (id, data, user) => {
   }
 
   // Verify permissions: process.env.SERVER bypass or company ownership
-  const isSuperAdmin = user?.role === "process.env.SERVER";
+  const isSuperAdmin = user?.role === process.env.SERVER;
   const isCompanyAdmin = user?.role === "company_admin" && job.companyId === user.companyId;
 
   if (!isSuperAdmin && !isCompanyAdmin) {
@@ -257,7 +257,7 @@ const deleteJobService = async (id, user) => {
   }
 
   // Verify permissions: process.env.SERVER bypass or company ownership
-  const isSuperAdmin = user?.role === 'process.env.SERVER';
+  const isSuperAdmin = user?.role === process.env.SERVER;
   const isCompanyAdmin = user?.role === 'company_admin' && job.companyId === user.companyId;
 
   if (!isSuperAdmin && !isCompanyAdmin) {
