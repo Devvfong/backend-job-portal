@@ -265,7 +265,7 @@ const deleteJobService = async (id, user) => {
   }
 
   return prisma.job.delete({
-    where: { id },
+  where: { id },
   });
 };
 
