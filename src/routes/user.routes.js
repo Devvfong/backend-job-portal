@@ -13,8 +13,8 @@ import {
   deleteUserController,
   uploadAvatarController,
   uploadResumeController,
-} 
-from "../controllers/user.controller.js";
+  getUserStatsController,
+} from "../controllers/user.controller.js";
 import authorize from "../middlewares/authorize.middleware.js";
 
 const router = express.Router();
@@ -49,6 +49,7 @@ const handleUploadError = (multerMiddleware) => (req, res, next) => {
 
 // ─── Profile ───────────────────────────────────────────────────────────────
 router.get("/profile", protect, getProfileController);
+router.get("/me/stats", protect, getUserStatsController);
 router.post("/profile", protect, validate(createProfileSchema), createProfileController);
 router.put("/profile", protect, validate(updateProfileSchema), updateProfileController);
 

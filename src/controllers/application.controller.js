@@ -3,6 +3,7 @@ import {
   getMyApplicationsService,
   getApplicantsForJobService,
   updateApplicationStatusService,
+  withdrawApplicationService,
 } from "../services/application.service.js";
 
 const applyToJobController = async (req, res) => {
@@ -85,4 +86,5 @@ export {
   getMyApplicationsController,
   getApplicantsController,
   updateApplicationStatusController,
+  withdrawApplicationController,
 };

@@ -28,7 +28,7 @@ Authorization: Bearer <token>
 
 ```json
 {
-  "success": true,
+  "status": "success",
   "data": {}
 }
 ```
@@ -37,7 +37,7 @@ Authorization: Bearer <token>
 
 ```json
 {
-  "success": false,
+  "status": "fail",
   "message": "Error description"
 }
 ```
@@ -78,13 +78,15 @@ Authorization: Bearer <token>
 
 ```json
 {
-  "success": true,
+  "status": "success",
+  "message": "User registered successfully",
   "data": {
     "user": {
       "id": "uuid",
       "name": "John Doe",
       "email": "john@email.com"
-    }
+    },
+    "token": "jwt_token"
   }
 }
 ```
@@ -108,11 +110,14 @@ Authorization: Bearer <token>
 
 ```json
 {
-  "success": true,
-  "token": "jwt_token",
-  "user": {
-    "id": "uuid",
-    "name": "John Doe"
+  "status": "success",
+  "message": "User logged in successfully",
+  "data": {
+    "user": {
+      "id": "uuid",
+      "name": "John Doe"
+    },
+    "token": "jwt_token"
   }
 }
 ```
@@ -137,6 +142,24 @@ Authorization: Bearer <JWT>
 
 # User Profile
 
+## Create Profile
+
+**POST** `/users/profile`
+
+Creates a new profile for the authenticated user.
+
+```json
+{
+  "headline": "Fullstack Developer",
+  "bio": "Passionate about web tech",
+  "location": "Remote",
+  "phone": "+1234567890",
+  "skills": ["JavaScript", "React"]
+}
+```
+
+---
+
 ## Get Profile
 
 **GET** `/users/profile`
@@ -155,6 +178,26 @@ Authorization: Bearer <JWT>
     "skills": ["Node.js", "PostgreSQL"],
     "avatar": "/uploads/avatar.jpg",
     "resumeUrl": "/uploads/resume.pdf"
+  }
+}
+```
+
+---
+
+## Get User Stats
+
+**GET** `/users/me/stats`
+
+Returns a summary of the user's activity and profile completeness.
+
+Response:
+```json
+{
+  "status": "success",
+  "data": {
+    "totalApplications": 12,
+    "totalSavedJobs": 5,
+    "profileStrength": 85
   }
 }
 ```
@@ -224,14 +267,17 @@ multipart/form-data
 
 ## Create Company
 
-**POST** `/companies`
+**POST** `/companies/create`
 
 ```json
 {
-  "name": "Tech Corp",
+  "companyName": "Tech Corp",
   "description": "AI startup",
   "website": "https://techcorp.com",
-  "location": "Singapore"
+  "location": "Singapore",
+  "industry": "Software",
+  "size": "50-100",
+  "email": "hr@techcorp.com"
 }
 ```
 
@@ -249,12 +295,55 @@ multipart/form-data
 
 ---
 
+## Delete Company
+
+**DELETE** `/companies/:id`
+
+Restricted to `super_admin` or the company owner.
+
+---
+
 ## Upload Logo
 
-**POST** `/companies/:id/logo`
+**POST** `/companies/logo`
 
 ```
-multipart/form-data
+multipart/form-data (field: logo)
+```
+
+Restricted to `company_admin`. Updates the company associated with the current user.
+
+---
+
+## Delete Logo
+
+**DELETE** `/companies/logo`
+
+Removes the logo for the company associated with the current user.
+
+---
+
+## Get Company Stats
+
+**GET** `/companies/me/stats`
+
+Returns a summary of job postings and applications for the recruiter's company.
+
+Response:
+```json
+{
+  "status": "success",
+  "data": {
+    "totalJobs": 5,
+    "totalApplications": 24,
+    "statusSummary": {
+      "pending": 10,
+      "reviewed": 8,
+      "accepted": 4,
+      "rejected": 2
+    }
+  }
+}
 ```
 
 ---
@@ -283,13 +372,18 @@ Query:
 
 ## Create Job
 
-**POST** `/jobs`
+**POST** `/jobs/create`
 
 ```json
 {
   "title": "Backend Developer",
+  "description": "Work with Node.js and PostgreSQL",
   "location": "Remote",
-  "jobType": "full_time"
+  "jobType": "full_time",
+  "requirements": "Strong SQL skills",
+  "benefits": "Health insurance, remote work",
+  "salaryMin": 5000,
+  "salaryMax": 8000
 }
 ```
 
@@ -323,13 +417,9 @@ Query:
 
 ## Apply to Job
 
-**POST** `/jobs/:id/applications`
+**POST** `/applications/job/:id/apply`
 
-```json
-{
-  "coverLetter": "I am interested in this role"
-}
-```
+Job Seeker endpoint to apply for a specific job.
 
 ---
 
@@ -339,29 +429,31 @@ Query:
 
 ---
 
-## Withdraw Application
-
-**DELETE** `/applications/:id`
-
-Allows a job seeker to withdraw their application.
-
----
-
 ## Get Applicants
 
-**GET** `/jobs/:id/applications`
+**GET** `/applications/job/:id/applicants`
+
+Restricted to `company_admin`.
 
 ---
 
-## Update Application
+## Update Application Status
 
-**PATCH** `/applications/:id`
+**PATCH** `/applications/:id/status`
 
 ```json
 {
   "status": "reviewed"
 }
 ```
+
+---
+
+## Withdraw Application
+
+**DELETE** `/applications/:id`
+
+Allows a job seeker to withdraw their application.
 
 ---
 
@@ -376,33 +468,39 @@ GET    /auth/me
 
 USERS
 GET    /users/profile
+GET    /users/me/stats
+POST   /users/profile
 PUT    /users/profile
-PUT    /users/profile/:id     (Admin)
-GET    /users                 (Admin)
-DELETE /users/:id             (Admin)
+PUT    /users/profile/:id           (Admin)
+GET    /users                       (Admin)
+DELETE /users/:id                   (Admin)
 POST   /users/avatar
 POST   /users/resume
 
 COMPANIES
-POST   /companies
+POST   /companies/create
+GET    /companies
 GET    /companies/:id
 PUT    /companies/:id
-POST   /companies/:id/logo
-GET    /companies/me/stats    (Recruiter)
+POST   /companies/logo
+DELETE /companies/logo
 
 JOBS
 GET    /jobs
+GET    /jobs/saved                  (Job Seeker)
 GET    /jobs/:id
-POST   /jobs
-PUT    /jobs/:id
-DELETE /jobs/:id
-POST   /jobs/:id/save         (Job Seeker)
-GET    /jobs/saved            (Job Seeker)
+POST   /jobs/create                 (Recruiter)
+PUT    /jobs/:id                    (Recruiter)
+DELETE /jobs/:id                    (Recruiter)
+POST   /jobs/:id/save               (Job Seeker)
 
 APPLICATIONS
-POST   /jobs/:id/apply
-GET    /applications/me
-GET    /jobs/:id/applicants
-PATCH  /applications/:id
-DELETE /applications/:id      (Withdraw)
+POST   /applications/job/:id/apply  (Job Seeker)
+GET    /applications/me             (Job Seeker)
+DELETE /applications/:id            (Job Seeker - Withdraw)
+GET    /applications/job/:id/applicants (Recruiter)
+PATCH  /applications/:id/status     (Recruiter)
+
+COMPANIES (Cont.)
+GET    /companies/me/stats          (Recruiter)
 ```

@@ -98,9 +98,29 @@ const updateApplicationStatusService = async (applicationId, status, user) => {
   });
 };
 
+const withdrawApplicationService = async (applicationId, user) => {
+  const application = await prisma.application.findUnique({
+    where: { id: applicationId },
+  });
+
+  if (!application) {
+    throw new Error("Application not found");
+  }
+
+  // Only the user who applied can withdraw
+  if (application.userId !== user.id) {
+    throw new Error("Forbidden: You can only withdraw your own applications");
+  }
+
+  return prisma.application.delete({
+    where: { id: applicationId },
+  });
+};
+
 export {
   applyToJobService,
   getMyApplicationsService,
   getApplicantsForJobService,
   updateApplicationStatusService,
+  withdrawApplicationService,
 };

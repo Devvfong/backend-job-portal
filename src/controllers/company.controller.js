@@ -5,7 +5,8 @@ import {
   updateCompanyService,
   deleteCompanyService,
   updateCompanyLogo,
-  deleteCompanyLogo
+  deleteCompanyLogo,
+  getCompanyStatsService,
 } from "../services/company.service.js";
 import { uploadLogo as uploadLogoToSupabase } from "../services/upload.service.js";
 
@@ -148,4 +149,5 @@ export {
   deleteCompanyController,
   uploadLogoController,
   deleteLogoController,
+  getCompanyStatsController,
 };

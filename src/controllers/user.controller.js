@@ -6,6 +6,7 @@ import {
   updateUserResume,
   getAllUsers,
   deleteUser,
+  getUserStatsService,
 } from "../services/user.service.js";
 import {
   uploadAvatar as uploadAvatarToSupabase,
@@ -178,6 +179,19 @@ const uploadResumeController = async (req, res) => {
   }
 };
 
+const getUserStatsController = async (req, res) => {
+  try {
+    const stats = await getUserStatsService(req.user.id);
+    return res.status(200).json({
+      status: "success",
+      data: stats,
+    });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ error: e.message });
+  }
+};
+
 export {
   createProfileController,
   getProfileController,
@@ -187,5 +201,6 @@ export {
   deleteUserController,
   uploadAvatarController,
   uploadResumeController,
+  getUserStatsController,
 };
 

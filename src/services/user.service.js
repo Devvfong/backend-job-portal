@@ -213,13 +213,45 @@ const updateUserResume = async (userId, resumeUrl) => {
     },
   });
 };
+const getUserStatsService = async (userId) => {
+  const [totalApplications, totalSavedJobs, user] = await Promise.all([
+    prisma.application.count({ where: { userId } }), // this for count total applications of user
+    prisma.savedJob.count({ where: { userId } }), // this for count total saved jobs of user
+    prisma.user.findUnique({ where: { id: userId } }), // this for get user data
+  ]);
 
-export { 
-  getProfile, 
-  updateProfile, 
-  createProfile, 
-  updateUserAvatar, 
-  updateUserResume, 
-  getAllUsers, 
-  deleteUser 
+  // Calculate profile strength (completeness)
+  const profileFields = [
+    "headline",
+    "bio",
+    "location",
+    "phone",
+    "avatar",
+    "resume",
+    "skills",
+  ];
+  const filledFields = profileFields.filter((field) => {
+    if (field === "skills") return user.skills && user.skills.length > 0;
+    return !!user[field];
+  });
+  const profileStrength = Math.round(
+    (filledFields.length / profileFields.length) * 100,
+  );
+
+  return {
+    totalApplications,
+    totalSavedJobs,
+    profileStrength,
+  };
+};
+
+export {
+  getProfile,
+  updateProfile,
+  createProfile,
+  updateUserAvatar,
+  updateUserResume,
+  getAllUsers,
+  deleteUser,
+  getUserStatsService,
 };

@@ -6,7 +6,8 @@ import {
   updateCompanyController,
   deleteCompanyController,
   uploadLogoController,
-  deleteLogoController
+  deleteLogoController,
+  getCompanyStatsController,
 } from "../controllers/company.controller.js";
 import protect from "../middlewares/protect.middleware.js";
 import authorize from "../middlewares/authorize.middleware.js";
@@ -41,6 +42,13 @@ router.delete(
   protect,
   authorize("company_admin"),
   deleteLogoController,
+);
+
+router.get(
+  "/me/stats",
+  protect,
+  authorize("company_admin"),
+  getCompanyStatsController,
 );
 
 router.post(

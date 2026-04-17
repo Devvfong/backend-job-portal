@@ -1,5 +1,6 @@
 import { Router } from "express";
 import passport from "../config/passport.js";
+import generateToken from "../utils/generateToken.js";
 
 const router = Router();
 
@@ -15,9 +16,15 @@ router.get(
   passport.authenticate("github", { failureRedirect: "/login" }),
   (req, res) => {
     // Successful authentication
-    // Here you can create/find the user in your DB and issue a JWT or session
-    res.json({ user: req.user, message: "GitHub login successful" });
+    // Generate JWT and set it as a cookie
+    const token = generateToken(req.user.id, res);
+
+    // Redirect back to the frontend
+    // If you have a specific dashboard route, you can change this to /dashboard
+    const frontendUrl = process.env.FRONTEND_URL || "https://devqii.me";
+    res.redirect(`${frontendUrl}?token=${token}`);
   },
 );
 
 export default router;
+

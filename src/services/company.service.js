@@ -243,6 +243,43 @@ const deleteCompanyLogo = async (user,companyId) => {
     data: { logo: null },
   });
 };
+
+const getCompanyStatsService = async (companyId) => {
+  const [totalJobs, totalApplications, statusCounts] = await Promise.all([
+    // 1. Total Jobs
+    prisma.job.count({
+      where: { companyId: Number(companyId) },
+    }),
+    
+    // 2. Total Applications
+    prisma.application.count({
+      where: {
+        job: { companyId: Number(companyId) },
+      },
+    }),
+
+    // 3. Status Breakdown
+    prisma.application.groupBy({
+      by: ["status"],
+      where: {
+        job: { companyId: Number(companyId) },
+      },
+      _count: true,
+    }),
+  ]);
+
+  // Format status counts into a nice object
+  const statusSummary = statusCounts.reduce((acc, item) => {
+    acc[item.status] = item._count;
+    return acc;
+  }, {});
+
+  return {
+    totalJobs,
+    totalApplications,
+    statusSummary,
+  };
+};
 export {
   createCompanyService,
   getCompanyService,
@@ -251,4 +288,5 @@ export {
   deleteCompanyService,
   updateCompanyLogo,
   deleteCompanyLogo,
+  getCompanyStatsService,
 };
