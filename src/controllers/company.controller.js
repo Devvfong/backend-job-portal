@@ -141,6 +141,24 @@ const deleteLogoController = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+const getCompanyStatsController = async (req, res) => {
+  try {
+    if (!req.user.companyId) {
+      return res.status(403).json({ message: "Forbidden: No company associated" });
+    }
+
+    const stats = await getCompanyStatsService(req.user.companyId);
+
+    return res.status(200).json({
+      status: "success",
+      data: stats,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: error.message });
+  }
+};
+
 export {
   createCompanyController,
   getCompanyController,
