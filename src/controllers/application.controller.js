@@ -81,6 +81,26 @@ const updateApplicationStatusController = async (req, res) => {
   }
 };
 
+const withdrawApplicationController = async (req, res) => {
+  try {
+    const applicationId = Number(req.params.id);
+    await withdrawApplicationService(applicationId, req.user);
+
+    return res.status(200).json({
+      status: "success",
+      message: "Application withdrawn successfully",
+    });
+  } catch (err) {
+    if (err.message === "Application not found") {
+      return res.status(404).json({ message: err.message });
+    }
+    if (err.message.includes("Forbidden")) {
+      return res.status(403).json({ message: err.message });
+    }
+    return res.status(500).json({ error: err.message });
+  }
+};
+
 export {
   applyToJobController,
   getMyApplicationsController,
