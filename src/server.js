@@ -70,10 +70,24 @@ app.get(
   }),
 );
 
+// Global Error Handler
+app.use((err, req, res, next) => {
+  console.error("💥 Global Error Handler:", err);
+  res.status(err.status || 500).json({
+    status: "error",
+    message: err.message || "Internal Server Error",
+    stack: process.env.NODE_ENV === "development" ? err.stack : undefined,
+  });
+});
+
 // Landing page is served statically from public/index.html
 const server = app.listen(PORT || 3000, "0.0.0.0", () => {
   console.log(`Server is running on port ${PORT}`);
 });
+
+// Prevent process from exiting cleanly in environments where event loop might drain
+process.stdin.resume();
+setInterval(() => {}, 1000 * 60 * 60); // Keep alive every hour
 // =========================================================================================================
 
 // ================================================================================================================

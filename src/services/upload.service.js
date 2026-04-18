@@ -80,4 +80,30 @@ const uploadLogo = async (fileBuffer, mimetype, originalname, companyId) => {
   return data.publicUrl;
 };
 
-export { uploadAvatar, uploadResume, uploadLogo };
+/**
+ * Delete a file from Supabase Storage given its public URL
+ * @param {string} publicUrl - Public URL of the file to delete
+ * @param {string} bucket    - Bucket name ('avatars', 'resumes', or 'logos')
+ */
+const deleteFileFromSupabase = async (publicUrl, bucket) => {
+  if (!publicUrl) return;
+
+  try {
+    // Extract the path from the public URL
+    // URL format: https://[PROJECT_ID].supabase.co/storage/v1/object/public/[BUCKET]/[PATH]
+    const urlParts = publicUrl.split(`${bucket}/`);
+    if (urlParts.length < 2) return;
+
+    const filePath = urlParts[1];
+
+    const { error } = await supabase.storage.from(bucket).remove([filePath]);
+
+    if (error) {
+      console.error(`Failed to delete file from Supabase: ${error.message}`);
+    }
+  } catch (err) {
+    console.error(`Error parsing Supabase URL for deletion: ${err.message}`);
+  }
+};
+
+export { uploadAvatar, uploadResume, uploadLogo, deleteFileFromSupabase };

@@ -1,4 +1,5 @@
 import { prisma } from "../config/db.js";
+import { deleteFileFromSupabase } from "./upload.service.js";
 import dotenv from "dotenv";
 dotenv.config();  
 const createProfile = async (data, id) => {
@@ -122,6 +123,14 @@ const deleteUser = async (id) => {
 
   if (!user) {
     throw new Error("User not found");
+  }
+
+  // Cleanup files from storage before deleting the user record
+  if (user.avatar) {
+    await deleteFileFromSupabase(user.avatar, "avatars");
+  }
+  if (user.resume) {
+    await deleteFileFromSupabase(user.resume, "resumes");
   }
 
   return prisma.user.delete({

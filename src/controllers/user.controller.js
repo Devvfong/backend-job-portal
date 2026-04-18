@@ -11,6 +11,7 @@ import {
 import {
   uploadAvatar as uploadAvatarToSupabase,
   uploadResume as uploadResumeToSupabase,
+  deleteFileFromSupabase,
 } from "../services/upload.service.js";
 
 const createProfileController = async (req, res) => {
@@ -133,6 +134,11 @@ const uploadAvatarController = async (req, res) => {
       return res.status(400).json({ message: "No avatar file provided" });
     }
 
+    // 1. Get current profile to check for old avatar
+    const currentProfile = await getProfile(req.user.id);
+    const oldAvatarUrl = currentProfile?.avatar;
+
+    // 2. Upload new avatar
     const publicUrl = await uploadAvatarToSupabase(
       req.file.buffer,
       req.file.mimetype,
@@ -140,7 +146,13 @@ const uploadAvatarController = async (req, res) => {
       req.user.id,
     );
 
+    // 3. Update database
     const user = await updateUserAvatar(req.user.id, publicUrl);
+
+    // 4. Cleanup old avatar if it exists
+    if (oldAvatarUrl) {
+      await deleteFileFromSupabase(oldAvatarUrl, "avatars");
+    }
 
     return res.status(200).json({
       status: "success",
@@ -159,6 +171,11 @@ const uploadResumeController = async (req, res) => {
       return res.status(400).json({ message: "No resume file provided" });
     }
 
+    // 1. Get current profile to check for old resume
+    const currentProfile = await getProfile(req.user.id);
+    const oldResumeUrl = currentProfile?.resume;
+
+    // 2. Upload new resume
     const publicUrl = await uploadResumeToSupabase(
       req.file.buffer,
       req.file.mimetype,
@@ -166,7 +183,13 @@ const uploadResumeController = async (req, res) => {
       req.user.id,
     );
 
+    // 3. Update database
     const user = await updateUserResume(req.user.id, publicUrl);
+
+    // 4. Cleanup old resume if it exists
+    if (oldResumeUrl) {
+      await deleteFileFromSupabase(oldResumeUrl, "resumes");
+    }
 
     return res.status(200).json({
       status: "success",

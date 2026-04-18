@@ -8,7 +8,10 @@ import {
   deleteCompanyLogo,
   getCompanyStatsService,
 } from "../services/company.service.js";
-import { uploadLogo as uploadLogoToSupabase } from "../services/upload.service.js";
+import {
+  uploadLogo as uploadLogoToSupabase,
+  deleteFileFromSupabase,
+} from "../services/upload.service.js";
 
 const createCompanyController = async (req, res) => {
   try {
@@ -96,12 +99,17 @@ const uploadLogoController = async (req, res) => {
       return res.status(400).json({ message: "No logo file provided" });
     }
 
-    // Since users must be company_admin and have a companyId to update, 
-    // we use req.user.companyId
     if (!req.user.companyId) {
-      return res.status(403).json({ message: "Forbidden: No company associated" });
+      return res
+        .status(403)
+        .json({ message: "Forbidden: No company associated" });
     }
 
+    // 1. Get current company to check for old logo
+    const company = await getCompanyServiceById(req.user.companyId);
+    const oldLogoUrl = company?.logo;
+
+    // 2. Upload new logo
     const publicUrl = await uploadLogoToSupabase(
       req.file.buffer,
       req.file.mimetype,
@@ -109,12 +117,21 @@ const uploadLogoController = async (req, res) => {
       req.user.companyId,
     );
 
-    const company = await updateCompanyLogo(req.user.companyId, publicUrl);
+    // 3. Update database
+    const updatedCompany = await updateCompanyLogo(
+      req.user.companyId,
+      publicUrl,
+    );
+
+    // 4. Cleanup old logo if it exists
+    if (oldLogoUrl) {
+      await deleteFileFromSupabase(oldLogoUrl, "logos");
+    }
 
     return res.status(200).json({
       status: "success",
       message: "Logo uploaded successfully",
-      data: company,
+      data: updatedCompany,
     });
   } catch (error) {
     console.error(error);

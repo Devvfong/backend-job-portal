@@ -75,7 +75,11 @@ const login = async (req, res) => {
     });
   } catch (error) {
     console.error("Error logging in:", error);
-    return res.status(500).json({ message: "Server error" });
+    return res.status(500).json({ 
+      message: "Server error", 
+      error: error.message,
+      stack: process.env.NODE_ENV === "development" ? error.stack : undefined 
+    });
   }
 };
 

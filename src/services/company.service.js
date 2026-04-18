@@ -1,5 +1,5 @@
 import { prisma } from "./../config/db.js";
-import { supabase } from "./../lib/supabase.js";
+import { deleteFileFromSupabase } from "./upload.service.js";
 
 const createCompanyService = async (data, user) => {
   if (!user || user.role !== "company_admin") {
@@ -192,11 +192,7 @@ const deleteCompanyService = async (id, user) => {
     throw new Error("Company not found");
   }
   if (company.logo) {
-    const urlParts = company.logo.split("/logos/");
-    if (urlParts.length > 1) {
-      const filePath = urlParts[1];
-      await supabase.storage.from("logos").remove([filePath]);
-    }
+    await deleteFileFromSupabase(company.logo, "logos");
   }
   return prisma.company.delete({
     where: { id },
@@ -231,11 +227,7 @@ const deleteCompanyLogo = async (user,companyId) => {
   }
 
   if (company.logo) {
-    const urlParts = company.logo.split("/logos/");
-    if (urlParts.length > 1) {
-      const filePath = urlParts[1];
-      await supabase.storage.from("logos").remove([filePath]);
-    }
+    await deleteFileFromSupabase(company.logo, "logos");
   }
 
   return prisma.company.update({
