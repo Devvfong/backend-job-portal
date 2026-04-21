@@ -25,14 +25,7 @@
 // export { prisma, connectDB, disconnectDB };
 import { PrismaClient } from "@prisma/client";
 
-// 1. Validate Environment Variable Immediately
-if (!process.env.DATABASE_URL) {
-  throw new Error(
-    "❌ Missing DATABASE_URL environment variable. Check your .env file."
-  );
-}
-
-// 2. Global Singleton Pattern (Prevents connection leaks during hot-reloading)
+// Global Singleton Pattern (Prevents connection leaks during hot-reloading)
 // We attach Prisma to globalThis so it survives server restarts in dev
 const globalForPrisma = globalThis;
 
@@ -40,7 +33,7 @@ const prisma = globalForPrisma.prisma ?? new PrismaClient({
   datasources: {
     db: { url: process.env.DATABASE_URL }
   },
-  // 3. Secure Logging Configuration
+  // Secure Logging Configuration
   log: process.env.NODE_ENV === "development" 
     ? ["query", "error", "warn"] // Verbose in dev
     : ["error"],                 // Only errors in prod
@@ -53,13 +46,8 @@ if (process.env.NODE_ENV !== "production") {
 
 // 4. Wrapper Functions for Clean API
 const connectDB = async () => {
-  try {
-    await prisma.$connect();
-    console.log("✅ Database connected successfully");
-  } catch (error) {
-    console.error("❌ Database connection failed:", error.message);
-    process.exit(1); // Exit process if DB fails to start
-  }
+  await prisma.$connect();
+  console.log("✅ Database connected successfully");
 };
 
 const disconnectDB = async () => {

@@ -18,7 +18,6 @@ import protect from "./middlewares/protect.middleware.js";
 import authorize from "./middlewares/authorize.middleware.js";
 
 dotenv.config(); // Load environment variables from .env file
-await connectDB(); // Connect to the database when the server starts
 const app = express(); // Create an Express application
 app.set("trust proxy", 1);
 app.use(helmet({
@@ -26,7 +25,7 @@ app.use(helmet({
 }));
 // Serve static files from the public directory
 app.use(express.static("public"));
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 app.use(express.json());	
 app.use(cookieParser()); // Middleware to parse cookies from incoming requests
 const pgSession = pgSimple(session);
@@ -54,14 +53,19 @@ app.use("/api/v1/users", userroutes);
 app.use("/api/v1/companies", companyroutes);
 app.use("/api/v1/applications", applicationRoute);
 app.use("/auth", githubAuthRoutes);
-app.get("/openapi.json", protect, authorize("company_admin"), (req, res) => {
+const docsPublicEnv = String(process.env.DOCS_PUBLIC || "").trim().toLowerCase();
+const docsArePublic =
+  process.env.NODE_ENV !== "production" ||
+  docsPublicEnv === "true" ||
+  docsPublicEnv === "1" ||
+  docsPublicEnv === "yes";
+app.get("/openapi.json", ...(docsArePublic ? [] : [protect, authorize("company_admin")]), (req, res) => {
   res.status(200).json(openApiDocument);
 });
 
 app.get(
   "/docs",
-  protect,
-  authorize("company_admin"),
+  ...(docsArePublic ? [] : [protect, authorize("company_admin")]),
   apiReference({
     theme: "kepler",
     spec: {
@@ -83,6 +87,12 @@ app.use((err, req, res, next) => {
 // Landing page is served statically from public/index.html
 const server = app.listen(PORT || 3000, "0.0.0.0", () => {
   console.log(`Server is running on port ${PORT}`);
+});
+
+// Connect after server boot so docs can still load without DB
+connectDB().catch((err) => {
+  console.warn("⚠️  Database unavailable. API endpoints may fail until DB is up.");
+  console.warn(err?.message || err);
 });
 
 // Prevent process from exiting cleanly in environments where event loop might drain

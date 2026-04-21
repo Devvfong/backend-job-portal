@@ -129,6 +129,7 @@ model Job {
   description  String?
   requirements String?
   benefits     String?
+  category     String?
 
   salaryMin Int?
   salaryMax Int?

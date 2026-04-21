@@ -7,7 +7,7 @@ const openApiDocument = {
   },
   servers: [
     {
-      url: "http://localhost:3000",
+      url: "http://localhost:5000",
       description: "Local development",
     },
   ],
@@ -17,7 +17,9 @@ const openApiDocument = {
     { name: "Jobs", description: "Job postings management" },
     { name: "Users", description: "User profile and resume management" },
     { name: "Companies", description: "Company profiles and logo management" },
-    { name: "Applications", description: "Job application submissions and status tracking" }
+    { name: "Applications", description: "Job application submissions and status tracking" },
+    { name: "OAuth", description: "Third-party OAuth flows" },
+    { name: "Admin", description: "Super admin management endpoints" }
   ],
   components: {
     securitySchemes: {
@@ -33,6 +35,14 @@ const openApiDocument = {
       },
     },
     schemas: {
+      ApiResponse: {
+        type: "object",
+        properties: {
+          status: { type: "string", example: "success" },
+          message: { type: "string", nullable: true, example: "OK" },
+          data: { type: "object", nullable: true, additionalProperties: true },
+        },
+      },
       SuccessMessage: {
         type: "object",
         properties: {
@@ -47,13 +57,29 @@ const openApiDocument = {
           message: { type: "string", example: "Error description" },
         },
       },
+      ValidationError: {
+        type: "object",
+        properties: {
+          status: { type: "string", example: "error" },
+          errors: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                field: { type: "string", example: "email" },
+                message: { type: "string", example: "Invalid email" },
+              },
+            },
+          },
+        },
+      },
       User: {
         type: "object",
         properties: {
           id: { type: "integer", example: 1 },
           name: { type: "string", example: "John Doe" },
           email: { type: "string", format: "email", example: "john@example.com" },
-          role: { type: "string", enum: ["job_seeker", "company_admin"], example: "job_seeker" },
+          role: { type: "string", enum: ["job_seeker", "company_admin", "super_admin"], example: "job_seeker" },
         },
       },
       Company: {
@@ -93,9 +119,15 @@ const openApiDocument = {
           status: { type: "string", enum: ["pending", "reviewing", "shortlisted", "rejected", "accepted"], example: "pending" },
           userId: { type: "integer", example: 1 },
           jobId: { type: "integer", example: 1 },
-          resumeId: { type: "integer", example: 1 },
           appliedAt: { type: "string", format: "date-time", example: "2023-10-01T12:00:00Z" }
         }
+      },
+      UpdateApplicationStatusRequest: {
+        type: "object",
+        required: ["status"],
+        properties: {
+          status: { type: "string", enum: ["pending", "reviewing", "shortlisted", "rejected", "accepted"], example: "reviewing" },
+        },
       },
       RegisterRequest: {
         type: "object",
@@ -185,6 +217,7 @@ const openApiDocument = {
         responses: {
           201: { description: "User registered successfully" },
           400: { description: "Validation error or user already exists" },
+          429: { description: "Too many attempts (rate limited)" },
         },
       },
     },
@@ -199,6 +232,7 @@ const openApiDocument = {
         responses: {
           200: { description: "Login successful" },
           400: { description: "Invalid credentials" },
+          429: { description: "Too many attempts (rate limited)" },
         },
       },
     },
@@ -223,26 +257,26 @@ const openApiDocument = {
         },
       },
     },
-    "/api/v1/auth": {
-      get: {
-        tags: ["Auth"],
-        summary: "Test protected admin route",
-        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
-        responses: {
-          200: { description: "Authenticated" },
-          401: { description: "Not authorized" },
-          403: { description: "Forbidden - Requires company_admin role" },
-        },
-      },
-    },
-
     // -------------------------------- JOBS --------------------------------
     "/api/v1/jobs": {
       get: {
         tags: ["Jobs"],
         summary: "Get all jobs with pagination & filtering",
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
         responses: {
           200: { description: "List of jobs returned" },
+          401: { description: "Not authorized" },
+        },
+      },
+    },
+    "/api/v1/jobs/saved": {
+      get: {
+        tags: ["Jobs"],
+        summary: "Get current user's saved jobs",
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        responses: {
+          200: { description: "Saved jobs returned" },
+          401: { description: "Not authorized" },
         },
       },
     },
@@ -250,10 +284,12 @@ const openApiDocument = {
       get: {
         tags: ["Jobs"],
         summary: "Get specific job by ID",
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
         responses: {
           200: { description: "Job details returned" },
           404: { description: "Job not found" },
+          401: { description: "Not authorized" },
         },
       },
       put: {
@@ -262,14 +298,22 @@ const openApiDocument = {
         security: [{ cookieAuth: [] }, { bearerAuth: [] }],
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
         requestBody: { content: { "application/json": { schema: { $ref: "#/components/schemas/CreateJobRequest" } } } },
-        responses: { 200: { description: "Job updated" } },
+        responses: {
+          200: { description: "Job updated" },
+          401: { description: "Not authorized" },
+          403: { description: "Forbidden - Requires company_admin role" },
+        },
       },
       delete: {
         tags: ["Jobs"],
         summary: "Delete job listing",
         security: [{ cookieAuth: [] }, { bearerAuth: [] }],
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
-        responses: { 200: { description: "Job deleted" } },
+        responses: {
+          200: { description: "Job deleted" },
+          401: { description: "Not authorized" },
+          403: { description: "Forbidden - Requires company_admin role" },
+        },
       },
     },
     "/api/v1/jobs/create": {
@@ -281,7 +325,23 @@ const openApiDocument = {
           required: true,
           content: { "application/json": { schema: { $ref: "#/components/schemas/CreateJobRequest" } } },
         },
-        responses: { 201: { description: "Job created" } },
+        responses: {
+          201: { description: "Job created" },
+          401: { description: "Not authorized" },
+          403: { description: "Forbidden - Requires company_admin role" },
+        },
+      },
+    },
+    "/api/v1/jobs/{id}/save": {
+      post: {
+        tags: ["Jobs"],
+        summary: "Toggle save/unsave a job for current user",
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        responses: {
+          200: { description: "Saved/unsaved successfully" },
+          401: { description: "Not authorized" },
+        },
       },
     },
 
@@ -306,6 +366,56 @@ const openApiDocument = {
         security: [{ cookieAuth: [] }, { bearerAuth: [] }],
         requestBody: { required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/ProfileRequest" } } } },
         responses: { 200: { description: "Profile updated" } },
+      },
+    },
+    "/api/v1/users/me/stats": {
+      get: {
+        tags: ["Users"],
+        summary: "Get current user's application stats",
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        responses: {
+          200: { description: "User stats returned" },
+          401: { description: "Not authorized" },
+        },
+      },
+    },
+    "/api/v1/users": {
+      get: {
+        tags: ["Admin"],
+        summary: "Get all users (Super Admin)",
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        responses: {
+          200: { description: "Users returned" },
+          401: { description: "Not authorized" },
+          403: { description: "Forbidden - Requires super_admin role" },
+        },
+      },
+    },
+    "/api/v1/users/profile/{id}": {
+      put: {
+        tags: ["Admin"],
+        summary: "Update any user's profile (Super Admin)",
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        requestBody: { required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/ProfileRequest" } } } },
+        responses: {
+          200: { description: "User updated" },
+          401: { description: "Not authorized" },
+          403: { description: "Forbidden - Requires super_admin role" },
+        },
+      },
+    },
+    "/api/v1/users/{id}": {
+      delete: {
+        tags: ["Admin"],
+        summary: "Delete a user (Super Admin)",
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        responses: {
+          200: { description: "User deleted" },
+          401: { description: "Not authorized" },
+          403: { description: "Forbidden - Requires super_admin role" },
+        },
       },
     },
     "/api/v1/users/avatar": {
@@ -391,6 +501,18 @@ const openApiDocument = {
         responses: { 200: { description: "Logo deleted" } },
       },
     },
+    "/api/v1/companies/me/stats": {
+      get: {
+        tags: ["Companies"],
+        summary: "Get current company stats (Company Admin)",
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        responses: {
+          200: { description: "Company stats returned" },
+          401: { description: "Not authorized" },
+          403: { description: "Forbidden - Requires company_admin role" },
+        },
+      },
+    },
 
     // -------------------------------- APPLICATIONS --------------------------------
     "/api/v1/applications/job/{id}/apply": {
@@ -410,6 +532,18 @@ const openApiDocument = {
         responses: { 200: { description: "List of applied jobs" } },
       },
     },
+    "/api/v1/applications/{id}": {
+      delete: {
+        tags: ["Applications"],
+        summary: "Withdraw an application (Job Seeker)",
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" }, description: "Application ID" }],
+        responses: {
+          200: { description: "Application withdrawn" },
+          401: { description: "Not authorized" },
+        },
+      },
+    },
     "/api/v1/applications/job/{id}/applicants": {
       get: {
         tags: ["Applications"],
@@ -427,9 +561,28 @@ const openApiDocument = {
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" }, description: "Application ID" }],
         requestBody: {
           required: true,
-          content: { "application/json": { schema: { type: "object", properties: { status: { type: "string", enum: ["pending", "reviewing", "shortlisted", "rejected", "accepted"] } } } } },
+          content: { "application/json": { schema: { $ref: "#/components/schemas/UpdateApplicationStatusRequest" } } },
         },
         responses: { 200: { description: "Application status updated" } },
+      },
+    },
+    "/auth/github": {
+      get: {
+        tags: ["OAuth"],
+        summary: "Start GitHub OAuth login",
+        responses: {
+          302: { description: "Redirect to GitHub OAuth consent screen" },
+        },
+      },
+    },
+    "/auth/github/callback": {
+      get: {
+        tags: ["OAuth"],
+        summary: "GitHub OAuth callback (sets JWT cookie / redirects to frontend)",
+        responses: {
+          302: { description: "Redirect back to frontend with token query param" },
+          401: { description: "Authentication failed" },
+        },
       },
     },
   },
