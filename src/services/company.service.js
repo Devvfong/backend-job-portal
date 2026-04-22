@@ -2,15 +2,28 @@ import { prisma } from "./../config/db.js";
 import { deleteFileFromSupabase } from "./upload.service.js";
 
 const createCompanyService = async (data, user) => {
-  if (!user || user.role !== "company_admin") {
-    throw new Error("Unauthorized kdmv ah chkae");
+  // Only authenticated users allowed.
+  if (!user) {
+    throw new Error("Unauthorized");
+  }
+
+  // Allow super_admin to create companies.
+  if (user.role === "super_admin") {
+    // ok
+  } else if (user.role === "company_admin") {
+    // company_admin may create a company only if not already linked to one
+    if (user.companyId) {
+      throw new Error("User is already linked to a company");
+    }
+  } else {
+    throw new Error("Unauthorized");
   }
 
   const companyName = data.companyName?.trim(); // Trim whitespace from companyName
   const email = data.email?.trim().toLowerCase();
   // Basic validation to ensure required fields are provided and not just whitespace
   if (!companyName || companyName === "") {
-    throw new Error("companyName is required ah thok theab");
+    throw new Error("companyName is required");
   }
 
   if (!email || email === "") {
@@ -206,7 +219,7 @@ const updateCompanyLogo = async (companyId, logoUrl) => {
     data: { logo: logoUrl },
   });
 };
-const deleteCompanyLogo = async (user,companyId) => {
+const deleteCompanyLogo = async (user, companyId) => {
   // Verify permissions: super_admin bypass or company ownership
   const isSuperAdmin = user?.role === 'super_admin';
   const isOwnCompanyAdmin = user?.role === 'company_admin' && user.companyId === companyId;
@@ -242,7 +255,7 @@ const getCompanyStatsService = async (companyId) => {
     prisma.job.count({
       where: { companyId: Number(companyId) },
     }),
-    
+
     // 2. Total Applications
     prisma.application.count({
       where: {

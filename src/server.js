@@ -11,6 +11,7 @@ import authRoutes from "./routes/auth.routes.js";
 import jobroutes from "./routes/job.routes.js";
 import userroutes from "./routes/user.routes.js";
 import companyroutes from "./routes/company.routes.js";
+import categoriesRoutes from "./routes/category.routes.js";
 import applicationRoute from "./routes/application.route.js";
 import githubAuthRoutes from "./routes/github.routes.js";
 import openApiDocument from "./utils/openapi.js";
@@ -26,7 +27,7 @@ app.use(helmet({
 // Serve static files from the public directory
 app.use(express.static("public"));
 const PORT = process.env.PORT || 5000;
-app.use(express.json());	
+app.use(express.json());
 app.use(cookieParser()); // Middleware to parse cookies from incoming requests
 const pgSession = pgSimple(session);
 
@@ -51,6 +52,7 @@ app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/jobs", jobroutes);
 app.use("/api/v1/users", userroutes);
 app.use("/api/v1/companies", companyroutes);
+app.use("/api/v1/categories", categoriesRoutes);
 app.use("/api/v1/applications", applicationRoute);
 app.use("/auth", githubAuthRoutes);
 const docsPublicEnv = String(process.env.DOCS_PUBLIC || "").trim().toLowerCase();
@@ -97,7 +99,7 @@ connectDB().catch((err) => {
 
 // Prevent process from exiting cleanly in environments where event loop might drain
 process.stdin.resume();
-setInterval(() => {}, 1000 * 60 * 60); // Keep alive every hour
+setInterval(() => { }, 1000 * 60 * 60); // Keep alive every hour
 // =========================================================================================================
 
 // ================================================================================================================
