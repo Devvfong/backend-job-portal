@@ -48,9 +48,9 @@ router.put(
 );
 router.delete("/:id", protect, authorize("company_admin"), deleteJobController);
 
-router.get("/", protect, getJobsController);
+router.get("/", getJobsController);
 router.get("/saved", protect, getSavedJobsController);
-router.get("/:id", protect, getJobByIdController);
+router.get("/:id", getJobByIdController);
 router.post("/:id/save", protect, toggleSaveJobController);
 
 export default router;
