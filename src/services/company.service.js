@@ -1,6 +1,37 @@
 import { prisma } from "./../config/db.js";
 import { deleteFileFromSupabase } from "./upload.service.js";
 
+const logoDevToken = process.env.LOGO_DEV_TOKEN || "YOUR_API_KEY";
+
+const getCompanyDomain = (data) => {
+  if (data.website) {
+    try {
+      return new URL(data.website).hostname.replace(/^www\./, "");
+    } catch {
+      // fall through to email parsing
+    }
+  }
+
+  if (data.email?.includes("@")) {
+    return data.email.split("@")[1].toLowerCase();
+  }
+
+  return null;
+};
+
+const getCompanyLogoUrl = (data) => {
+  if (data.logo) {
+    return data.logo;
+  }
+
+  const domain = getCompanyDomain(data);
+  if (!domain) {
+    return null;
+  }
+
+  return `https://img.logo.dev/${domain}?token=${logoDevToken}`;
+};
+
 const createCompanyService = async (data, user) => {
   // Only authenticated users allowed.
   if (!user) {
@@ -46,7 +77,7 @@ const createCompanyService = async (data, user) => {
         description: data.description ?? null,
         website: data.website ?? null,
         location: data.location ?? null,
-        logo: data.logo ?? null,
+        logo: getCompanyLogoUrl({ ...data, email }),
         industry: data.industry ?? null,
         size: data.size ?? null,
       },

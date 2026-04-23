@@ -2,6 +2,9 @@ import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcrypt";
 
 const prisma = new PrismaClient();
+const logoDevToken = process.env.LOGO_DEV_TOKEN || "YOUR_API_KEY";
+
+const getLogoUrl = (domain) => `https://img.logo.dev/${domain}?token=${logoDevToken}`;
 
 async function main() {
   console.log("🚀 Starting to seed database...");
@@ -65,7 +68,7 @@ async function main() {
         data: {
           companyName: c.name,
           email: `contact@${c.domain}`,
-          logo: `https://img.logo.dev/${c.domain}`,
+          logo: getLogoUrl(c.domain),
           description: `${c.name} global company.`,
           website: `https://${c.domain}`,
           location: "Global",

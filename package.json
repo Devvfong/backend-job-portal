@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
+    "query:companies": "node scripts/query-companies.js",
+    "backfill:company-logos": "node scripts/backfill-company-logos.js",
     "build": "npx prisma generate",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
