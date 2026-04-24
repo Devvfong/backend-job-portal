@@ -7,6 +7,7 @@ import { uploadAvatar, uploadResume } from "../middlewares/upload.middleware.js"
 import {
   createProfileController,
   getProfileController,
+  getProfileByIdController,
   updateProfileController,
   updateUserController,
   getAllUsersController,
@@ -49,6 +50,7 @@ const handleUploadError = (multerMiddleware) => (req, res, next) => {
 
 // ─── Profile ───────────────────────────────────────────────────────────────
 router.get("/profile", protect, getProfileController);
+router.get("/profile/:id", getProfileByIdController);
 router.get("/me/stats", protect, getUserStatsController);
 router.post("/profile", protect, validate(createProfileSchema), createProfileController);
 router.put("/profile", protect, validate(updateProfileSchema), updateProfileController);

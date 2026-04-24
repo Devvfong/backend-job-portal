@@ -215,9 +215,29 @@ const getUserStatsController = async (req, res) => {
   }
 };
 
+const getProfileByIdController = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const profile = await getProfile(Number(id));
+
+    if (!profile) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(200).json({
+      status: "success",
+      data: profile,
+    });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ error: e.message });
+  }
+};
+
 export {
   createProfileController,
   getProfileController,
+  getProfileByIdController,
   updateProfileController,
   updateUserController,
   getAllUsersController,
