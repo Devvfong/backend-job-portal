@@ -9,6 +9,7 @@
     "query:companies": "node scripts/query-companies.js",
     "backfill:company-logos": "node scripts/backfill-company-logos.js",
     "build": "npx prisma generate",
+    "backup": "node scripts/backup.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

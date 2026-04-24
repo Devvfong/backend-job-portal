@@ -17,48 +17,16 @@ async function main() {
   await prisma.user.deleteMany();
   await prisma.company.deleteMany();
 
-  // 1. Create Companies (full list)
+  // 1. Create Companies (global enterprise list)
   const companiesData = [
-    { name: "Apple Inc.", domain: "apple.com" },
-    { name: "Microsoft", domain: "microsoft.com" },
-    { name: "Alphabet Inc.", domain: "google.com" },
-    { name: "Amazon", domain: "amazon.com" },
-    { name: "Meta Platforms", domain: "meta.com" },
     { name: "NVIDIA", domain: "nvidia.com" },
-    { name: "Intel", domain: "intel.com" },
-    { name: "AMD", domain: "amd.com" },
-    { name: "TSMC", domain: "tsmc.com" },
-    { name: "Samsung Electronics", domain: "samsung.com" },
+    { name: "Microsoft", domain: "microsoft.com" },
+    { name: "Google", domain: "google.com" },
+    { name: "Amazon", domain: "amazon.com" },
+    { name: "Apple", domain: "apple.com" },
+    { name: "Meta", domain: "meta.com" },
     { name: "Oracle", domain: "oracle.com" },
-    { name: "Salesforce", domain: "salesforce.com" },
-    { name: "SAP", domain: "sap.com" },
-    { name: "Adobe", domain: "adobe.com" },
-    { name: "Tencent", domain: "tencent.com" },
-    { name: "Alibaba Group", domain: "alibaba.com" },
-    { name: "ByteDance", domain: "bytedance.com" },
-    { name: "Tesla", domain: "tesla.com" },
-    { name: "ASML", domain: "asml.com" },
-    { name: "Broadcom", domain: "broadcom.com" },
-    { name: "General Electric", domain: "ge.com" },
-    { name: "Caterpillar", domain: "cat.com" },
-    { name: "Siemens", domain: "siemens.com" },
-    { name: "Honeywell", domain: "honeywell.com" },
-    { name: "3M", domain: "3m.com" },
-    { name: "ABB", domain: "abb.com" },
-    { name: "RTX Corporation", domain: "rtx.com" },
-    { name: "Boeing", domain: "boeing.com" },
-    { name: "Airbus", domain: "airbus.com" },
-    { name: "Lockheed Martin", domain: "lockheedmartin.com" },
-    { name: "Schneider Electric", domain: "se.com" },
-    { name: "Emerson Electric", domain: "emerson.com" },
-    { name: "Eaton Corporation", domain: "eaton.com" },
-    { name: "Hitachi", domain: "hitachi.com" },
-    { name: "CATL", domain: "catl.com" },
-    { name: "Mitsubishi Heavy Industries", domain: "mhi.com" },
-    { name: "Bosch", domain: "bosch.com" },
-    { name: "Deere & Company", domain: "deere.com" },
-    { name: "Union Pacific Railroad", domain: "up.com" },
-    { name: "CSX Corporation", domain: "csx.com" }
+    { name: "Salesforce", domain: "salesforce.com" }
   ];
 
   const createdCompanies = [];
@@ -69,10 +37,10 @@ async function main() {
           companyName: c.name,
           email: `contact@${c.domain}`,
           logo: getLogoUrl(c.domain),
-          description: `${c.name} global company.`,
+          description: `${c.name} global enterprise technology company.`,
           website: `https://${c.domain}`,
           location: "Global",
-          industry: "Technology/Industrial",
+          industry: "Technology / Enterprise Software",
           size: "10000+"
         }
       });
@@ -88,7 +56,7 @@ async function main() {
   // 2. Create Company Admins
   for (let i = 0; i < createdCompanies.length; i++) {
     const comp = createdCompanies[i];
-    const email = `admin@${comp.companyName.toLowerCase().replace(/\s/g, "")} .com`;
+    const email = `admin@${comp.companyName.toLowerCase().replace(/\s/g, "")}.com`;
     try {
       await prisma.user.upsert({
         where: { email },
@@ -126,39 +94,79 @@ async function main() {
     skipDuplicates: true,
   });
 
-  // 4. Create Jobs: generate random jobs for each company
-  const jobTitles = [
-    "Frontend Developer",
-    "Backend Developer",
-    "Full Stack Developer",
-    "DevOps Engineer",
-    "AI Engineer",
-    "QA Engineer",
-    "Cloud Engineer",
-    "Data Engineer"
+  // 4. Create Jobs: 18 jobs per company, with 10 IT and 8 non-IT roles
+  const itJobTemplates = [
+    { title: "Software Engineer", category: "Software Engineering", jobType: "full_time", salaryMin: 90000, salaryMax: 150000, description: "Build and maintain core product systems." },
+    { title: "Frontend Engineer", category: "Software Engineering", jobType: "full_time", salaryMin: 85000, salaryMax: 140000, description: "Develop user interfaces and web experiences." },
+    { title: "Backend Engineer", category: "Software Engineering", jobType: "full_time", salaryMin: 90000, salaryMax: 155000, description: "Design APIs, services, and data flows." },
+    { title: "Cloud Engineer", category: "Infrastructure", jobType: "full_time", salaryMin: 95000, salaryMax: 160000, description: "Manage cloud systems and deployment reliability." },
+    { title: "DevOps Engineer", category: "Infrastructure", jobType: "full_time", salaryMin: 95000, salaryMax: 165000, description: "Automate releases and improve platform stability." },
+    { title: "Data Engineer", category: "Data", jobType: "full_time", salaryMin: 90000, salaryMax: 155000, description: "Build data pipelines and analytics infrastructure." },
+    { title: "Cybersecurity Analyst", category: "Security", jobType: "full_time", salaryMin: 95000, salaryMax: 165000, description: "Protect systems, users, and company data." },
+    { title: "QA Engineer", category: "Quality Assurance", jobType: "full_time", salaryMin: 80000, salaryMax: 130000, description: "Test products and improve release quality." },
+    { title: "Solutions Architect", category: "Architecture", jobType: "full_time", salaryMin: 115000, salaryMax: 180000, description: "Design scalable enterprise solutions." },
+    { title: "IT Support Specialist", category: "Support", jobType: "full_time", salaryMin: 60000, salaryMax: 100000, description: "Support devices, users, and internal systems." }
   ];
 
-  const jobTypes = ["full_time", "part_time", "contract", "internship", "remote"];
+  const nonItJobTemplates = [
+    { title: "Marketing Manager", category: "Marketing", jobType: "full_time", salaryMin: 70000, salaryMax: 120000, description: "Lead campaigns and brand strategy." },
+    { title: "Product Marketing Specialist", category: "Marketing", jobType: "full_time", salaryMin: 65000, salaryMax: 110000, description: "Position products and support launches." },
+    { title: "Sales Executive", category: "Sales", jobType: "full_time", salaryMin: 60000, salaryMax: 105000, description: "Grow accounts and drive revenue." },
+    { title: "Business Development Manager", category: "Sales", jobType: "full_time", salaryMin: 80000, salaryMax: 135000, description: "Build partnerships and new business opportunities." },
+    { title: "HR Business Partner", category: "Human Resources", jobType: "full_time", salaryMin: 75000, salaryMax: 125000, description: "Support teams, hiring, and employee success." },
+    { title: "Finance Analyst", category: "Finance", jobType: "full_time", salaryMin: 75000, salaryMax: 130000, description: "Analyze financial performance and planning." },
+    { title: "Operations Coordinator", category: "Operations", jobType: "full_time", salaryMin: 55000, salaryMax: 95000, description: "Coordinate daily business operations." },
+    { title: "Content Strategist", category: "Marketing", jobType: "contract", salaryMin: 60000, salaryMax: 100000, description: "Create content plans and campaign messaging." }
+  ];
 
-  function rand(min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-  }
+  const jobsPerCompany = 18;
+  const itJobsPerCompany = 10;
+  const nonItJobsPerCompany = 8;
 
-  for (const comp of createdCompanies) {
-    const jobCount = rand(3, 6);
-    for (let i = 0; i < jobCount; i++) {
+  for (let companyIndex = 0; companyIndex < createdCompanies.length; companyIndex++) {
+    const comp = createdCompanies[companyIndex];
+    let templateIndex = 0;
+
+    for (let i = 0; i < itJobsPerCompany; i++) {
+      const template = itJobTemplates[templateIndex % itJobTemplates.length];
+      templateIndex += 1;
+
       try {
         await prisma.job.create({
           data: {
-            title: jobTitles[Math.floor(Math.random() * jobTitles.length)],
-            location: comp.location || "Remote",
-            jobType: jobTypes[Math.floor(Math.random() * jobTypes.length)],
-            description: "Generated job description.",
-            requirements: "Relevant experience required.",
-            benefits: "Health insurance, remote work.",
-            category: "Software Development",
-            salaryMin: rand(70000, 100000),
-            salaryMax: rand(110000, 180000),
+            title: template.title,
+            location: comp.location || "Global",
+            jobType: template.jobType,
+            description: template.description,
+            requirements: "Relevant experience and strong communication skills.",
+            benefits: "Competitive salary, growth opportunities, and staff benefits.",
+            category: template.category,
+            salaryMin: template.salaryMin,
+            salaryMax: template.salaryMax,
+            status: "open",
+            companyId: comp.id
+          }
+        });
+      } catch (e) {
+        console.error(`Warning: failed to create job for ${comp.companyName}:`, e.message || e);
+      }
+    }
+
+    for (let i = 0; i < nonItJobsPerCompany; i++) {
+      const template = nonItJobTemplates[i % nonItJobTemplates.length];
+
+      try {
+        await prisma.job.create({
+          data: {
+            title: template.title,
+            location: comp.location || "Global",
+            jobType: template.jobType,
+            description: template.description,
+            requirements: "Relevant experience and strong communication skills.",
+            benefits: "Competitive salary, growth opportunities, and staff benefits.",
+            category: template.category,
+            salaryMin: template.salaryMin,
+            salaryMax: template.salaryMax,
             status: "open",
             companyId: comp.id
           }
@@ -169,7 +177,7 @@ async function main() {
     }
   }
 
-  console.log("✅ Successfully seeded database with tech-giant companies, specific jobs, and users!");
+  console.log(`✅ Successfully seeded ${createdCompanies.length} global companies with ${jobsPerCompany} jobs each and mixed roles!`);
 }
 
 main()
