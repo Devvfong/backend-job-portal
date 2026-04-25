@@ -3,6 +3,7 @@ import {
   createCompanyController,
   getCompanyController,
   getCompanyControllerById,
+  getMyCompanyController,
   updateCompanyController,
   deleteCompanyController,
   uploadLogoController,
@@ -49,6 +50,13 @@ router.get(
   protect,
   authorize("company_admin"),
   getCompanyStatsController,
+);
+
+router.get(
+  "/me",
+  protect,
+  authorize("company_admin"),
+  getMyCompanyController,
 );
 
 router.post(

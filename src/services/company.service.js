@@ -1,7 +1,7 @@
 import { prisma } from "./../config/db.js";
 import { deleteFileFromSupabase } from "./upload.service.js";
 
-const logoDevToken = process.env.LOGO_DEV_TOKEN || "YOUR_API_KEY";
+const logoDevToken = process.env.LOGO_DEV_TOKEN;
 
 const getCompanyDomain = (data) => {
   if (data.website) {
@@ -198,14 +198,50 @@ const getCompanyServiceById = async (id) => {
     },
   });
 };
+
+const getMyCompanyService = async (companyId) => {
+  if (!companyId) {
+    throw new Error("Company not found");
+  }
+  return getCompanyServiceById(Number(companyId));
+};
+
+const getMyCompanyJobsService = async (companyId) => {
+  if (!companyId) {
+    throw new Error("Company not found");
+  }
+
+  return prisma.job.findMany({
+    where: { companyId: Number(companyId) },
+    include: {
+      company: {
+        select: {
+          id: true,
+          companyName: true,
+          logo: true,
+        },
+      },
+      _count: {
+        select: {
+          applications: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+};
+
 const updateCompanyService = async (id, data, user) => {
   // Verify permissions: super_admin bypass or company ownership
-  const isSuperAdmin = user?.role === 'super_admin';
-  const isOwnCompanyAdmin = user?.role === 'company_admin' && user.companyId === id;
+  const isSuperAdmin = user?.role === "super_admin";
+  const isOwnCompanyAdmin = user?.role === "company_admin" && user.companyId === id;
 
   if (!isSuperAdmin && !isOwnCompanyAdmin) {
     throw new Error("Unauthorized");
   }
+
   const company = await prisma.company.findUnique({
     where: { id },
   });
@@ -213,6 +249,7 @@ const updateCompanyService = async (id, data, user) => {
   if (!company) {
     throw new Error("Company not found");
   }
+
   return prisma.company.update({
     where: { id },
     data,
@@ -221,8 +258,8 @@ const updateCompanyService = async (id, data, user) => {
 
 const deleteCompanyService = async (id, user) => {
   // Verify permissions: super_admin bypass or company admin role
-  const isSuperAdmin = user?.role === 'super_admin';
-  const isCompanyAdmin = user?.role === 'company_admin';
+  const isSuperAdmin = user?.role === "super_admin";
+  const isCompanyAdmin = user?.role === "company_admin";
 
   if (!isSuperAdmin && !isCompanyAdmin) {
     throw new Error("Unauthorized");
@@ -235,13 +272,14 @@ const deleteCompanyService = async (id, user) => {
   if (!company) {
     throw new Error("Company not found");
   }
+
   if (company.logo) {
     await deleteFileFromSupabase(company.logo, "logos");
   }
+
   return prisma.company.delete({
     where: { id },
   });
-
 };
 
 const updateCompanyLogo = async (companyId, logoUrl) => {
@@ -250,14 +288,16 @@ const updateCompanyLogo = async (companyId, logoUrl) => {
     data: { logo: logoUrl },
   });
 };
+
 const deleteCompanyLogo = async (user, companyId) => {
   // Verify permissions: super_admin bypass or company ownership
-  const isSuperAdmin = user?.role === 'super_admin';
-  const isOwnCompanyAdmin = user?.role === 'company_admin' && user.companyId === companyId;
+  const isSuperAdmin = user?.role === "super_admin";
+  const isOwnCompanyAdmin = user?.role === "company_admin" && user.companyId === companyId;
 
   if (!isSuperAdmin && !isOwnCompanyAdmin) {
     throw new Error("Unauthorized");
   }
+
   const company = await prisma.company.findUnique({
     where: { id: companyId },
   });
@@ -270,9 +310,7 @@ const deleteCompanyLogo = async (user, companyId) => {
     throw new Error("No logo found");
   }
 
-  if (company.logo) {
-    await deleteFileFromSupabase(company.logo, "logos");
-  }
+  await deleteFileFromSupabase(company.logo, "logos");
 
   return prisma.company.update({
     where: { id: companyId },
@@ -282,19 +320,14 @@ const deleteCompanyLogo = async (user, companyId) => {
 
 const getCompanyStatsService = async (companyId) => {
   const [totalJobs, totalApplications, statusCounts] = await Promise.all([
-    // 1. Total Jobs
     prisma.job.count({
       where: { companyId: Number(companyId) },
     }),
-
-    // 2. Total Applications
     prisma.application.count({
       where: {
         job: { companyId: Number(companyId) },
       },
     }),
-
-    // 3. Status Breakdown
     prisma.application.groupBy({
       by: ["status"],
       where: {
@@ -304,7 +337,6 @@ const getCompanyStatsService = async (companyId) => {
     }),
   ]);
 
-  // Format status counts into a nice object
   const statusSummary = statusCounts.reduce((acc, item) => {
     acc[item.status] = item._count;
     return acc;
@@ -316,10 +348,13 @@ const getCompanyStatsService = async (companyId) => {
     statusSummary,
   };
 };
+
 export {
   createCompanyService,
   getCompanyService,
   getCompanyServiceById,
+  getMyCompanyService,
+  getMyCompanyJobsService,
   updateCompanyService,
   deleteCompanyService,
   updateCompanyLogo,

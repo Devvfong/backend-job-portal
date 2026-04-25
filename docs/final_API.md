@@ -289,6 +289,14 @@ multipart/form-data
 
 ---
 
+## Get My Company
+
+**GET** `/companies/me`
+
+Returns the company linked to the authenticated `company_admin`.
+
+---
+
 ## Update Company
 
 **PUT** `/companies/:id`

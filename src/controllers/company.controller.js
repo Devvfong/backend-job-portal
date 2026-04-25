@@ -2,6 +2,7 @@ import {
   createCompanyService,
   getCompanyService,
   getCompanyServiceById,
+  getMyCompanyService,
   updateCompanyService,
   deleteCompanyService,
   updateCompanyLogo,
@@ -50,6 +51,30 @@ const getCompanyControllerById = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+const getMyCompanyController = async (req, res) => {
+  try {
+    if (!req.user?.companyId) {
+      return res.status(404).json({ message: "Company not found" });
+    }
+
+    const company = await getMyCompanyService(req.user.companyId);
+    if (!company) {
+      return res.status(404).json({ message: "Company not found" });
+    }
+
+    return res.status(200).json({
+      status: "success",
+      data: company,
+    });
+  } catch (error) {
+    console.error(error);
+    if (error.message === "Company not found") {
+      return res.status(404).json({ message: "Company not found" });
+    }
     return res.status(500).json({ error: error.message });
   }
 };
@@ -180,6 +205,7 @@ export {
   createCompanyController,
   getCompanyController,
   getCompanyControllerById,
+  getMyCompanyController,
   updateCompanyController,
   deleteCompanyController,
   uploadLogoController,
