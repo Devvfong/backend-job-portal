@@ -1,7 +1,7 @@
 import { prisma } from "../config/db.js";
 import { deleteFileFromSupabase } from "./upload.service.js";
 import dotenv from "dotenv";
-dotenv.config();  
+dotenv.config();
 const createProfile = async (data, id) => {
   // Profile should update existing user, not create a new user row
   const user = await prisma.user.findUnique({
@@ -264,4 +264,3 @@ export {
   deleteUser,
   getUserStatsService,
 };
-  

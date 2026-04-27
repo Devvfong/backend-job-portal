@@ -1,16 +1,16 @@
 import { prisma } from "../config/db.js";
 
-const createJobService = async (data, user) =>{
-  if (!user){
+const createJobService = async (data, user) => {
+  if (!user) {
     throw new Error("Forbidden user not authenticated");
   }
- 
+
   const companyId = data.companyId || user.companyId; // this for 
-  if (!companyId){
-    throw new Error ("A companyId must be provided in the request body or linked to your account");
+  if (!companyId) {
+    throw new Error("A companyId must be provided in the request body or linked to your account");
   }
   const duplicated = await prisma.job.findFirst({
-     where: {
+    where: {
       companyId: Number(companyId),
       title: data.title,
       location: data.location,
@@ -22,10 +22,10 @@ const createJobService = async (data, user) =>{
       salaryMax: data.salaryMax ? Number(data.salaryMax) : undefined,
     },
   })
-  if(duplicated){
+  if (duplicated) {
     throw new Error("A job with identical details already exists for this company");
   }
-  else if(!duplicated){
+  else if (!duplicated) {
     return prisma.job.create({
       data: {
         companyId: Number(companyId),
@@ -48,6 +48,7 @@ const getJobService = async (query) => {
     search,
     location,
     jobType,
+    category,
     minSalary,
     maxSalary,
     page = 1,
@@ -80,6 +81,10 @@ const getJobService = async (query) => {
 
   if (jobType) {
     where.jobType = String(jobType);
+  }
+
+  if (category) {
+    where.category = String(category);
   }
 
   if (minSalary || maxSalary) {
@@ -265,16 +270,16 @@ const deleteJobService = async (id, user) => {
   }
 
   return prisma.job.delete({
-  where: { id },
+    where: { id },
   });
 };
 
-export { 
-  createJobService, 
-  getJobService, 
-  getJobByIdService, 
-  updateJobService, 
-  deleteJobService, 
-  toggleSaveJobService, 
-  getSavedJobsService 
+export {
+  createJobService,
+  getJobService,
+  getJobByIdService,
+  updateJobService,
+  deleteJobService,
+  toggleSaveJobService,
+  getSavedJobsService
 };

@@ -257,20 +257,18 @@ const updateCompanyService = async (id, data, user) => {
 };
 
 const deleteCompanyService = async (id, user) => {
-  // Verify permissions: super_admin bypass or company admin role
-  const isSuperAdmin = user?.role === "super_admin";
-  const isCompanyAdmin = user?.role === "company_admin";
-
-  if (!isSuperAdmin && !isCompanyAdmin) {
-    throw new Error("Unauthorized");
-  }
-
   const company = await prisma.company.findUnique({
-    where: { id },
-  });
-
+    wehre: { id },
+  })
   if (!company) {
     throw new Error("Company not found");
+  }
+  // Verify permissions: super_admin bypass or company admin role
+  const isSuperAdmin = user?.role === "super_admin";
+  const isOwnCompanyAdmin = user?.role === "company_admin" && user.companyId === id;
+
+  if (!isSuperAdmin && !isOwnCompanyAdmin) {
+    throw new Error("Unauthorized");
   }
 
   if (company.logo) {

@@ -13,6 +13,7 @@ import {
 import protect from "../middlewares/protect.middleware.js";
 import authorize from "../middlewares/authorize.middleware.js";
 import { uploadLogo } from "../middlewares/upload.middleware.js";
+import decryptMiddleware from "../middlewares/decrypt.middleware.js";
 const router = express.Router();
 import validate from "../middlewares/validate.middleware.js";
 import { z } from "zod";
@@ -66,13 +67,14 @@ router.post(
   createCompanyController,
 );
 
-router.get("/:id", getCompanyControllerById);
+router.get("/:id", decryptMiddleware, getCompanyControllerById);
 router.put(
   "/:id",
+  decryptMiddleware,
   protect,
   validate(updateCompanySchema),
   updateCompanyController,
 );
-router.delete("/:id", protect, deleteCompanyController);
+router.delete("/:id", decryptMiddleware, protect, deleteCompanyController);
 
 export default router;

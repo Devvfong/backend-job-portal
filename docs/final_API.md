@@ -367,6 +367,7 @@ Query:
 - search
 - location
 - jobType
+- category
 - page
 - limit
 

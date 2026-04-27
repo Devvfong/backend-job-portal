@@ -4,6 +4,7 @@ import multer from "multer";
 import protect from "../middlewares/protect.middleware.js";
 import validate from "../middlewares/validate.middleware.js";
 import { uploadAvatar, uploadResume } from "../middlewares/upload.middleware.js";
+import decryptMiddleware from "../middlewares/decrypt.middleware.js";
 import {
   createProfileController,
   getProfileController,
@@ -50,7 +51,7 @@ const handleUploadError = (multerMiddleware) => (req, res, next) => {
 
 // ─── Profile ───────────────────────────────────────────────────────────────
 router.get("/profile", protect, getProfileController);
-router.get("/profile/:id", getProfileByIdController);
+router.get("/profile/:id", decryptMiddleware, getProfileByIdController);
 router.get("/me/stats", protect, getUserStatsController);
 router.post("/profile", protect, validate(createProfileSchema), createProfileController);
 router.put("/profile", protect, validate(updateProfileSchema), updateProfileController);
@@ -58,8 +59,8 @@ router.put("/profile", protect, validate(updateProfileSchema), updateProfileCont
 // ─── Admin User Routes ──────────────────────────────────────────────────────
 // Super Admin can manage any user
 router.get("/", protect, authorize("super_admin"), getAllUsersController);
-router.put("/profile/:id", protect, authorize("super_admin"), validate(updateProfileSchema), updateUserController);
-router.delete("/:id", protect, authorize("super_admin"), deleteUserController);
+router.put("/profile/:id", decryptMiddleware, protect, authorize("super_admin"), validate(updateProfileSchema), updateUserController);
+router.delete("/:id", decryptMiddleware, protect, authorize("super_admin"), deleteUserController);
 
 // ─── Uploads ───────────────────────────────────────────────────────────────
 router.post("/avatar", protect, handleUploadError(uploadAvatar.single("avatar")), uploadAvatarController);

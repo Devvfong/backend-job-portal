@@ -3,6 +3,7 @@ import { z } from "zod";
 import protect from "../middlewares/protect.middleware.js";
 import authorize from "../middlewares/authorize.middleware.js";
 import validate from "../middlewares/validate.middleware.js";
+import decryptMiddleware from "../middlewares/decrypt.middleware.js";
 import {
   createJobController,
   getJobsController,
@@ -50,7 +51,7 @@ router.delete("/:id", protect, authorize("company_admin"), deleteJobController);
 
 router.get("/", getJobsController);
 router.get("/saved", protect, getSavedJobsController);
-router.get("/:id", getJobByIdController);
-router.post("/:id/save", protect, toggleSaveJobController);
+router.get("/:id", decryptMiddleware, getJobByIdController);
+router.post("/:id/save", decryptMiddleware, protect, toggleSaveJobController);
 
 export default router;
