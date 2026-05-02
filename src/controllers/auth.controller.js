@@ -1,13 +1,26 @@
 import generateToken from "../utils/generateToken.js";
+import CryptoJS from 'crypto-js';
 import {
   findUserByEmail,
   createUser,
   verifyPassword,
 } from "../services/auth.service.js";
 
+const secretKey = process.env.ENCRYPTION_KEY || 'default-secret-key-change-in-prod';
+
+const decryptParam = (encrypted) => {
+  try {
+    const bytes = CryptoJS.AES.decrypt(encrypted, secretKey);
+    return bytes.toString(CryptoJS.enc.Utf8);
+  } catch (e) {
+    throw new Error('Invalid encrypted parameter');
+  }
+};
+
 const register = async (req, res) => {
   const { name, email, password } = req.body;
   try {
+    const decryptedPassword = decryptParam(password);
     // Check if user already exists
     const userExists = await findUserByEmail(email);
     if (userExists) {
@@ -18,12 +31,12 @@ const register = async (req, res) => {
     const user = await createUser({
       name,
       email,
-      password,
+      password: decryptedPassword,
       role: "job_seeker", //prevent hacker patch if leak endpoint, only allow register as job seeker, company admin must be created by admin
     });
 
     // Generate token and set cookie
-    const token = generateToken(user.id, res);
+    const token = generateToken(user.id, user.role, res);
 
     return res.status(201).json({
       status: "success",
@@ -33,6 +46,7 @@ const register = async (req, res) => {
           id: user.id,
           name: user.name,
           email: user.email,
+          role: user.role,
         },
         token,
       },
@@ -46,6 +60,7 @@ const register = async (req, res) => {
 const login = async (req, res) => {
   const { email, password } = req.body;
   try {
+    const decryptedPassword = decryptParam(password);
     // Check if user exists
     const user = await findUserByEmail(email);
     if (!user) {
@@ -53,13 +68,13 @@ const login = async (req, res) => {
     }
 
     // Check if password is correct
-    const isPasswordValid = await verifyPassword(password, user.password);
+    const isPasswordValid = await verifyPassword(decryptedPassword, user.password);
     if (!isPasswordValid) {
       return res.status(400).json({ message: "Invalid email or password" });
     }
 
     // Generate token and set cookie
-    const token = generateToken(user.id, res);
+    const token = generateToken(user.id, user.role, res);
 
     return res.status(200).json({
       status: "success",
@@ -69,16 +84,17 @@ const login = async (req, res) => {
           id: user.id,
           name: user.name,
           email: user.email,
+          role: user.role,
         },
         token,
       },
     });
   } catch (error) {
     console.error("Error logging in:", error);
-    return res.status(500).json({ 
-      message: "Server error", 
+    return res.status(500).json({
+      message: "Server error",
       error: error.message,
-      stack: process.env.NODE_ENV === "development" ? error.stack : undefined 
+      stack: process.env.NODE_ENV === "development" ? error.stack : undefined
     });
   }
 };
@@ -96,7 +112,7 @@ const logout = async (req, res) => {
   });
 };
 const getMe = async (req, res) => {
-  const token = generateToken(req.user.id, res); // Refresh token on profile access
+  const token = generateToken(req.user.id, req.user.role, res); // Refresh token on profile access
   try {
     return res.status(200).json({
       status: "success",

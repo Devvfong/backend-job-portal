@@ -17,7 +17,7 @@ router.get(
   (req, res) => {
     // Successful authentication
     // Generate JWT and set it as a cookie
-    const token = generateToken(req.user.id, res);
+    const token = generateToken(req.user.id, req.user.role, res);
 
     // Redirect back to the frontend
     // If you have a specific dashboard route, you can change this to /dashboard
