@@ -26,6 +26,13 @@ const protect = async (req, res, next) => {
         email: true,
         role: true, //to check if the user is company admin or not in the authorize middleware
         companyId: true,
+        avatar: true,
+        headline: true,
+        bio: true,
+        location: true,
+        phone: true,
+        skills: true,
+        resume: true,
       },
     });
     if (!req.user) {
