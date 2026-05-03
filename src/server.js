@@ -14,6 +14,7 @@ import companyroutes from "./routes/company.routes.js";
 import categoriesRoutes from "./routes/category.routes.js";
 import applicationRoute from "./routes/application.route.js";
 import githubAuthRoutes from "./routes/github.routes.js";
+import linkedinAuthRoutes from "./routes/linkedin.routes.js";
 import openApiDocument from "./utils/openapi.js";
 import protect from "./middlewares/protect.middleware.js";
 import authorize from "./middlewares/authorize.middleware.js";
@@ -55,6 +56,7 @@ app.use("/api/v1/companies", companyroutes);
 app.use("/api/v1/categories", categoriesRoutes);
 app.use("/api/v1/applications", applicationRoute);
 app.use("/auth", githubAuthRoutes);
+app.use("/auth", linkedinAuthRoutes);
 const docsPublicEnv = String(process.env.DOCS_PUBLIC || "").trim().toLowerCase();
 const docsArePublic =
   process.env.NODE_ENV !== "production" ||
