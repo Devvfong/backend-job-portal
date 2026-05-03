@@ -146,7 +146,7 @@ if (LINKEDIN_CLIENT_ID && LINKEDIN_CLIENT_SECRET) {
         clientID: LINKEDIN_CLIENT_ID,
         clientSecret: LINKEDIN_CLIENT_SECRET,
         callbackURL: "/auth/linkedin/callback",
-        scope: ["r_emailaddress", "r_liteprofile"],
+        scope: ["openid", "profile", "email"],
       },
       async (accessToken, refreshToken, profile, done) => {
         try {
