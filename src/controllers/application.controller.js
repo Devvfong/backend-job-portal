@@ -2,6 +2,7 @@ import {
   applyToJobService,
   getMyApplicationsService,
   getApplicantsForJobService,
+  getCompanyApplicantsService,
   updateApplicationStatusService,
   withdrawApplicationService,
 } from "../services/application.service.js";
@@ -101,10 +102,26 @@ const withdrawApplicationController = async (req, res) => {
   }
 };
 
+const getCompanyApplicantsController = async (req, res) => {
+  try {
+    const applicants = await getCompanyApplicantsService(req.user);
+    return res.status(200).json({
+      status: "success",
+      data: applicants,
+    });
+  } catch (err) {
+    if (err.message.includes("Forbidden")) {
+      return res.status(403).json({ message: err.message });
+    }
+    return res.status(500).json({ error: err.message });
+  }
+};
+
 export {
   applyToJobController,
   getMyApplicationsController,
   getApplicantsController,
+  getCompanyApplicantsController,
   updateApplicationStatusController,
   withdrawApplicationController,
 };

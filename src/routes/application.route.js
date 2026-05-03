@@ -5,6 +5,7 @@ import {
   getApplicantsController,
   updateApplicationStatusController,
   withdrawApplicationController,
+  getCompanyApplicantsController,
 } from "../controllers/application.controller.js";
 import protect from "../middlewares/protect.middleware.js";
 import authorize from "../middlewares/authorize.middleware.js";
@@ -18,6 +19,7 @@ router.get("/me", protect, getMyApplicationsController);
 router.delete("/:id", decryptMiddleware, protect, withdrawApplicationController);
 
 // 🏢 RECRUITER (Company Admin) ENDPOINTS
+router.get("/company", protect, authorize("company_admin"), getCompanyApplicantsController);
 router.get("/job/:id/applicants", decryptMiddleware, protect, authorize("company_admin"), getApplicantsController);
 router.patch("/:id/status", decryptMiddleware, protect, authorize("company_admin"), updateApplicationStatusController);
 

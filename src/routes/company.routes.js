@@ -10,6 +10,7 @@ import {
   deleteLogoController,
   getCompanyStatsController,
 } from "../controllers/company.controller.js";
+import { getMyCompanyJobsController } from "../controllers/job.controller.js";
 import protect from "../middlewares/protect.middleware.js";
 import authorize from "../middlewares/authorize.middleware.js";
 import { uploadLogo } from "../middlewares/upload.middleware.js";
@@ -51,6 +52,13 @@ router.get(
   protect,
   authorize("company_admin"),
   getCompanyStatsController,
+);
+
+router.get(
+  "/me/jobs",
+  protect,
+  authorize("company_admin"),
+  getMyCompanyJobsController,
 );
 
 router.get(

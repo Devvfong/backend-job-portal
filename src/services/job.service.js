@@ -274,6 +274,22 @@ const deleteJobService = async (id, user) => {
   });
 };
 
+const getMyCompanyJobsService = async (user) => {
+  if (!user || !user.companyId) {
+    throw new Error("Admin account is not linked to a company");
+  }
+
+  return prisma.job.findMany({
+    where: { companyId: user.companyId },
+    include: {
+      _count: {
+        select: { applications: true },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+};
+
 export {
   createJobService,
   getJobService,
@@ -281,5 +297,6 @@ export {
   updateJobService,
   deleteJobService,
   toggleSaveJobService,
-  getSavedJobsService
+  getSavedJobsService,
+  getMyCompanyJobsService,
 };

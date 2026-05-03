@@ -6,6 +6,7 @@ import {
   deleteJobService,
   toggleSaveJobService,
   getSavedJobsService,
+  getMyCompanyJobsService,
 } from "../services/job.service.js";
 
 const createJobController = async (req, res) => {
@@ -148,6 +149,19 @@ const getSavedJobsController = async (req, res) => {
   }
 };
 
+const getMyCompanyJobsController = async (req, res) => {
+  try {
+    const jobs = await getMyCompanyJobsService(req.user);
+    return res.status(200).json({
+      status: "success",
+      data: jobs,
+    });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ error: e.message });
+  }
+};
+
 export {
   createJobController,
   getJobsController,
@@ -156,4 +170,5 @@ export {
   deleteJobController,
   toggleSaveJobController,
   getSavedJobsController,
+  getMyCompanyJobsController,
 };

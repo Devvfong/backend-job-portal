@@ -117,10 +117,46 @@ const withdrawApplicationService = async (applicationId, user) => {
   });
 };
 
+const getCompanyApplicantsService = async (user) => {
+  if (!user || !user.companyId) {
+    throw new Error("Forbidden: You must be associated with a company");
+  }
+
+  return prisma.application.findMany({
+    where: {
+      job: {
+        companyId: user.companyId,
+      },
+    },
+    include: {
+      job: {
+        select: {
+          id: true,
+          title: true,
+          location: true,
+        },
+      },
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          headline: true,
+          avatar: true,
+          resume: true,
+          skills: true,
+        },
+      },
+    },
+    orderBy: { appliedDate: "desc" },
+  });
+};
+
 export {
   applyToJobService,
   getMyApplicationsService,
   getApplicantsForJobService,
+  getCompanyApplicantsService,
   updateApplicationStatusService,
   withdrawApplicationService,
 };
