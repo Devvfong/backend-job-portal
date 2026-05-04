@@ -1,6 +1,7 @@
 import { Router } from "express";
 import passport from "../config/passport.js";
-import generateToken from "../utils/generateToken.js";
+import generateTokens from "../utils/generateToken.js";
+import { updateRefreshToken } from "../services/auth.service.js";
 
 const router = Router();
 
@@ -17,7 +18,8 @@ router.get(
   (req, res) => {
     // Successful authentication
     // Generate JWT and set it as a cookie
-    const token = generateToken(req.user.id, req.user.role, res);
+    const { accessToken, refreshToken } = generateTokens(req.user.id, req.user.role, res);
+    updateRefreshToken(req.user.id, refreshToken).catch(console.error);
 
     // Redirect back to the frontend
     // If you have a specific dashboard route, you can change this to /dashboard

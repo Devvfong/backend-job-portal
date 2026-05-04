@@ -38,4 +38,4 @@ const verifyPassword = async (plainPassword, hashedPassword) => {
   return isMatch;
 };
 
-export { findUserByEmail, createUser, verifyPassword };
+export { findUserByEmail, createUser, verifyPassword, updateRefreshToken, findUserById };

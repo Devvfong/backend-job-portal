@@ -1,15 +1,26 @@
 import jwt from "jsonwebtoken";
 
-const generateToken = (userId, role, res) => {
-  const token = jwt.sign({ id: userId, role: role }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES_IN || "1d",
+const generateTokens = (userId, role, res) => {
+  // 1. Access Token (Short-lived, eg. 15 mins)
+  const accessToken = jwt.sign({ id: userId, role: role }, process.env.JWT_SECRET, {
+    expiresIn: "15m",
   });
-  res.cookie("jwt", token, {
+
+  // 2. Refresh Token (Long-lived, eg. 7 days)
+  const refreshToken = jwt.sign({ id: userId }, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET, {
+    expiresIn: "7d",
+  });
+
+  // Set the Refresh Token inside the Secure HttpOnly Cookie
+  res.cookie("jwt", refreshToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
-    maxAge: 24 * 60 * 60 * 1000, // 1 day
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
-  return token;
+
+  // Only return the Access Token (and optionally the Refresh Token if you need it in controller)
+  return { accessToken, refreshToken };
 };
-export default generateToken;
+
+export default generateTokens;

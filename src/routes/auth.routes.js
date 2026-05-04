@@ -5,6 +5,7 @@ import {
   login,
   logout,
   getMe,
+  refresh,
 } from "../controllers/auth.controller.js";
 import validate from "../middlewares/validate.middleware.js";
 import protect from "../middlewares/protect.middleware.js";
@@ -35,9 +36,10 @@ const loginSchema = z.object({
   password: z.string().min(1),
 });
 
-router.post("/register",authRateLimiter,validate(registerSchema), register); // validate middleware will validate the request body against the registerSchema before calling the register controller
-router.post("/login", authRateLimiter,validate(loginSchema), login); // validate middleware will validate the request body against the loginSchema before calling the login controller
+router.post("/register", authRateLimiter, validate(registerSchema), register); // validate middleware will validate the request body against the registerSchema before calling the register controller
+router.post("/login", authRateLimiter, validate(loginSchema), login); // validate middleware will validate the request body against the loginSchema before calling the login controller
 router.get("/me", protect, getMe);
+router.post("/refresh", refresh);
 router.post("/logout", protect, logout);
 // router.get("/me", protect, getMe);
 export default router;

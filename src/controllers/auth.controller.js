@@ -1,9 +1,12 @@
-import generateToken from "../utils/generateToken.js";
+import generateTokens from "../utils/generateToken.js";
 import CryptoJS from 'crypto-js';
+import jwt from "jsonwebtoken";
 import {
   findUserByEmail,
   createUser,
   verifyPassword,
+  updateRefreshToken,
+  findUserById
 } from "../services/auth.service.js";
 
 const secretKey = process.env.ENCRYPTION_KEY || 'default-secret-key-change-in-prod';
@@ -36,7 +39,8 @@ const register = async (req, res) => {
     });
 
     // Generate token and set cookie
-    const token = generateToken(user.id, user.role, res);
+    const { accessToken, refreshToken } = generateTokens(user.id, user.role, res);
+    await updateRefreshToken(user.id, refreshToken);
 
     return res.status(201).json({
       status: "success",
@@ -48,7 +52,7 @@ const register = async (req, res) => {
           email: user.email,
           role: user.role,
         },
-        token,
+        token: accessToken,
       },
     });
   } catch (error) {
@@ -74,7 +78,8 @@ const login = async (req, res) => {
     }
 
     // Generate token and set cookie
-    const token = generateToken(user.id, user.role, res);
+    const { accessToken, refreshToken } = generateTokens(user.id, user.role, res);
+    await updateRefreshToken(user.id, refreshToken);
 
     return res.status(200).json({
       status: "success",
@@ -86,7 +91,7 @@ const login = async (req, res) => {
           email: user.email,
           role: user.role,
         },
-        token,
+        token: accessToken,
       },
     });
   } catch (error) {
@@ -100,6 +105,9 @@ const login = async (req, res) => {
 };
 
 const logout = async (req, res) => {
+  if (req.user && req.user.id) {
+    await updateRefreshToken(req.user.id, null);
+  }
   res.cookie("jwt", "", {
     expires: new Date(0),
     httpOnly: true,
@@ -111,18 +119,51 @@ const logout = async (req, res) => {
     message: "Logged out successfully",
   });
 };
+
 const getMe = async (req, res) => {
-  const token = generateToken(req.user.id, req.user.role, res); // Refresh token on profile access
   try {
     return res.status(200).json({
       status: "success",
       data: {
         ...req.user
-      },
-      token,
+      }
     });
   } catch (e) {
     return res.status(500).json({ message: "Server error" });
   }
 };
-export { register, login, logout, getMe };
+
+const refresh = async (req, res) => {
+  try {
+    const refreshToken = req.cookies.jwt;
+    if (!refreshToken) {
+      return res.status(401).json({ message: "Not authorized, no refresh token" });
+    }
+
+    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET);
+
+    // Find user by ID to get their stored refresh token
+    const user = await findUserById(decoded.id);
+    if (!user || user.refreshToken !== refreshToken) {
+      return res.status(401).json({ message: "Not authorized, invalid refresh token" });
+    }
+
+    // Generate new tokens
+    const { accessToken, refreshToken: newRefreshToken } = generateTokens(user.id, user.role, res);
+
+    // Save new refresh token in DB (Refresh Token Rotation)
+    await updateRefreshToken(user.id, newRefreshToken);
+
+    res.status(200).json({
+      status: "success",
+      data: {
+        token: accessToken
+      }
+    });
+  } catch (error) {
+    console.error("Error refreshing token:", error);
+    return res.status(401).json({ message: "Not authorized, refresh token failed" });
+  }
+};
+
+export { register, login, logout, getMe, refresh };
