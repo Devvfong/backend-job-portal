@@ -13,7 +13,8 @@ const secretKey = process.env.ENCRYPTION_KEY || 'default-secret-key-change-in-pr
 
 const decryptParam = (encrypted) => {
   try {
-    const bytes = CryptoJS.AES.decrypt(encrypted, secretKey);
+    const decoded = decodeURIComponent(encrypted);
+    const bytes = CryptoJS.AES.decrypt(decoded, secretKey);
     return bytes.toString(CryptoJS.enc.Utf8);
   } catch (e) {
     throw new Error('Invalid encrypted parameter');

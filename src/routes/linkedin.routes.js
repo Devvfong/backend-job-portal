@@ -1,8 +1,9 @@
-import express from "express";
-import passport from "passport";
-import generateToken from "../utils/generateToken.js";
+import { Router } from "express";
+import passport from "../config/passport.js";
+import generateTokens from "../utils/generateToken.js";
+import { updateRefreshToken } from "../services/auth.service.js";
 
-const router = express.Router();
+const router = Router();
 
 // Initiate LinkedIn OAuth
 router.get(
@@ -22,7 +23,7 @@ router.get(
 
         // Redirect back to the frontend
         const frontendUrl = process.env.FRONTEND_URL || "https://devqii.me";
-        res.redirect(`${frontendUrl}?token=${token}`);
+        res.redirect(`${frontendUrl}?token=${accessToken}`);
     },
 );
 

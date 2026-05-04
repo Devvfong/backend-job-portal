@@ -24,7 +24,7 @@ router.get(
     // Redirect back to the frontend
     // If you have a specific dashboard route, you can change this to /dashboard
     const frontendUrl = process.env.FRONTEND_URL || "https://devqii.me";
-    res.redirect(`${frontendUrl}?token=${token}`);
+    res.redirect(`${frontendUrl}?token=${accessToken}`);
   },
 );
 
