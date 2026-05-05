@@ -258,7 +258,7 @@ const updateCompanyService = async (id, data, user) => {
 
 const deleteCompanyService = async (id, user) => {
   const company = await prisma.company.findUnique({
-    wehre: { id },
+    where: { id },
   })
   if (!company) {
     throw new Error("Company not found");
@@ -317,9 +317,12 @@ const deleteCompanyLogo = async (user, companyId) => {
 };
 
 const getCompanyStatsService = async (companyId) => {
-  const [totalJobs, totalApplications, statusCounts] = await Promise.all([
+  const [activeJobs, totalApplications, statusCounts] = await Promise.all([
     prisma.job.count({
-      where: { companyId: Number(companyId) },
+      where: { 
+        companyId: Number(companyId),
+        status: "open"  // Only count active/open jobs
+      },
     }),
     prisma.application.count({
       where: {
@@ -341,7 +344,7 @@ const getCompanyStatsService = async (companyId) => {
   }, {});
 
   return {
-    totalJobs,
+    activeJobs,      // Changed from totalJobs to activeJobs
     totalApplications,
     statusSummary,
   };
