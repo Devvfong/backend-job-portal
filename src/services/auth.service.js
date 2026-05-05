@@ -11,6 +11,16 @@ const findUserByEmail = async (email) => {
   return user;
 };
 
+// Find a user by their ID
+const findUserById = async (id) => {
+  const user = await prisma.user.findUnique({
+    where: {
+      id: id,
+    },
+  });
+  return user;
+};
+
 const createUser = async ({ name, email, password, role }) => {
   // Hash password
   const salt = await bcrypt.genSalt(10);
@@ -36,6 +46,13 @@ const createUser = async ({ name, email, password, role }) => {
 const verifyPassword = async (plainPassword, hashedPassword) => {
   const isMatch = await bcrypt.compare(plainPassword, hashedPassword);
   return isMatch;
+};
+
+const updateRefreshToken = async (userId, refreshToken) => {
+  await prisma.user.update({
+    where: { id: userId },
+    data: { refreshToken },
+  });
 };
 
 export { findUserByEmail, createUser, verifyPassword, updateRefreshToken, findUserById };
