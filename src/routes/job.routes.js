@@ -42,12 +42,13 @@ router.post(
 );
 router.put(
   "/:id",
+  decryptMiddleware,
   protect,
   validate(updateJobSchema),
   authorize("company_admin"),
   updateJobController,
 );
-router.delete("/:id", protect, authorize("company_admin"), deleteJobController);
+router.delete("/:id", decryptMiddleware, protect, authorize("company_admin"), deleteJobController);
 
 router.get("/", getJobsController);
 router.get("/saved", protect, getSavedJobsController);

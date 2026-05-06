@@ -78,6 +78,7 @@ router.post(
 router.get("/:id", decryptMiddleware, getCompanyControllerById);
 router.put(
   "/:id",
+  decryptMiddleware,
   protect,
   validate(updateCompanySchema),
   updateCompanyController,
