@@ -66,10 +66,16 @@ const getJobService = async (query) => {
   };
 
   if (search) {
-    where.title = {
-      contains: String(search),
-      mode: "insensitive",
-    };
+    const searchStr = String(search);
+    where.OR = [
+      { title: { contains: searchStr, mode: "insensitive" } },
+      { description: { contains: searchStr, mode: "insensitive" } },
+      { 
+        company: { 
+          companyName: { contains: searchStr, mode: "insensitive" } 
+        } 
+      }
+    ];
   }
 
   if (location) {
