@@ -25,6 +25,12 @@ const protect = async (req, res, next) => {
         email: true,
         role: true, //to check if the user is company admin or not in the authorize middleware
         companyId: true,
+        company: {
+          select: {
+            companyName: true,
+            logo: true
+          }
+        },
         avatar: true,
         headline: true,
         bio: true,
@@ -34,6 +40,7 @@ const protect = async (req, res, next) => {
         resume: true,
       },
     });
+    console.log("Protect Middleware - User:", req.user.id, "Company:", req.user.company ? req.user.company.companyName : "No Company");
     if (!req.user) {
       return res
         .status(401)
