@@ -1,9 +1,11 @@
 import express from "express";
 import helmet from "helmet";
 import dotenv from "dotenv";
+import path from "path";
 import cookieParser from "cookie-parser";
 import session from "express-session";
 import pgSimple from "connect-pg-simple";
+import { fileURLToPath } from "url";
 import passport from "./config/passport.js";
 import { apiReference } from "@scalar/express-api-reference";
 import { connectDB, disconnectDB } from "./config/db.js";
@@ -19,7 +21,9 @@ import openApiDocument from "./utils/openapi.js";
 import protect from "./middlewares/protect.middleware.js";
 import authorize from "./middlewares/authorize.middleware.js";
 
-dotenv.config(); // Load environment variables from .env file
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, "../.env") }); // Load backend environment variables reliably
 const app = express(); // Create an Express application
 app.set("trust proxy", 1);
 app.use(helmet({
