@@ -9,7 +9,8 @@ DNSSEC.md
 # Prisma generated client
 /src/generated/prisma
 prisma/migrations/**/migration_lock.toml   # ignore migration locks if needed
-
+.scripts
+scripts/   # ignore build scripts if they are generated or not needed in the repo
 # Logs
 npm-debug.log*
 yarn-debug.log*
