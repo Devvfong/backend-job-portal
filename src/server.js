@@ -1,5 +1,6 @@
 import express from "express";
 import helmet from "helmet";
+import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
 import cookieParser from "cookie-parser";
@@ -24,11 +25,22 @@ import authorize from "./middlewares/authorize.middleware.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.resolve(__dirname, "../.env") }); // Load backend environment variables reliably
+// Warn if encryption keys between front-end and back-end do not match (helps SEO/meta decryption issues)
+if (process.env.NEXT_PUBLIC_ENCRYPTION_KEY && process.env.NEXT_PUBLIC_ENCRYPTION_KEY !== process.env.ENCRYPTION_KEY) {
+  console.warn("⚠️  ENCRYPTION_KEY mismatch: NEXT_PUBLIC_ENCRYPTION_KEY does not equal ENCRYPTION_KEY. Verify CI secrets and redeploy front-end/back-end with matching keys.");
+}
 const app = express(); // Create an Express application
 app.set("trust proxy", 1);
 app.use(helmet({
   contentSecurityPolicy: false,
 }));
+// Configure CORS to allow the frontend domain and include credentials
+app.use(
+  cors({
+    origin: process.env.CORS_ORIGIN || "https://job-portal.devqii.me",
+    credentials: true,
+  }),
+);
 // Serve static files from the public directory
 app.use(express.static("public"));
 const PORT = process.env.PORT || 5000;

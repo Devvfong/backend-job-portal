@@ -14,6 +14,8 @@ import {
   deleteFileFromSupabase,
 } from "../services/upload.service.js";
 
+import { encryptId, decryptId } from "../utils/crypto.js";
+
 const createCompanyController = async (req, res) => {
   try {
     const company = await createCompanyService(req.body, req.user);
@@ -28,10 +30,11 @@ const createCompanyController = async (req, res) => {
 };
 const getCompanyController = async (req, res) => {
   try {
-    const companies = await getCompanyService(req.query);
+    const result = await getCompanyService(req.query);
+    const companies = result.companies.map((c) => ({ ...c, encryptedId: encryptId(c.id) }));
     return res.status(200).json({
       status: "success",
-      data: companies,
+      data: { companies, meta: result.meta },
     });
   } catch (error) {
     console.error(error);
@@ -41,13 +44,32 @@ const getCompanyController = async (req, res) => {
 
 const getCompanyControllerById = async (req, res) => {
   try {
-    const company = await getCompanyServiceById(Number(req.params.id));
+    // Accept either numeric IDs or encrypted IDs
+    let idParam = req.params.id;
+    let id = Number(idParam);
+    if (Number.isNaN(id)) {
+      try {
+        const decrypted = decryptId(idParam);
+        id = Number(decrypted);
+      } catch (err) {
+        return res.status(400).json({ message: "Invalid company id" });
+      }
+    }
+
+    const includeSensitive = !!(
+      req.user && (req.user.role === "super_admin" || (req.user.role === "company_admin" && req.user.companyId === id))
+    );
+
+    const company = await getCompanyServiceById(Number(id), includeSensitive);
     if (!company) {
       return res.status(404).json({ message: "Company not found" });
     }
+
+    const out = { ...company, encryptedId: encryptId(company.id) };
+
     return res.status(200).json({
       status: "success",
-      data: company,
+      data: out,
     });
   } catch (error) {
     console.error(error);
@@ -68,7 +90,7 @@ const getMyCompanyController = async (req, res) => {
 
     return res.status(200).json({
       status: "success",
-      data: company,
+      data: { ...company, encryptedId: encryptId(company.id) },
     });
   } catch (error) {
     console.error(error);
@@ -131,7 +153,7 @@ const uploadLogoController = async (req, res) => {
     }
 
     // 1. Get current company to check for old logo
-    const company = await getCompanyServiceById(req.user.companyId);
+    const company = await getCompanyServiceById(req.user.companyId, true);
     const oldLogoUrl = company?.logo;
 
     // 2. Upload new logo
@@ -143,10 +165,7 @@ const uploadLogoController = async (req, res) => {
     );
 
     // 3. Update database
-    const updatedCompany = await updateCompanyLogo(
-      req.user.companyId,
-      publicUrl,
-    );
+    const updatedCompany = await updateCompanyLogo(req.user.companyId, publicUrl);
 
     // 4. Cleanup old logo if it exists
     if (oldLogoUrl) {
@@ -156,7 +175,7 @@ const uploadLogoController = async (req, res) => {
     return res.status(200).json({
       status: "success",
       message: "Logo uploaded successfully",
-      data: updatedCompany,
+      data: { ...updatedCompany, encryptedId: encryptId(updatedCompany.id) },
     });
   } catch (error) {
     console.error(error);
@@ -176,7 +195,7 @@ const deleteLogoController = async (req, res) => {
     return res.status(200).json({
       status: "success",
       message: "Logo deleted successfully",
-      data: company,
+      data: { ...company, encryptedId: encryptId(company.id) },
     });
   } catch (error) {
     console.error(error);

@@ -109,6 +109,7 @@ const getJobService = async (query) => {
       include: {
         company: {
           select: {
+            id: true,
             companyName: true,
             logo: true,
             location: true,
@@ -243,6 +244,7 @@ const getSavedJobsService = async (userId) => {
         include: {
           company: {
             select: {
+              id: true,
               companyName: true,
               logo: true,
             },

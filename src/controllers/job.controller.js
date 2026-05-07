@@ -8,6 +8,7 @@ import {
   getSavedJobsService,
   getMyCompanyJobsService,
 } from "../services/job.service.js";
+import { encryptId } from "../utils/crypto.js";
 
 const createJobController = async (req, res) => {
   try {
@@ -37,10 +38,15 @@ const createJobController = async (req, res) => {
 const getJobsController = async (req, res) => {
   try {
     const result = await getJobService(req.query);
+    const jobs = result.jobs.map((j) => ({
+      ...j,
+      encryptedId: encryptId(j.id),
+      company: j.company ? { ...j.company, encryptedId: j.company.id ? encryptId(j.company.id) : undefined } : j.company,
+    }));
 
     return res.status(200).json({
       status: "success",
-      data: result.jobs,
+      data: jobs,
       meta: result.meta,
     });
   } catch (e) {
@@ -51,7 +57,16 @@ const getJobsController = async (req, res) => {
 
 const getJobByIdController = async (req, res) => {
   try {
-    const id = Number(req.params.id);
+    let idParam = req.params.id;
+    let id = Number(idParam);
+    if (Number.isNaN(id)) {
+      try {
+        const { decryptId } = await import("../utils/crypto.js");
+        id = Number(decryptId(idParam));
+      } catch (err) {
+        return res.status(400).json({ message: "Invalid job id" });
+      }
+    }
     const job = await getJobByIdService(id);
 
     if (!job) {
@@ -60,7 +75,7 @@ const getJobByIdController = async (req, res) => {
 
     return res.status(200).json({
       status: "success",
-      data: job,
+      data: job ? { ...job, encryptedId: encryptId(job.id), company: job.company ? { ...job.company, encryptedId: job.company.id ? encryptId(job.company.id) : undefined } : job.company } : job,
     });
   } catch (e) {
     console.error(e);
@@ -138,10 +153,14 @@ const toggleSaveJobController = async (req, res) => {
 const getSavedJobsController = async (req, res) => {
   try {
     const jobs = await getSavedJobsService(req.user.id);
+    const mapped = jobs.map((s) => ({
+      ...s,
+      job: s.job ? { ...s.job, encryptedId: encryptId(s.job.id), company: s.job.company ? { ...s.job.company, encryptedId: s.job.company.id ? encryptId(s.job.company.id) : undefined } : s.job.company } : s.job,
+    }));
 
     return res.status(200).json({
       status: "success",
-      data: jobs,
+      data: mapped,
     });
   } catch (e) {
     console.error(e);
@@ -152,9 +171,10 @@ const getSavedJobsController = async (req, res) => {
 const getMyCompanyJobsController = async (req, res) => {
   try {
     const jobs = await getMyCompanyJobsService(req.user);
+    const mapped = jobs.map((j) => ({ ...j, encryptedId: encryptId(j.id) }));
     return res.status(200).json({
       status: "success",
-      data: jobs,
+      data: mapped,
     });
   } catch (e) {
     console.error(e);
