@@ -7,9 +7,121 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-//////////////////////////////////////////////////////
-// ENUMS
-//////////////////////////////////////////////////////
+model User {
+  id           Int           @id @default(autoincrement())
+  name         String
+  email        String        @unique
+  password     String
+  resume       String?
+  /// ///////////////////////////////////////////////////
+  /// ///////////////////////////////////////////////////
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  /// ///////////////////////////////////////////////////
+  /// ///////////////////////////////////////////////////
+  companyId    Int?
+  role         Role          @default(job_seeker)
+  avatar       String?
+  bio          String?
+  /// ///////////////////////////////////////////////////
+  /// ///////////////////////////////////////////////////
+  headline     String?
+  location     String?
+  phone        String?
+  skills       String[]
+  refreshToken String?
+  applications Application[]
+  savedJobs    SavedJob[]
+  company      Company?      @relation(fields: [companyId], references: [id])
+
+  @@index([email])
+}
+
+model Company {
+  id          Int      @id @default(autoincrement())
+  companyName String
+  email       String   @unique
+  /// ///////////////////////////////////////////////////
+  /// ///////////////////////////////////////////////////
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  description String?
+  location    String?
+  logo        String?
+  website     String?
+  industry    String?
+  size        String?
+  jobs        Job[]
+  users       User[]
+}
+
+model Job {
+  id           Int           @id @default(autoincrement())
+  title        String
+  location     String
+  description  String?
+  /// ///////////////////////////////////////////////////
+  /// ///////////////////////////////////////////////////
+  companyId    Int
+  /// ///////////////////////////////////////////////////
+  /// ///////////////////////////////////////////////////
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  jobType      JobType
+  salaryMax    Int?
+  salaryMin    Int?
+  status       JobStatus     @default(open)
+  benefits     String?
+  requirements String?
+  category     String?
+  applications Application[]
+  company      Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  savedBy      SavedJob[]
+
+  @@index([companyId])
+  @@index([location])
+  @@index([jobType])
+  @@index([status])
+}
+
+model Application {
+  id          Int               @id @default(autoincrement())
+  appliedDate DateTime          @default(now())
+  /// ///////////////////////////////////////////////////
+  /// ///////////////////////////////////////////////////
+  userId      Int
+  jobId       Int
+  status      ApplicationStatus @default(pending)
+  coverLetter String?
+  job         Job               @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, jobId])
+  @@index([userId])
+  @@index([jobId])
+}
+
+model Session {
+  sid    String   @id @map("sid")
+  sess   Json     @map("sess")
+  expire DateTime @map("expire")
+
+  @@index([expire], map: "IDX_session_expire")
+  @@map("session")
+}
+
+model SavedJob {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  jobId     Int
+  createdAt DateTime @default(now())
+  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, jobId])
+  @@index([userId])
+  @@index([jobId])
+}
 
 enum Role {
   job_seeker
@@ -35,191 +147,4 @@ enum ApplicationStatus {
   reviewed
   accepted
   rejected
-}
-
-//////////////////////////////////////////////////////
-// USER
-//////////////////////////////////////////////////////
-
-model User {
-  id       Int    @id @default(autoincrement())
-  name     String
-  email    String @unique
-  password String
-
-  role Role @default(job_seeker)
-
-  //////////////////////////////////////////////////////
-  // PROFILE FIELDS
-  //////////////////////////////////////////////////////
-
-  headline String?
-  bio      String?
-  location String?
-  phone    String?
-  avatar   String?
-
-  skills   String[] // PostgreSQL array
-
-  resume String?
-
-  refreshToken String? @db.Text
-
-  //////////////////////////////////////////////////////
-  // RELATIONS
-  //////////////////////////////////////////////////////
-
-  companyId Int?
-  company   Company? @relation(fields: [companyId], references: [id])
-
-  applications Application[]
-  savedJobs    SavedJob[]
-
-  //////////////////////////////////////////////////////
-  // META
-  //////////////////////////////////////////////////////
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([email])
-}
-
-//////////////////////////////////////////////////////
-// COMPANY
-//////////////////////////////////////////////////////
-
-model Company {
-  id          Int    @id @default(autoincrement())
-  companyName String
-  email       String @unique
-
-  logo        String?
-  description String?
-  website     String?
-  location    String?
-
-  // 🔥 Optional improvements
-  industry String?
-  size     String? // e.g. "1-10", "10-50", "50-200"
-
-  //////////////////////////////////////////////////////
-  // RELATIONS
-  //////////////////////////////////////////////////////
-
-  users User[]
-  jobs  Job[]
-
-  //////////////////////////////////////////////////////
-  // META
-  //////////////////////////////////////////////////////
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-//////////////////////////////////////////////////////
-// JOB
-//////////////////////////////////////////////////////
-
-model Job {
-  id       Int @id @default(autoincrement())
-  title    String
-  location String
-  jobType  JobType
-
-  description  String?
-  requirements String?
-  benefits     String?
-  category     String?
-
-  salaryMin Int?
-  salaryMax Int?
-
-  status JobStatus @default(open)
-
-  //////////////////////////////////////////////////////
-  // RELATIONS
-  //////////////////////////////////////////////////////
-
-  companyId Int
-  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-
-  applications Application[]
-  savedBy      SavedJob[]
-
-  //////////////////////////////////////////////////////
-  // META
-  //////////////////////////////////////////////////////
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  //////////////////////////////////////////////////////
-  // INDEXES (IMPORTANT FOR PERFORMANCE)
-  //////////////////////////////////////////////////////
-
-  @@index([companyId])
-  @@index([location])
-  @@index([jobType])
-  @@index([status])
-}
-
-//////////////////////////////////////////////////////
-// APPLICATION
-//////////////////////////////////////////////////////
-
-model Application {
-  id          Int @id @default(autoincrement())
-  status      ApplicationStatus @default(pending)
-  appliedDate DateTime @default(now())
-
-  // 🔥 IMPORTANT FEATURE
-  coverLetter String?
-
-  //////////////////////////////////////////////////////
-  // RELATIONS
-  //////////////////////////////////////////////////////
-
-  userId Int
-  jobId  Int
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
-
-  //////////////////////////////////////////////////////
-  // CONSTRAINTS
-  //////////////////////////////////////////////////////
-
-  @@unique([userId, jobId]) // prevent duplicate applications
-  @@index([userId])
-  @@index([jobId])
-}
-
-model Session {
-  sid    String   @id @map("sid")
-  sess   Json     @map("sess")
-  expire DateTime @map("expire")
-
-  @@index([expire], name: "IDX_session_expire")
-  @@map("session")
-}
-
-//////////////////////////////////////////////////////
-// SAVED JOBS (BOOKMARKS)
-//////////////////////////////////////////////////////
-
-model SavedJob {
-  id     Int @id @default(autoincrement())
-  userId Int
-  jobId  Int
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-
-  @@unique([userId, jobId]) // prevent saving the same job multiple times
-  @@index([userId])
-  @@index([jobId])
 }

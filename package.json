@@ -10,6 +10,11 @@
     "backfill:company-logos": "node scripts/backfill-company-logos.js",
     "build": "npx prisma generate",
     "backup": "node scripts/backup.js",
+    "mcp:init": "npx neonctl@latest init",
+    "mcp:add": "npx add-mcp https://mcp.neon.tech/mcp",
+    "mcp:add:with-key": "npx add-mcp https://mcp.neon.tech/mcp --header \"Authorization: Bearer $NEON_API_KEY\"",
+    "mcp:local": "npx -y @neondatabase/mcp-server-neon start $NEON_API_KEY",
+    "mcp:local:win": "cmd /c \"npx -y @neondatabase/mcp-server-neon start %NEON_API_KEY%\"",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

@@ -201,6 +201,11 @@ PORT=5000
 
 ---
 
+## Neon MCP (optional)
+
+If you want to connect an AI assistant or local MCP server to a Neon Postgres instance for safe, conversational database operations, see the detailed guide: [docs/NEON_MCP_SETUP.md](docs/NEON_MCP_SETUP.md).
+
+
 ### 4. Run Database Migration
 
 ```
