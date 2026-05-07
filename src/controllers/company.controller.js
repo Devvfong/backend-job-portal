@@ -19,9 +19,11 @@ import { encryptId, decryptId } from "../utils/crypto.js";
 const createCompanyController = async (req, res) => {
   try {
     const company = await createCompanyService(req.body, req.user);
+    // Remove raw id from response and expose only encryptedId
+    const { id, ...rest } = company;
     return res.status(201).json({
       status: "success",
-      data: company,
+      data: { ...rest, encryptedId: encryptId(id) },
     });
   } catch (error) {
     console.error(error);
@@ -31,7 +33,7 @@ const createCompanyController = async (req, res) => {
 const getCompanyController = async (req, res) => {
   try {
     const result = await getCompanyService(req.query);
-    const companies = result.companies.map((c) => ({ ...c, encryptedId: encryptId(c.id) }));
+    const companies = result.companies.map(({ id, ...rest }) => ({ ...rest, encryptedId: encryptId(id) }));
     return res.status(200).json({
       status: "success",
       data: { companies, meta: result.meta },
@@ -65,7 +67,11 @@ const getCompanyControllerById = async (req, res) => {
       return res.status(404).json({ message: "Company not found" });
     }
 
-    const out = { ...company, encryptedId: encryptId(company.id) };
+    // Remove raw id and map nested jobs to include encryptedId instead of id
+    const { id: companyId, jobs = [], ...companyRest } = company;
+    const jobsSanitized = (jobs || []).map(({ id: jobId, ...jobRest }) => ({ ...jobRest, encryptedId: encryptId(jobId) }));
+
+    const out = { ...companyRest, encryptedId: encryptId(companyId), jobs: jobsSanitized };
 
     return res.status(200).json({
       status: "success",
@@ -88,9 +94,12 @@ const getMyCompanyController = async (req, res) => {
       return res.status(404).json({ message: "Company not found" });
     }
 
+    const { id: myId, jobs = [], ...companyRest } = company;
+    const jobsSanitized = (jobs || []).map(({ id: jobId, ...jobRest }) => ({ ...jobRest, encryptedId: encryptId(jobId) }));
+
     return res.status(200).json({
       status: "success",
-      data: { ...company, encryptedId: encryptId(company.id) },
+      data: { ...companyRest, encryptedId: encryptId(myId), jobs: jobsSanitized },
     });
   } catch (error) {
     console.error(error);
@@ -172,10 +181,13 @@ const uploadLogoController = async (req, res) => {
       await deleteFileFromSupabase(oldLogoUrl, "logos");
     }
 
+    const { id: updatedId, jobs = [], ...updatedRest } = updatedCompany;
+    const jobsSanitized = (jobs || []).map(({ id: jobId, ...jobRest }) => ({ ...jobRest, encryptedId: encryptId(jobId) }));
+
     return res.status(200).json({
       status: "success",
       message: "Logo uploaded successfully",
-      data: { ...updatedCompany, encryptedId: encryptId(updatedCompany.id) },
+      data: { ...updatedRest, encryptedId: encryptId(updatedId), jobs: jobsSanitized },
     });
   } catch (error) {
     console.error(error);
@@ -192,10 +204,13 @@ const deleteLogoController = async (req, res) => {
 
     const company = await deleteCompanyLogo(req.user, req.user.companyId);
 
+    const { id: deletedId, jobs = [], ...deletedRest } = company;
+    const jobsSanitized = (jobs || []).map(({ id: jobId, ...jobRest }) => ({ ...jobRest, encryptedId: encryptId(jobId) }));
+
     return res.status(200).json({
       status: "success",
       message: "Logo deleted successfully",
-      data: { ...company, encryptedId: encryptId(company.id) },
+      data: { ...deletedRest, encryptedId: encryptId(deletedId), jobs: jobsSanitized },
     });
   } catch (error) {
     console.error(error);
