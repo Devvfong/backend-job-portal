@@ -20,10 +20,8 @@ prisma/migrations/**/migration_lock.toml
 
 # Build scripts: we track repository scripts; if you want to ignore generated scripts,
 # uncomment the following line:
-# scripts/
+scripts/
 docs/
-.docs/
-.docs
 # Logs
 npm-debug.log*
 yarn-debug.log*
