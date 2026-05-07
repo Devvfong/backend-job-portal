@@ -38,10 +38,10 @@ const createJobController = async (req, res) => {
 const getJobsController = async (req, res) => {
   try {
     const result = await getJobService(req.query);
-    const jobs = result.jobs.map((j) => ({
-      ...j,
-      encryptedId: encryptId(j.id),
-      company: j.company ? { ...j.company, encryptedId: j.company.id ? encryptId(j.company.id) : undefined } : j.company,
+    const jobs = result.jobs.map(({ id, company, ...rest }) => ({
+      ...rest,
+      encryptedId: encryptId(id),
+      company: company ? ({ ...(({ id: cId, ...cRest }) => ({ ...cRest, encryptedId: encryptId(cId) }))(company) }) : company,
     }));
 
     return res.status(200).json({
@@ -61,8 +61,8 @@ const getJobByIdController = async (req, res) => {
     let id = Number(idParam);
     if (Number.isNaN(id)) {
       try {
-        const { decryptId } = await import("../utils/crypto.js");
-        id = Number(decryptId(idParam));
+        const decrypted = decryptId(idParam);
+        id = Number(decrypted);
       } catch (err) {
         return res.status(400).json({ message: "Invalid job id" });
       }
@@ -73,9 +73,17 @@ const getJobByIdController = async (req, res) => {
       return res.status(404).json({ message: "Job not found" });
     }
 
+    // Remove raw id fields and return encrypted ids only
+    if (!job) {
+      return res.status(200).json({ status: "success", data: null });
+    }
+
+    const { id: jobId, company, ...jobRest } = job;
+    const companySanitized = company ? (({ id: cId, ...cRest }) => ({ ...cRest, encryptedId: encryptId(cId) }))(company) : null;
+
     return res.status(200).json({
       status: "success",
-      data: job ? { ...job, encryptedId: encryptId(job.id), company: job.company ? { ...job.company, encryptedId: job.company.id ? encryptId(job.company.id) : undefined } : job.company } : job,
+      data: { ...jobRest, encryptedId: encryptId(jobId), company: companySanitized },
     });
   } catch (e) {
     console.error(e);
