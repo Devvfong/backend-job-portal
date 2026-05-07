@@ -36,3 +36,40 @@ pids/
 *.pid
 skills-lock.json
 sites-enabled/   # don’t push your live nginx configs
+ 
+# Neon MCP and local secret files
+.mcp.json
+.mcp.json.local
+.mcp.*.local
+
+# Local env variants
+.env.local
+.env.*.local
+.env.*.secret
+
+# Secrets and keys
+*.pem
+*.key
+*.crt
+*.p12
+*.jks
+
+# CI and secret folders
+secrets/
+*.secret
+
+# Build, cache, and test artifacts
+coverage/
+.nyc_output/
+.cache/
+.turbo/
+.parcel-cache/
+.eslintcache
+dist/
+build/
+tmp/
+.next/
+
+# Debug logs (some already present)
+debug.log
+.vscode-test/
