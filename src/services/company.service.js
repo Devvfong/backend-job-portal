@@ -159,6 +159,17 @@ const getCompanyService = async (query = {}) => {
       },
       skip,
       take: limitNumber,
+      select: {
+        id: true,
+        companyName: true,
+        logo: true,
+        industry: true,
+        location: true,
+        website: true,
+        size: true,
+        description: true,
+        createdAt: true,
+      },
     }),
     prisma.company.count({ where }),
   ]);
@@ -175,27 +186,42 @@ const getCompanyService = async (query = {}) => {
     },
   };
 };
-const getCompanyServiceById = async (id) => {
-  return prisma.company.findUnique({
-    where: { id },
-    include: {
-      jobs: {
-        where: { status: "open" },
-        select: {
-          id: true,
-          status: true,
-          title: true,
-          location: true,
-          jobType: true,
-          description: true,
-          requirements: true,
-          benefits: true,
-          salaryMin: true,
-          salaryMax: true,
-          createdAt: true,
-        },
+const getCompanyServiceById = async (id, includeSensitive = false) => {
+  const select = {
+    id: true,
+    companyName: true,
+    logo: true,
+    industry: true,
+    location: true,
+    website: true,
+    size: true,
+    description: true,
+    createdAt: true,
+    jobs: {
+      where: { status: "open" },
+      select: {
+        id: true,
+        status: true,
+        title: true,
+        location: true,
+        jobType: true,
+        description: true,
+        requirements: true,
+        benefits: true,
+        salaryMin: true,
+        salaryMax: true,
+        createdAt: true,
       },
     },
+  };
+
+  if (includeSensitive) {
+    select.email = true;
+  }
+
+  return prisma.company.findUnique({
+    where: { id },
+    select,
   });
 };
 
@@ -203,7 +229,8 @@ const getMyCompanyService = async (companyId) => {
   if (!companyId) {
     throw new Error("Company not found");
   }
-  return getCompanyServiceById(Number(companyId));
+  // For authenticated users, include sensitive fields like email
+  return getCompanyServiceById(Number(companyId), true);
 };
 
 const getMyCompanyJobsService = async (companyId) => {
