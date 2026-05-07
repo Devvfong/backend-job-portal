@@ -1,5 +1,7 @@
 import generateTokens from "../utils/generateToken.js";
-import CryptoJS from 'crypto-js';
+import crypto from "crypto";
+import fs from "fs";
+import path from "path";
 import jwt from "jsonwebtoken";
 import {
   findUserByEmail,
@@ -9,14 +11,22 @@ import {
   findUserById
 } from "../services/auth.service.js";
 
-const secretKey = process.env.ENCRYPTION_KEY || 'default-secret-key-change-in-prod';
+// Load Private Key for RSA Decryption
+const privateKeyPath = path.join(process.cwd(), "private_key.pem");
+const privateKey = fs.readFileSync(privateKeyPath, "utf8");
 
 const decryptParam = (encrypted) => {
   try {
-    const decoded = decodeURIComponent(encrypted);
-    const bytes = CryptoJS.AES.decrypt(decoded, secretKey);
-    return bytes.toString(CryptoJS.enc.Utf8);
+    const decrypted = crypto.privateDecrypt(
+      {
+        key: privateKey,
+        padding: crypto.constants.RSA_PKCS1_PADDING,
+      },
+      Buffer.from(encrypted, 'base64')
+    );
+    return decrypted.toString('utf8');
   } catch (e) {
+    console.error("RSA Decryption Error:", e);
     throw new Error('Invalid encrypted parameter');
   }
 };
