@@ -27,6 +27,12 @@ try {
 }
 
 const decryptParam = (encrypted) => {
+  if (!privateKey) {
+    const msg = 'RSA private key not configured on the server. Set RSA_PRIVATE_KEY env var.';
+    console.error(msg);
+    throw new Error(msg);
+  }
+
   try {
     const decrypted = crypto.privateDecrypt(
       {
