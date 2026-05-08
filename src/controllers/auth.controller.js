@@ -12,8 +12,19 @@ import {
 } from "../services/auth.service.js";
 
 // Load Private Key for RSA Decryption
-const privateKeyPath = path.join(process.cwd(), "private_key.pem");
-const privateKey = fs.readFileSync(privateKeyPath, "utf8");
+let privateKey;
+try {
+  // Prefer environment variable (for Render/production), fallback to local file
+  if (process.env.RSA_PRIVATE_KEY) {
+    // In case the env var represents newlines as literal '\n'
+    privateKey = process.env.RSA_PRIVATE_KEY.replace(/\\n/g, '\n');
+  } else {
+    const privateKeyPath = path.join(process.cwd(), "private_key.pem");
+    privateKey = fs.readFileSync(privateKeyPath, "utf8");
+  }
+} catch (error) {
+  console.warn("Warning: Could not load RSA Private Key. RSA decryption will fail.", error.message);
+}
 
 const decryptParam = (encrypted) => {
   try {
