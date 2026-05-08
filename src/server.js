@@ -29,6 +29,16 @@ dotenv.config({ path: path.resolve(__dirname, "../.env") }); // Load backend env
 if (process.env.NEXT_PUBLIC_ENCRYPTION_KEY && process.env.NEXT_PUBLIC_ENCRYPTION_KEY !== process.env.ENCRYPTION_KEY) {
   console.warn("⚠️  ENCRYPTION_KEY mismatch: NEXT_PUBLIC_ENCRYPTION_KEY does not equal ENCRYPTION_KEY. Verify CI secrets and redeploy front-end/back-end with matching keys.");
 }
+
+// Production preflight: ensure RSA private key is configured (we require env var in production)
+if (process.env.NODE_ENV === 'production') {
+  if (!process.env.RSA_PRIVATE_KEY) {
+    console.error('FATAL: RSA_PRIVATE_KEY is not set in environment. RSA decryption is required in production.');
+    console.error('Please add RSA_PRIVATE_KEY to your deployment environment (include full PEM with BEGIN/END lines).');
+    // Exit with non-zero so the platform flags the deploy as failed
+    process.exit(1);
+  }
+}
 const app = express(); // Create an Express application
 app.set("trust proxy", 1);
 app.use(helmet({
