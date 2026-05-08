@@ -40,12 +40,12 @@ const protect = async (req, res, next) => {
         resume: true,
       },
     });
-    console.log("Protect Middleware - User:", req.user.id, "Company:", req.user.company ? req.user.company.companyName : "No Company");
     if (!req.user) {
       return res
         .status(401)
         .json({ message: "Not authorized, user not found" });
     }
+    console.log("Protect Middleware - User:", req.user.id, "Company:", req.user.company ? req.user.company.companyName : "No Company");
     next();
   } catch {
     return res.status(401).json({ message: "Not authorized, invalid token" });

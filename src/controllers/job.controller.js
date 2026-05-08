@@ -8,7 +8,7 @@ import {
   getSavedJobsService,
   getMyCompanyJobsService,
 } from "../services/job.service.js";
-import { encryptId } from "../utils/crypto.js";
+import { encryptId, decryptId } from "../utils/crypto.js";
 
 const createJobController = async (req, res) => {
   try {
@@ -71,11 +71,6 @@ const getJobByIdController = async (req, res) => {
 
     if (!job) {
       return res.status(404).json({ message: "Job not found" });
-    }
-
-    // Remove raw id fields and return encrypted ids only
-    if (!job) {
-      return res.status(200).json({ status: "success", data: null });
     }
 
     const { id: jobId, company, ...jobRest } = job;
