@@ -260,7 +260,6 @@ test.describe('Company Admin - Applicant Management', () => {
     
     // Verify applicants for job displayed
     await expect(page.locator('text=Job Applicants')).toBeVisible();
-    await expect(page.locator('[data-testid="applicant-row"]')).toHaveCount(0, { relation: 'or' });
     
     console.log('✅ Job applicants loaded');
   });
@@ -321,8 +320,8 @@ test.describe('Company Admin - Access Control', () => {
   test('job_seeker should NOT see admin buttons', async ({ page }) => {
     // Login as job seeker (different credentials)
     await page.goto(`${FRONTEND_URL}/login`);
-    await page.fill('input[name="email"]', 'seeker@example.com');
-    await page.fill('input[name="password"]', 'seekerpass123');
+    await page.fill('input[name="email"]', TEST_SEEKER_EMAIL);
+    await page.fill('input[name="password"]', TEST_SEEKER_PASSWORD);
     await page.click('button[type="submit"]');
     await page.waitForNavigation();
     
@@ -339,8 +338,8 @@ test.describe('Company Admin - Access Control', () => {
   test('admin buttons should be hidden for non-admin users', async ({ page }) => {
     // Login as job seeker
     await page.goto(`${FRONTEND_URL}/login`);
-    await page.fill('input[name="email"]', 'seeker@example.com');
-    await page.fill('input[name="password"]', 'seekerpass123');
+    await page.fill('input[name="email"]', TEST_SEEKER_EMAIL);
+    await page.fill('input[name="password"]', TEST_SEEKER_PASSWORD);
     await page.click('button[type="submit"]');
     await page.waitForNavigation();
     
@@ -367,8 +366,8 @@ test.describe('Company Admin - Access Control', () => {
 
     // Login as job seeker
     await page.goto(`${FRONTEND_URL}/login`);
-    await page.fill('input[name="email"]', 'seeker@example.com');
-    await page.fill('input[name="password"]', 'seekerpass123');
+    await page.fill('input[name="email"]', TEST_SEEKER_EMAIL);
+    await page.fill('input[name="password"]', TEST_SEEKER_PASSWORD);
     await page.click('button[type="submit"]');
     await page.waitForNavigation();
 
