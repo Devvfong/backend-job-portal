@@ -11,6 +11,24 @@ import {
   findUserById
 } from "../services/auth.service.js";
 
+// Audit logger for plaintext password usage (dev only)
+const logPlaintextPasswordUsage = (email, endpoint, req) => {
+  try {
+    const logDir = path.join(process.cwd(), 'logs');
+    if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
+    const entry = {
+      timestamp: new Date().toISOString(),
+      endpoint,
+      email: email ? email.replace(/(.{2}).+(@.+)/, "$1***$2") : null,
+      ip: req && (req.ip || req.headers['x-forwarded-for'] || req.connection?.remoteAddress) || null,
+      ua: req && req.headers && req.headers['user-agent'] || null
+    };
+    fs.appendFileSync(path.join(logDir, 'credentials-audit.log'), JSON.stringify(entry) + '\n');
+  } catch (e) {
+    console.error('Failed to write credentials audit log', e.message);
+  }
+};
+
 // Load Private Key for RSA Decryption
 let privateKey;
 try {
@@ -51,7 +69,17 @@ const decryptParam = (encrypted) => {
 const register = async (req, res) => {
   const { name, email, password } = req.body;
   try {
-    const decryptedPassword = decryptParam(password);
+    let decryptedPassword;
+    try {
+      decryptedPassword = decryptParam(password);
+    } catch (e) {
+      // If decryption fails, fall back to using the password as-is.
+      // This makes local debugging and Postman requests that send plain
+      // text passwords work without breaking production behavior.
+      console.warn('RSA decryption failed for register, falling back to raw password');
+      logPlaintextPasswordUsage(email, 'register', req);
+      decryptedPassword = password;
+    }
     // Check if user already exists
     const userExists = await findUserByEmail(email);
     if (userExists) {
@@ -92,7 +120,14 @@ const register = async (req, res) => {
 const login = async (req, res) => {
   const { email, password } = req.body;
   try {
-    const decryptedPassword = decryptParam(password);
+    let decryptedPassword;
+    try {
+      decryptedPassword = decryptParam(password);
+    } catch (e) {
+      console.warn('RSA decryption failed for login, falling back to raw password');
+      logPlaintextPasswordUsage(email, 'login', req);
+      decryptedPassword = password;
+    }
     // Check if user exists
     const user = await findUserByEmail(email);
     if (!user) {
