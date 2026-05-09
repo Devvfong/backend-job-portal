@@ -24,7 +24,7 @@ import authorize from "./middlewares/authorize.middleware.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-dotenv.config({ path: path.resolve(__dirname, "../.env") }); // Load backend environment variables reliably
+dotenv.config({ path: path.resolve(__dirname, "../.env"), override: true }); // Load backend environment variables reliably
 // Warn if encryption keys between front-end and back-end do not match (helps SEO/meta decryption issues)
 if (process.env.NEXT_PUBLIC_ENCRYPTION_KEY && process.env.NEXT_PUBLIC_ENCRYPTION_KEY !== process.env.ENCRYPTION_KEY) {
   console.warn("⚠️  ENCRYPTION_KEY mismatch: NEXT_PUBLIC_ENCRYPTION_KEY does not equal ENCRYPTION_KEY. Verify CI secrets and redeploy front-end/back-end with matching keys.");
