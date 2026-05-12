@@ -23,7 +23,7 @@ const createCompanyController = async (req, res) => {
     const { id, ...rest } = company;
     return res.status(201).json({
       status: "success",
-      data: { ...rest, encryptedId: encryptId(id) },
+      data: { ...rest, id: encryptId(id), encryptedId: encryptId(id) },
     });
   } catch (error) {
     console.error(error);
@@ -68,10 +68,7 @@ const getCompanyControllerById = async (req, res) => {
     }
 
     // Remove raw id and map nested jobs to include encryptedId instead of id
-    const { id: companyId, jobs = [], ...companyRest } = company;
-    const jobsSanitized = (jobs || []).map(({ id: jobId, ...jobRest }) => ({ ...jobRest, encryptedId: encryptId(jobId) }));
-
-    const out = { ...companyRest, encryptedId: encryptId(companyId), jobs: jobsSanitized };
+    const out = { ...companyRest, id: encryptId(companyId), encryptedId: encryptId(companyId), jobs: jobsSanitized };
 
     return res.status(200).json({
       status: "success",
@@ -99,7 +96,7 @@ const getMyCompanyController = async (req, res) => {
 
     return res.status(200).json({
       status: "success",
-      data: { ...companyRest, encryptedId: encryptId(myId), jobs: jobsSanitized },
+      data: { ...companyRest, id: encryptId(myId), encryptedId: encryptId(myId), jobs: jobsSanitized },
     });
   } catch (error) {
     console.error(error);
