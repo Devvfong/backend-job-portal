@@ -68,6 +68,8 @@ const getCompanyControllerById = async (req, res) => {
     }
 
     // Remove raw id and map nested jobs to include encryptedId instead of id
+    const { id: companyId, jobs = [], ...companyRest } = company;
+    const jobsSanitized = (jobs || []).map(({ id: jobId, ...jobRest }) => ({ ...jobRest, encryptedId: encryptId(jobId) }));
     const out = { ...companyRest, id: encryptId(companyId), encryptedId: encryptId(companyId), jobs: jobsSanitized };
 
     return res.status(200).json({

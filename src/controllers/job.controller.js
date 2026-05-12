@@ -38,11 +38,19 @@ const createJobController = async (req, res) => {
 const getJobsController = async (req, res) => {
   try {
     const result = await getJobService(req.query);
-    const jobs = result.jobs.map(({ id, company, ...rest }) => ({
-      ...rest,
-      encryptedId: encryptId(id),
-      company: company ? ({ ...(({ id: cId, ...cRest }) => ({ ...cRest, encryptedId: encryptId(cId) }))(company) }) : company,
-    }));
+    const jobs = result.jobs.map((job) => {
+      const { id, company, ...rest } = job;
+      const companySanitized = company ? (({ id: cId, ...cRest }) => ({
+        ...cRest,
+        encryptedId: encryptId(cId),
+      }))(company) : company;
+
+      return {
+        ...rest,
+        encryptedId: encryptId(id),
+        company: companySanitized,
+      };
+    });
 
     return res.status(200).json({
       status: "success",

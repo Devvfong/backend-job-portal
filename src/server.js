@@ -47,7 +47,11 @@ app.use(helmet({
 // Configure CORS to allow the frontend domain and include credentials
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || "https://job-portal.devqii.me",
+    origin: [
+      "https://job-portal.devqii.me",
+      "http://localhost:3000",
+      "http://127.0.0.1:3000"
+    ],
     credentials: true,
   }),
 );
