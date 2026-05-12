@@ -33,6 +33,7 @@ const createUser = async ({ name, email, password, role }) => {
       email: email,
       password: hashedPassword,
       role: role,
+      skills: [],
     },
     select: {
       id: true,
