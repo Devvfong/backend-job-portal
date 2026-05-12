@@ -19,8 +19,8 @@ RUN npx prisma generate
 # Copy the rest of the app
 COPY . .
 
-# Expose port
-EXPOSE 3000
+# Expose the application port used by the Express server and nginx proxy
+EXPOSE 5000
 
 # Start command for production
 CMD ["npm", "start"]

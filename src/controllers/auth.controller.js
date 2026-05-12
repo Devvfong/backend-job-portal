@@ -27,6 +27,13 @@ try {
 }
 
 const decryptParam = (encrypted) => {
+  const value = String(encrypted || "");
+  const looksEncrypted = /^[A-Za-z0-9+/=\r\n]+$/.test(value) && value.length > 48;
+
+  if (!looksEncrypted) {
+    return value;
+  }
+
   if (!privateKey) {
     const msg = 'RSA private key not configured on the server. Set RSA_PRIVATE_KEY env var.';
     console.error(msg);
@@ -40,10 +47,14 @@ const decryptParam = (encrypted) => {
         padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
         oaepHash: "sha256",
       },
-      Buffer.from(encrypted, 'base64')
+      Buffer.from(value, 'base64')
     );
     return decrypted.toString('utf8');
   } catch (e) {
+    if (!looksEncrypted) {
+      return value;
+    }
+
     console.error("RSA Decryption Error:", e);
     throw new Error('Invalid encrypted parameter');
   }

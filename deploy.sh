@@ -1,18 +1,29 @@
 #!/bin/bash
 
+set -e
+
+if docker compose version >/dev/null 2>&1; then
+	DOCKER_COMPOSE="docker compose"
+elif command -v docker-compose >/dev/null 2>&1; then
+	DOCKER_COMPOSE="docker-compose"
+else
+	echo "❌ Neither 'docker compose' nor 'docker-compose' is available on this host."
+	exit 1
+fi
+
 echo "🔽 Stopping containers..."
-docker compose down
+$DOCKER_COMPOSE down
 
 echo "🔨 Building containers..."
-docker compose build
+$DOCKER_COMPOSE build
 
 echo "🚀 Starting containers..."
-docker compose up -d
+$DOCKER_COMPOSE up -d
 
 echo "🔁 Restarting nginx..."
-docker compose restart nginx
+$DOCKER_COMPOSE restart nginx
 
 echo "📊 Showing status..."
-docker compose ps
+$DOCKER_COMPOSE ps
 
 echo "✅ Done!"
