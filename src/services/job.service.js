@@ -18,6 +18,7 @@ const createJobService = async (data, user) => {
       description: data.description,
       requirements: data.requirements,
       benefits: data.benefits,
+      salaryNegotiable: Boolean(data.salaryNegotiable),
       salaryMin: data.salaryMin ? Number(data.salaryMin) : undefined,
       salaryMax: data.salaryMax ? Number(data.salaryMax) : undefined,
     },
@@ -35,6 +36,7 @@ const createJobService = async (data, user) => {
         description: data.description,
         requirements: data.requirements,
         benefits: data.benefits,
+        salaryNegotiable: Boolean(data.salaryNegotiable),
         salaryMin: data.salaryMin ? Number(data.salaryMin) : undefined,
         salaryMax: data.salaryMax ? Number(data.salaryMax) : undefined,
       },
@@ -185,6 +187,10 @@ const updateJobService = async (id, data, user) => {
     description: data.description || job.description,
     requirements: data.requirements || job.requirements,
     benefits: data.benefits || job.benefits,
+    salaryNegotiable:
+      typeof data.salaryNegotiable === "boolean"
+        ? data.salaryNegotiable
+        : job.salaryNegotiable,
     salaryMin: data.salaryMin ? Number(data.salaryMin) : job.salaryMin,
     salaryMax: data.salaryMax ? Number(data.salaryMax) : job.salaryMax,
     status: data.status || job.status,

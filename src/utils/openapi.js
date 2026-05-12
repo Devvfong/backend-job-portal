@@ -106,6 +106,7 @@ const openApiDocument = {
           description: { type: "string", example: "Develop APIs using Node.js" },
           requirements: { type: "string", example: "3+ years of experience with Express and Prisma" },
           benefits: { type: "string", example: "Health insurance, 401k" },
+          salaryNegotiable: { type: "boolean", example: false },
           salaryMin: { type: "integer", example: 80000 },
           salaryMax: { type: "integer", example: 120000 },
           status: { type: "string", enum: ["open", "closed"], example: "open" },
@@ -148,7 +149,7 @@ const openApiDocument = {
       },
       CreateJobRequest: {
         type: "object",
-        required: ["title", "description", "location", "jobType", "requirements", "benefits", "salaryMin", "salaryMax"],
+        required: ["title", "description", "location", "jobType", "requirements", "benefits"],
         properties: {
           title: { type: "string", example: "Backend Engineer" },
           description: { type: "string", example: "Node.js + Prisma + PostgreSQL" },
@@ -156,6 +157,7 @@ const openApiDocument = {
           jobType: { type: "string", enum: ["full_time", "part_time", "contract", "internship", "remote"], example: "full_time" },
           requirements: { type: "string", example: "Node.js, Express, Postgres" },
           benefits: { type: "string", example: "13th month salary" },
+          salaryNegotiable: { type: "boolean", example: true },
           salaryMin: { type: "integer", example: 400 },
           salaryMax: { type: "integer", example: 1200 },
           companyId: { type: "integer", nullable: true, example: 1 }

@@ -68,6 +68,7 @@ model Job {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   jobType      JobType
+  salaryNegotiable Boolean   @default(false)
   salaryMax    Int?
   salaryMin    Int?
   status       JobStatus     @default(open)

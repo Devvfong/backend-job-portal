@@ -15,7 +15,7 @@ import {
 } from "../controllers/job.controller.js";
 
 const router = express.Router();
-const createJobSchema = z.object({
+const baseJobSchema = z.object({
   title: z.string().min(1),
   description: z.string().min(1),
   location: z.string().min(1),
@@ -28,11 +28,16 @@ const createJobSchema = z.object({
   ]),
   requirements: z.string().optional().or(z.literal("")),
   benefits: z.string().optional().or(z.literal("")),
-  salaryMin: z.number().min(0),
-  salaryMax: z.number().min(0),
+  salaryNegotiable: z.boolean().optional().default(false),
+  salaryMin: z.number().min(0).optional(),
+  salaryMax: z.number().min(0).optional(),
   companyId: z.number().optional(),
 });
-const updateJobSchema = createJobSchema.partial(); // All fields are optional for update
+const createJobSchema = baseJobSchema.refine((data) => data.salaryNegotiable || (data.salaryMin != null && data.salaryMax != null), {
+  message: "Provide salaryMin and salaryMax unless salaryNegotiable is true",
+  path: ["salaryMin"],
+});
+const updateJobSchema = baseJobSchema.partial(); // All fields are optional for update
 router.post(
   "/create",
   protect,
