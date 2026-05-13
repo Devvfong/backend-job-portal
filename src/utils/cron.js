@@ -32,7 +32,7 @@ const cleanupCronJob = cron.schedule("0 0 * * *", async () => {
     const filePaths = orphans.map(o => o.filePath);
 
     // 2. Physically remove these files from Supabase Storage
-    const { error } = await supabase.storage.from("company-assets").remove(filePaths);
+    const { error } = await supabase.storage.from("logos").remove(filePaths);
 
     if (error) {
       console.error(`Failed to remove assets from Supabase:`, error);

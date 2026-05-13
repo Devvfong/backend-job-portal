@@ -56,7 +56,7 @@ const uploadResume = async (fileBuffer, mimetype, originalname, userId) => {
 };
 
 /**
- * Upload a company asset (logo or cover) to Supabase Storage (bucket: company-assets)
+ * Upload a company asset (logo or cover) to Supabase Storage (bucket: logos)
  * @param {Buffer} fileBuffer - File buffer from multer memoryStorage
  * @param {string} mimetype   - MIME type of the file
  * @param {string} originalname - Original file name
@@ -66,10 +66,10 @@ const uploadResume = async (fileBuffer, mimetype, originalname, userId) => {
  */
 const uploadCompanyAsset = async (fileBuffer, mimetype, originalname, companyId, assetType = "logo") => {
   const ext = path.extname(originalname).toLowerCase();
-  // Using path strategy: public/${companyId}/${assetType}${ext}
-  const fileName = `public/${companyId}/${assetType}${ext}`;
+  // Using path strategy: ${companyId}/${assetType}${ext}
+  const fileName = `${companyId}/${assetType}${ext}`;
 
-  const { error } = await supabase.storage.from("company-assets").upload(fileName, fileBuffer, {
+  const { error } = await supabase.storage.from("logos").upload(fileName, fileBuffer, {
     contentType: mimetype,
     upsert: true,
   });
@@ -78,7 +78,7 @@ const uploadCompanyAsset = async (fileBuffer, mimetype, originalname, companyId,
     throw new Error(`Supabase ${assetType} upload failed: ${error.message}`);
   }
 
-  const { data } = supabase.storage.from("company-assets").getPublicUrl(fileName);
+  const { data } = supabase.storage.from("logos").getPublicUrl(fileName);
   return data.publicUrl;
 };
 

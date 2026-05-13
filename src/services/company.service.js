@@ -313,9 +313,9 @@ const updateCompanyLogo = async (companyId, logoUrl) => {
   });
 
   if (company && company.logo) {
-    if (company.logo.includes("supabase.co") && company.logo.includes("company-assets")) {
+    if (company.logo.includes("supabase.co") && company.logo.includes("logos")) {
       // Extract the path from the URL
-      const urlParts = company.logo.split("company-assets/");
+      const urlParts = company.logo.split("logos/");
       if (urlParts.length >= 2) {
         const filePath = urlParts[1];
         await prisma.deletedAsset.create({
@@ -353,8 +353,8 @@ const deleteCompanyLogo = async (user, companyId) => {
   }
 
   // Shadow Deletion logic: insert path into deleted_assets instead of immediately deleting
-  if (company.logo.includes("supabase.co") && company.logo.includes("company-assets")) {
-    const urlParts = company.logo.split("company-assets/");
+  if (company.logo.includes("supabase.co") && company.logo.includes("logos")) {
+    const urlParts = company.logo.split("logos/");
     if (urlParts.length >= 2) {
       const filePath = urlParts[1];
       await prisma.deletedAsset.create({
@@ -375,8 +375,8 @@ const updateCompanyCover = async (companyId, coverUrl) => {
   });
 
   if (company && company.coverImage) {
-    if (company.coverImage.includes("supabase.co") && company.coverImage.includes("company-assets")) {
-      const urlParts = company.coverImage.split("company-assets/");
+    if (company.coverImage.includes("supabase.co") && company.coverImage.includes("logos")) {
+      const urlParts = company.coverImage.split("logos/");
       if (urlParts.length >= 2) {
         const filePath = urlParts[1];
         await prisma.deletedAsset.create({
@@ -412,8 +412,8 @@ const deleteCompanyCover = async (user, companyId) => {
     throw new Error("No cover image found");
   }
 
-  if (company.coverImage.includes("supabase.co") && company.coverImage.includes("company-assets")) {
-    const urlParts = company.coverImage.split("company-assets/");
+  if (company.coverImage.includes("supabase.co") && company.coverImage.includes("logos")) {
+    const urlParts = company.coverImage.split("logos/");
     if (urlParts.length >= 2) {
       const filePath = urlParts[1];
       await prisma.deletedAsset.create({
