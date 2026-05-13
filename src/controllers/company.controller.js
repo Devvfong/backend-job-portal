@@ -131,6 +131,69 @@ const updateCompanyController = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+const updateMyCompanyController = async (req, res) => {
+  try {
+    if (!req.user.companyId) {
+      return res.status(403).json({ message: "Forbidden: No company associated" });
+    }
+    
+    // Only allow expected premium fields and base fields
+    const { foundedYear, officeCount, gallery, specialties, ...restBody } = req.body;
+    
+    const company = await updateCompanyService(
+      req.user.companyId,
+      { ...restBody, foundedYear, officeCount, gallery, specialties },
+      req.user,
+    );
+
+    const { id: updatedId, jobs = [], ...updatedRest } = company;
+    const jobsSanitized = (jobs || []).map(({ id: jobId, ...jobRest }) => ({ ...jobRest, encryptedId: encryptId(jobId) }));
+
+    return res.status(200).json({
+      status: "success",
+      data: { ...updatedRest, encryptedId: encryptId(updatedId), jobs: jobsSanitized },
+    });
+  } catch (error) {
+    console.error(error);
+    if (error.message === "Unauthorized") {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+    if (error.message === "Company not found") {
+      return res.status(404).json({ message: "Company not found" });
+    }
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+const uploadGalleryController = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "No file provided" });
+    }
+
+    if (!req.user.companyId) {
+      return res
+        .status(403)
+        .json({ message: "Forbidden: No company associated" });
+    }
+
+    const { uploadGalleryAsset } = await import("../services/upload.service.js");
+    const publicUrl = await uploadGalleryAsset(
+      req.file.buffer,
+      req.file.mimetype,
+      req.user.companyId
+    );
+
+    return res.status(200).json({
+      status: "success",
+      data: { url: publicUrl },
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: error.message });
+  }
+};
+
 const deleteCompanyController = async (req, res) => {
   try {
     await deleteCompanyService(Number(req.params.id), req.user);
@@ -292,11 +355,13 @@ export {
   getCompanyController,
   getCompanyControllerById,
   getMyCompanyController,
+  updateMyCompanyController,
   updateCompanyController,
   deleteCompanyController,
   uploadLogoController,
   deleteLogoController,
   uploadCoverController,
   deleteCoverController,
+  uploadGalleryController,
   getCompanyStatsController,
 };

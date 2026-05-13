@@ -83,6 +83,29 @@ const uploadCompanyAsset = async (fileBuffer, mimetype, originalname, companyId,
 };
 
 /**
+ * Upload a gallery asset to Supabase Storage (bucket: company-assets)
+ * @param {Buffer} fileBuffer - File buffer from multer memoryStorage
+ * @param {string} mimetype   - MIME type of the file
+ * @param {number} companyId    - Authenticated company ID (used as folder prefix)
+ * @returns {promise<string>} Public URL of the uploaded file
+ */
+const uploadGalleryAsset = async (fileBuffer, mimetype, companyId) => {
+  const fileName = `gallery/${companyId}/${Date.now()}.jpg`;
+
+  const { error } = await supabase.storage.from("company-assets").upload(fileName, fileBuffer, {
+    contentType: mimetype,
+    upsert: true,
+  });
+
+  if (error) {
+    throw new Error(`Supabase gallery upload failed: ${error.message}`);
+  }
+
+  const { data } = supabase.storage.from("company-assets").getPublicUrl(fileName);
+  return data.publicUrl;
+};
+
+/**
  * Delete a file from Supabase Storage given its public URL
  * @param {string} publicUrl - Public URL of the file to delete
  * @param {string} bucket    - Bucket name ('avatars', 'resumes', 'logos', or 'company-assets')
@@ -108,4 +131,4 @@ const deleteFileFromSupabase = async (publicUrl, bucket) => {
   }
 };
 
-export { uploadAvatar, uploadResume, uploadCompanyAsset, deleteFileFromSupabase };
+export { uploadAvatar, uploadResume, uploadCompanyAsset, uploadGalleryAsset, deleteFileFromSupabase };

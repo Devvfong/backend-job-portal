@@ -4,12 +4,14 @@ import {
   getCompanyController,
   getCompanyControllerById,
   getMyCompanyController,
+  updateMyCompanyController,
   updateCompanyController,
   deleteCompanyController,
   uploadLogoController,
   deleteLogoController,
   uploadCoverController,
   deleteCoverController,
+  uploadGalleryController,
   getCompanyStatsController,
 } from "../controllers/company.controller.js";
 import { getMyCompanyJobsController } from "../controllers/job.controller.js";
@@ -29,6 +31,10 @@ const createCompanySchema = z.object({
   size: z.string().min(1),
   logo: z.string().url().optional(),
   email: z.string().email(),
+  foundedYear: z.number().optional(),
+  officeCount: z.number().optional(),
+  gallery: z.array(z.string()).optional(),
+  specialties: z.array(z.string()).optional(),
 });
 const updateCompanySchema = createCompanySchema.partial(); // All fields are optional for update
 
@@ -83,6 +89,22 @@ router.get(
   protect,
   authorize("company_admin"),
   getMyCompanyController,
+);
+
+router.put(
+  "/me",
+  protect,
+  authorize("company_admin"),
+  validate(updateCompanySchema),
+  updateMyCompanyController,
+);
+
+router.post(
+  "/upload",
+  protect,
+  authorize("company_admin"),
+  uploadCompanyAsset.single("file"),
+  uploadGalleryController,
 );
 
 router.post(
