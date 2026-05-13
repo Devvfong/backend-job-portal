@@ -48,6 +48,7 @@ model Company {
   description String?
   location    String?
   logo        String?
+  coverImage  String?
   website     String?
   industry    String?
   size        String?
@@ -109,6 +110,14 @@ model Session {
 
   @@index([expire], map: "IDX_session_expire")
   @@map("session")
+}
+
+model DeletedAsset {
+  id        String   @id @default(uuid())
+  filePath  String   @map("file_path")
+  deletedAt DateTime @default(now()) @map("deleted_at")
+
+  @@map("deleted_assets")
 }
 
 model SavedJob {

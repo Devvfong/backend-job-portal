@@ -21,6 +21,7 @@ import linkedinAuthRoutes from "./routes/linkedin.routes.js";
 import openApiDocument from "./utils/openapi.js";
 import protect from "./middlewares/protect.middleware.js";
 import authorize from "./middlewares/authorize.middleware.js";
+import "./utils/cron.js"; // Initialize the cron jobs
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

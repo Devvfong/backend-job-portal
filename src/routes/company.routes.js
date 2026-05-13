@@ -8,12 +8,14 @@ import {
   deleteCompanyController,
   uploadLogoController,
   deleteLogoController,
+  uploadCoverController,
+  deleteCoverController,
   getCompanyStatsController,
 } from "../controllers/company.controller.js";
 import { getMyCompanyJobsController } from "../controllers/job.controller.js";
 import protect from "../middlewares/protect.middleware.js";
 import authorize from "../middlewares/authorize.middleware.js";
-import { uploadLogo } from "../middlewares/upload.middleware.js";
+import { uploadCompanyAsset } from "../middlewares/upload.middleware.js";
 import decryptMiddleware from "../middlewares/decrypt.middleware.js";
 const router = express.Router();
 import validate from "../middlewares/validate.middleware.js";
@@ -36,7 +38,7 @@ router.post(
   "/logo",
   protect,
   authorize("company_admin"),
-  uploadLogo.single("logo"),
+  uploadCompanyAsset.single("logo"),
   uploadLogoController,
 );
 
@@ -45,6 +47,21 @@ router.delete(
   protect,
   authorize("company_admin"),
   deleteLogoController,
+);
+
+router.post(
+  "/cover",
+  protect,
+  authorize("company_admin"),
+  uploadCompanyAsset.single("cover"),
+  uploadCoverController,
+);
+
+router.delete(
+  "/cover",
+  protect,
+  authorize("company_admin"),
+  deleteCoverController,
 );
 
 router.get(

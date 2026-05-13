@@ -308,6 +308,23 @@ const deleteCompanyService = async (id, user) => {
 };
 
 const updateCompanyLogo = async (companyId, logoUrl) => {
+  const company = await prisma.company.findUnique({
+    where: { id: companyId },
+  });
+
+  if (company && company.logo) {
+    if (company.logo.includes("supabase.co") && company.logo.includes("company-assets")) {
+      // Extract the path from the URL
+      const urlParts = company.logo.split("company-assets/");
+      if (urlParts.length >= 2) {
+        const filePath = urlParts[1];
+        await prisma.deletedAsset.create({
+          data: { filePath },
+        });
+      }
+    }
+  }
+
   return prisma.company.update({
     where: { id: companyId },
     data: { logo: logoUrl },
@@ -335,11 +352,79 @@ const deleteCompanyLogo = async (user, companyId) => {
     throw new Error("No logo found");
   }
 
-  await deleteFileFromSupabase(company.logo, "logos");
+  // Shadow Deletion logic: insert path into deleted_assets instead of immediately deleting
+  if (company.logo.includes("supabase.co") && company.logo.includes("company-assets")) {
+    const urlParts = company.logo.split("company-assets/");
+    if (urlParts.length >= 2) {
+      const filePath = urlParts[1];
+      await prisma.deletedAsset.create({
+        data: { filePath },
+      });
+    }
+  }
 
   return prisma.company.update({
     where: { id: companyId },
     data: { logo: null },
+  });
+};
+
+const updateCompanyCover = async (companyId, coverUrl) => {
+  const company = await prisma.company.findUnique({
+    where: { id: companyId },
+  });
+
+  if (company && company.coverImage) {
+    if (company.coverImage.includes("supabase.co") && company.coverImage.includes("company-assets")) {
+      const urlParts = company.coverImage.split("company-assets/");
+      if (urlParts.length >= 2) {
+        const filePath = urlParts[1];
+        await prisma.deletedAsset.create({
+          data: { filePath },
+        });
+      }
+    }
+  }
+
+  return prisma.company.update({
+    where: { id: companyId },
+    data: { coverImage: coverUrl },
+  });
+};
+
+const deleteCompanyCover = async (user, companyId) => {
+  const isSuperAdmin = user?.role === "super_admin";
+  const isOwnCompanyAdmin = user?.role === "company_admin" && user.companyId === companyId;
+
+  if (!isSuperAdmin && !isOwnCompanyAdmin) {
+    throw new Error("Unauthorized");
+  }
+
+  const company = await prisma.company.findUnique({
+    where: { id: companyId },
+  });
+
+  if (!company) {
+    throw new Error("Company not found");
+  }
+
+  if (!company.coverImage) {
+    throw new Error("No cover image found");
+  }
+
+  if (company.coverImage.includes("supabase.co") && company.coverImage.includes("company-assets")) {
+    const urlParts = company.coverImage.split("company-assets/");
+    if (urlParts.length >= 2) {
+      const filePath = urlParts[1];
+      await prisma.deletedAsset.create({
+        data: { filePath },
+      });
+    }
+  }
+
+  return prisma.company.update({
+    where: { id: companyId },
+    data: { coverImage: null },
   });
 };
 
@@ -387,5 +472,7 @@ export {
   deleteCompanyService,
   updateCompanyLogo,
   deleteCompanyLogo,
+  updateCompanyCover,
+  deleteCompanyCover,
   getCompanyStatsService,
 };

@@ -56,34 +56,36 @@ const uploadResume = async (fileBuffer, mimetype, originalname, userId) => {
 };
 
 /**
- * Upload a company logo to Supabase Storage (bucket: logos)
+ * Upload a company asset (logo or cover) to Supabase Storage (bucket: company-assets)
  * @param {Buffer} fileBuffer - File buffer from multer memoryStorage
  * @param {string} mimetype   - MIME type of the file
  * @param {string} originalname - Original file name
  * @param {number} companyId    - Authenticated company ID (used as folder prefix)
+ * @param {string} assetType    - 'logo' or 'cover'
  * @returns {promise<string>} Public URL of the uploaded file
  */
-const uploadLogo = async (fileBuffer, mimetype, originalname, companyId) => {
+const uploadCompanyAsset = async (fileBuffer, mimetype, originalname, companyId, assetType = "logo") => {
   const ext = path.extname(originalname).toLowerCase();
-  const fileName = `${companyId}/${Date.now()}${ext}`;
+  // Using path strategy: public/${companyId}/${assetType}${ext}
+  const fileName = `public/${companyId}/${assetType}${ext}`;
 
-  const { error } = await supabase.storage.from("logos").upload(fileName, fileBuffer, {
+  const { error } = await supabase.storage.from("company-assets").upload(fileName, fileBuffer, {
     contentType: mimetype,
     upsert: true,
   });
 
   if (error) {
-    throw new Error(`Supabase logo upload failed: ${error.message}`);
+    throw new Error(`Supabase ${assetType} upload failed: ${error.message}`);
   }
 
-  const { data } = supabase.storage.from("logos").getPublicUrl(fileName);
+  const { data } = supabase.storage.from("company-assets").getPublicUrl(fileName);
   return data.publicUrl;
 };
 
 /**
  * Delete a file from Supabase Storage given its public URL
  * @param {string} publicUrl - Public URL of the file to delete
- * @param {string} bucket    - Bucket name ('avatars', 'resumes', or 'logos')
+ * @param {string} bucket    - Bucket name ('avatars', 'resumes', 'logos', or 'company-assets')
  */
 const deleteFileFromSupabase = async (publicUrl, bucket) => {
   if (!publicUrl) return;
@@ -106,4 +108,4 @@ const deleteFileFromSupabase = async (publicUrl, bucket) => {
   }
 };
 
-export { uploadAvatar, uploadResume, uploadLogo, deleteFileFromSupabase };
+export { uploadAvatar, uploadResume, uploadCompanyAsset, deleteFileFromSupabase };

@@ -7,11 +7,12 @@ import {
   deleteCompanyService,
   updateCompanyLogo,
   deleteCompanyLogo,
+  updateCompanyCover,
+  deleteCompanyCover,
   getCompanyStatsService,
 } from "../services/company.service.js";
 import {
-  uploadLogo as uploadLogoToSupabase,
-  deleteFileFromSupabase,
+  uploadCompanyAsset,
 } from "../services/upload.service.js";
 
 import { encryptId, decryptId } from "../utils/crypto.js";
@@ -160,25 +161,17 @@ const uploadLogoController = async (req, res) => {
         .json({ message: "Forbidden: No company associated" });
     }
 
-    // 1. Get current company to check for old logo
-    const company = await getCompanyServiceById(req.user.companyId, true);
-    const oldLogoUrl = company?.logo;
-
     // 2. Upload new logo
-    const publicUrl = await uploadLogoToSupabase(
+    const publicUrl = await uploadCompanyAsset(
       req.file.buffer,
       req.file.mimetype,
       req.file.originalname,
       req.user.companyId,
+      "logo"
     );
 
-    // 3. Update database
+    // 3. Update database (shadow deletion is handled in the service for the old logo)
     const updatedCompany = await updateCompanyLogo(req.user.companyId, publicUrl);
-
-    // 4. Cleanup old logo if it exists
-    if (oldLogoUrl) {
-      await deleteFileFromSupabase(oldLogoUrl, "logos");
-    }
 
     const { id: updatedId, jobs = [], ...updatedRest } = updatedCompany;
     const jobsSanitized = (jobs || []).map(({ id: jobId, ...jobRest }) => ({ ...jobRest, encryptedId: encryptId(jobId) }));
@@ -216,6 +209,66 @@ const deleteLogoController = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+
+const uploadCoverController = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "No cover file provided" });
+    }
+
+    if (!req.user.companyId) {
+      return res
+        .status(403)
+        .json({ message: "Forbidden: No company associated" });
+    }
+
+    const publicUrl = await uploadCompanyAsset(
+      req.file.buffer,
+      req.file.mimetype,
+      req.file.originalname,
+      req.user.companyId,
+      "cover"
+    );
+
+    const updatedCompany = await updateCompanyCover(req.user.companyId, publicUrl);
+
+    const { id: updatedId, jobs = [], ...updatedRest } = updatedCompany;
+    const jobsSanitized = (jobs || []).map(({ id: jobId, ...jobRest }) => ({ ...jobRest, encryptedId: encryptId(jobId) }));
+
+    return res.status(200).json({
+      status: "success",
+      message: "Cover uploaded successfully",
+      data: { ...updatedRest, encryptedId: encryptId(updatedId), jobs: jobsSanitized },
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+const deleteCoverController = async (req, res) => {
+  try {
+    if (!req.user.companyId) {
+      return res
+        .status(403)
+        .json({ message: "Forbidden: No company associated" });
+    }
+
+    const company = await deleteCompanyCover(req.user, req.user.companyId);
+
+    const { id: deletedId, jobs = [], ...deletedRest } = company;
+    const jobsSanitized = (jobs || []).map(({ id: jobId, ...jobRest }) => ({ ...jobRest, encryptedId: encryptId(jobId) }));
+
+    return res.status(200).json({
+      status: "success",
+      message: "Cover deleted successfully",
+      data: { ...deletedRest, encryptedId: encryptId(deletedId), jobs: jobsSanitized },
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: error.message });
+  }
+};
 const getCompanyStatsController = async (req, res) => {
   try {
     if (!req.user.companyId) {
@@ -243,5 +296,7 @@ export {
   deleteCompanyController,
   uploadLogoController,
   deleteLogoController,
+  uploadCoverController,
+  deleteCoverController,
   getCompanyStatsController,
 };
