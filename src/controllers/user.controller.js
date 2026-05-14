@@ -13,13 +13,14 @@ import {
   uploadResume as uploadResumeToSupabase,
   deleteFileFromSupabase,
 } from "../services/upload.service.js";
+import { encryptId } from "../utils/crypto.js";
 
 const createProfileController = async (req, res) => {
   try {
     const profile = await createProfile(req.body, req.user.id);
     return res.status(200).json({
       status: "success",
-      data: profile,
+      data: { ...profile, encryptedId: encryptId(profile.id) },
     });
   } catch (e) {
     console.error(e);
@@ -42,7 +43,7 @@ const getProfileController = async (req, res) => {
 
     return res.status(200).json({
       status: "success",
-      data: profile,
+      data: { ...profile, encryptedId: encryptId(profile.id) },
     });
   } catch (e) {
     console.error(e);
@@ -57,7 +58,7 @@ const updateProfileController = async (req, res) => {
 
     return res.status(200).json({
       status: "success",
-      data: profile,
+      data: { ...profile, encryptedId: encryptId(profile.id) },
     });
   } catch (e) {
     console.error(e);
@@ -78,7 +79,7 @@ const updateUserController = async (req, res) => {
 
     return res.status(200).json({
       status: "success",
-      data: profile,
+      data: { ...profile, encryptedId: encryptId(profile.id) },
     });
   } catch (e) {
     console.error(e);
@@ -98,9 +99,10 @@ const updateUserController = async (req, res) => {
 const getAllUsersController = async (req, res) => {
   try {
     const data = await getAllUsers();
+    const sanitizedUsers = data.user.map(u => ({ ...u, encryptedId: encryptId(u.id) }));
     return res.status(200).json({
       status: "success",
-      data: data,
+      data: { user: sanitizedUsers, total: data.total },
     });
   } catch (e) {
     console.error(e);
@@ -157,7 +159,7 @@ const uploadAvatarController = async (req, res) => {
     return res.status(200).json({
       status: "success",
       message: "Avatar uploaded successfully",
-      data: user,
+      data: { ...user, encryptedId: encryptId(user.id) },
     });
   } catch (e) {
     console.error(e);
@@ -194,7 +196,7 @@ const uploadResumeController = async (req, res) => {
     return res.status(200).json({
       status: "success",
       message: "Resume uploaded successfully",
-      data: user,
+      data: { ...user, encryptedId: encryptId(user.id) },
     });
   } catch (e) {
     console.error(e);
@@ -226,7 +228,7 @@ const getProfileByIdController = async (req, res) => {
 
     return res.status(200).json({
       status: "success",
-      data: profile,
+      data: { ...profile, encryptedId: encryptId(profile.id) },
     });
   } catch (e) {
     console.error(e);

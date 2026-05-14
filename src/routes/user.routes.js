@@ -51,7 +51,7 @@ const handleUploadError = (multerMiddleware) => (req, res, next) => {
 
 // ─── Profile ───────────────────────────────────────────────────────────────
 router.get("/profile", protect, getProfileController);
-router.get("/profile/:id", decryptMiddleware, protect, getProfileByIdController);
+router.get("/profile/:id", decryptMiddleware, getProfileByIdController);
 router.get("/me/stats", protect, getUserStatsController);
 router.post("/profile", protect, validate(createProfileSchema), createProfileController);
 router.put("/profile", protect, validate(updateProfileSchema), updateProfileController);

@@ -6,6 +6,7 @@ import {
   updateApplicationStatusService,
   withdrawApplicationService,
 } from "../services/application.service.js";
+import { encryptId } from "../utils/crypto.js";
 
 const applyToJobController = async (req, res) => {
   try {
@@ -46,9 +47,13 @@ const getApplicantsController = async (req, res) => {
   try {
     const jobId = Number(req.params.id); // convert string to number
     const applicants = await getApplicantsForJobService(jobId, req.user);
+    const sanitized = applicants.map(app => ({
+      ...app,
+      user: app.user ? { ...app.user, encryptedId: encryptId(app.user.id) } : app.user
+    }));
     return res.status(200).json({
       status: "success",
-      data: applicants,
+      data: sanitized,
     });
   } catch (err) {
     if (err.message.includes("Forbidden")) {
@@ -105,9 +110,13 @@ const withdrawApplicationController = async (req, res) => {
 const getCompanyApplicantsController = async (req, res) => {
   try {
     const applicants = await getCompanyApplicantsService(req.user);
+    const sanitized = applicants.map(app => ({
+      ...app,
+      user: app.user ? { ...app.user, encryptedId: encryptId(app.user.id) } : app.user
+    }));
     return res.status(200).json({
       status: "success",
-      data: applicants,
+      data: sanitized,
     });
   } catch (err) {
     if (err.message.includes("Forbidden")) {

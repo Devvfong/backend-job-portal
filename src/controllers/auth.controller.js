@@ -3,6 +3,7 @@ import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 import jwt from "jsonwebtoken";
+import { encryptId } from "../utils/crypto.js";
 import {
   findUserByEmail,
   createUser,
@@ -87,6 +88,7 @@ const register = async (req, res) => {
       data: {
         user: {
           id: user.id,
+          encryptedId: encryptId(user.id),
           name: user.name,
           email: user.email,
           role: user.role,
@@ -129,6 +131,7 @@ const login = async (req, res) => {
       data: {
         user: {
           id: user.id,
+          encryptedId: encryptId(user.id),
           name: user.name,
           email: user.email,
           role: user.role,
@@ -170,7 +173,8 @@ const getMe = async (req, res) => {
     return res.status(200).json({
       status: "success",
       data: {
-        ...req.user
+        ...req.user,
+        encryptedId: encryptId(req.user.id)
       }
     });
   } catch (e) {
