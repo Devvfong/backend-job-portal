@@ -32,6 +32,7 @@ const baseJobSchema = z.object({
   salaryMin: z.number().min(0).optional(),
   salaryMax: z.number().min(0).optional(),
   companyId: z.number().optional(),
+  status: z.enum(["open", "closed"]).optional(),
 });
 const createJobSchema = baseJobSchema.refine((data) => data.salaryNegotiable || (data.salaryMin != null && data.salaryMax != null), {
   message: "Provide salaryMin and salaryMax unless salaryNegotiable is true",
