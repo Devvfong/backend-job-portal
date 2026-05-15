@@ -56,6 +56,9 @@ model Company {
   officeCount Int?
   gallery     String[]
   specialties String[]
+  mapUrl      String?
+  latitude    Float?
+  longitude   Float?
   jobs        Job[]
   users       User[]
 }
@@ -80,6 +83,8 @@ model Job {
   benefits     String?
   requirements String?
   category     String?
+  skills       String[]
+  tags         String[]
   applications Application[]
   company      Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
   savedBy      SavedJob[]

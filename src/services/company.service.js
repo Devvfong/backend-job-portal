@@ -223,6 +223,15 @@ const getCompanyServiceById = async (id, includeSensitive = false) => {
         createdAt: true,
       },
     },
+    users: {
+      select: {
+        id: true,
+        name: true,
+        role: true,
+        avatar: true,
+        headline: true,
+      }
+    }
   };
 
   if (includeSensitive) {
@@ -289,7 +298,11 @@ const updateCompanyService = async (id, data, user) => {
 
   return prisma.company.update({
     where: { id },
-    data,
+    data: {
+      ...data,
+      latitude: data.latitude ? parseFloat(data.latitude) : undefined,
+      longitude: data.longitude ? parseFloat(data.longitude) : undefined,
+    },
   });
 };
 

@@ -37,7 +37,20 @@ const createJobController = async (req, res) => {
 
 const getJobsController = async (req, res) => {
   try {
-    const result = await getJobService(req.query);
+    const query = { ...req.query };
+    
+    // Decrypt companyId if provided and not a raw number
+    if (query.companyId && isNaN(Number(query.companyId))) {
+      try {
+        query.companyId = decryptId(query.companyId);
+      } catch (err) {
+        console.error("[Search] CompanyID decryption failed:", err);
+        // If decryption fails, we might want to return 0 jobs or ignore the filter
+        // For now, we'll let it pass (it will likely result in 0 jobs if the ID is invalid)
+      }
+    }
+
+    const result = await getJobService(query);
     const jobs = result.jobs.map((job) => {
       const { company, ...rest } = job;
       const companySanitized = company ? (({ id: cId, ...cRest }) => ({

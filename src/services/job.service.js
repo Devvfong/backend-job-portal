@@ -21,6 +21,8 @@ const createJobService = async (data, user) => {
       salaryNegotiable: Boolean(data.salaryNegotiable),
       salaryMin: data.salaryMin ? Number(data.salaryMin) : undefined,
       salaryMax: data.salaryMax ? Number(data.salaryMax) : undefined,
+      skills: data.skills || [],
+      tags: data.tags || [],
     },
   })
   if (duplicated) {
@@ -51,6 +53,7 @@ const getJobService = async (query) => {
     location,
     jobType,
     category,
+    companyId,
     minSalary,
     maxSalary,
     page = 1,
@@ -93,6 +96,10 @@ const getJobService = async (query) => {
 
   if (category) {
     where.category = String(category);
+  }
+
+  if (companyId) {
+    where.companyId = Number(companyId);
   }
 
   if (minSalary || maxSalary) {
@@ -194,6 +201,8 @@ const updateJobService = async (id, data, user) => {
     salaryMin: data.salaryMin ? Number(data.salaryMin) : job.salaryMin,
     salaryMax: data.salaryMax ? Number(data.salaryMax) : job.salaryMax,
     status: data.status || job.status,
+    skills: data.skills || job.skills,
+    tags: data.tags || job.tags,
   };
 
   if (isSuperAdmin && data.companyId) {
