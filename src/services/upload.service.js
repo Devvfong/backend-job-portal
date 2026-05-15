@@ -92,7 +92,7 @@ const uploadCompanyAsset = async (fileBuffer, mimetype, originalname, companyId,
 const uploadGalleryAsset = async (fileBuffer, mimetype, companyId) => {
   const fileName = `gallery/${companyId}/${Date.now()}.jpg`;
 
-  const { error } = await supabase.storage.from("company-assets").upload(fileName, fileBuffer, {
+  const { error } = await supabase.storage.from("logos").upload(fileName, fileBuffer, {
     contentType: mimetype,
     upsert: true,
   });
@@ -101,7 +101,7 @@ const uploadGalleryAsset = async (fileBuffer, mimetype, companyId) => {
     throw new Error(`Supabase gallery upload failed: ${error.message}`);
   }
 
-  const { data } = supabase.storage.from("company-assets").getPublicUrl(fileName);
+  const { data } = supabase.storage.from("logos").getPublicUrl(fileName);
   return data.publicUrl;
 };
 

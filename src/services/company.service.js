@@ -173,6 +173,9 @@ const getCompanyService = async (query = {}) => {
         officeCount: true,
         gallery: true,
         specialties: true,
+        mapUrl: true,
+        latitude: true,
+        longitude: true,
         createdAt: true,
       },
     }),
@@ -206,6 +209,9 @@ const getCompanyServiceById = async (id, includeSensitive = false) => {
     officeCount: true,
     gallery: true,
     specialties: true,
+    mapUrl: true,
+    latitude: true,
+    longitude: true,
     createdAt: true,
     jobs: {
       where: { status: "open" },
@@ -300,8 +306,10 @@ const updateCompanyService = async (id, data, user) => {
     where: { id },
     data: {
       ...data,
-      latitude: data.latitude ? parseFloat(data.latitude) : undefined,
-      longitude: data.longitude ? parseFloat(data.longitude) : undefined,
+      gallery: data.gallery ? data.gallery : undefined,
+      mapUrl: data.mapUrl !== undefined ? data.mapUrl : undefined,
+      latitude: data.latitude !== undefined && data.latitude !== null ? parseFloat(data.latitude) : undefined,
+      longitude: data.longitude !== undefined && data.longitude !== null ? parseFloat(data.longitude) : undefined,
     },
   });
 };
