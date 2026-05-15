@@ -3,7 +3,6 @@ import { prisma } from "../config/db.js";
 const getJobLocationsService = async () => {
     const groups = await prisma.job.groupBy({
         by: ["location"],
-        where: { location: { not: "" } },
         _count: { location: true },
         orderBy: { _count: { location: "desc" } },
         take: 6
