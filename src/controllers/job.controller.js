@@ -39,7 +39,7 @@ const getJobsController = async (req, res) => {
   try {
     const result = await getJobService(req.query);
     const jobs = result.jobs.map((job) => {
-      const { id, company, ...rest } = job;
+      const { company, ...rest } = job;
       const companySanitized = company ? (({ id: cId, ...cRest }) => ({
         ...cRest,
         encryptedId: encryptId(cId),
@@ -47,7 +47,7 @@ const getJobsController = async (req, res) => {
 
       return {
         ...rest,
-        encryptedId: encryptId(id),
+        encryptedId: encryptId(rest.id),
         company: companySanitized,
       };
     });
@@ -81,12 +81,12 @@ const getJobByIdController = async (req, res) => {
       return res.status(404).json({ message: "Job not found" });
     }
 
-    const { id: jobId, company, ...jobRest } = job;
+    const { company, ...jobRest } = job;
     const companySanitized = company ? (({ id: cId, ...cRest }) => ({ ...cRest, encryptedId: encryptId(cId) }))(company) : null;
 
     return res.status(200).json({
       status: "success",
-      data: { ...jobRest, encryptedId: encryptId(jobId), company: companySanitized },
+      data: { ...jobRest, encryptedId: encryptId(jobRest.id), company: companySanitized },
     });
   } catch (e) {
     console.error(e);
