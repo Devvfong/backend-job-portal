@@ -138,11 +138,36 @@ const updateMyCompanyController = async (req, res) => {
     }
     
     // Only allow expected premium fields and base fields
-    const { foundedYear, officeCount, gallery, specialties, ...restBody } = req.body;
+    // Only allow expected premium fields and base fields, excluding immutable IDs
+    const { 
+      id, 
+      encryptedId, 
+      companyId, 
+      userId, 
+      createdAt, 
+      updatedAt,
+      foundedYear, 
+      officeCount, 
+      gallery, 
+      specialties,
+      mapUrl,
+      latitude,
+      longitude,
+      ...restBody 
+    } = req.body;
     
     const company = await updateCompanyService(
       req.user.companyId,
-      { ...restBody, foundedYear, officeCount, gallery, specialties },
+      { 
+        ...restBody, 
+        foundedYear, 
+        officeCount, 
+        gallery, 
+        specialties,
+        mapUrl,
+        latitude,
+        longitude
+      },
       req.user,
     );
 

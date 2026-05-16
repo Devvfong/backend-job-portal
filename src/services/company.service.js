@@ -177,6 +177,9 @@ const getCompanyService = async (query = {}) => {
         latitude: true,
         longitude: true,
         createdAt: true,
+        _count: {
+          select: { jobs: true }
+        }
       },
     }),
     prisma.company.count({ where }),

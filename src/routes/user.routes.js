@@ -24,9 +24,9 @@ const router = express.Router();
 const createProfileSchema = z.object({
   name: z.string().min(1),
   email: z.string().email(),
-  headline: z.string().max(100).optional(),
-  bio: z.string().max(200).optional(),
-  location: z.string().max(100).optional(),
+  headline: z.string().max(200).optional(),
+  bio: z.string().max(500).optional(),
+  location: z.string().max(500).optional(),
   phone: z.string().max(20).optional(),
   avatar: z.string().url().optional(),
   skills: z.array(z.string()).optional(),
