@@ -43,16 +43,73 @@ const prisma = globalForPrisma.prisma ?? new PrismaClient({
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;
 }
+// Idle disconnect settings (default 10 minutes)
+const DEFAULT_IDLE_MS = 10 * 60 * 1000; // 10 minutes
+const IDLE_TIMEOUT_MS = process.env.DB_IDLE_TIMEOUT_MS
+  ? parseInt(process.env.DB_IDLE_TIMEOUT_MS, 10)
+  : DEFAULT_IDLE_MS;
+
+let _idleTimer = null;
+let _isConnected = false;
+
+function _clearIdleTimer() {
+  if (_idleTimer) {
+    clearTimeout(_idleTimer);
+    _idleTimer = null;
+  }
+}
+
+function _scheduleIdleDisconnect() {
+  _clearIdleTimer();
+  _idleTimer = setTimeout(async () => {
+    try {
+      await disconnectDB();
+      console.log(`🕒 Idle ${IDLE_TIMEOUT_MS}ms reached — disconnected from DB`);
+    } catch (err) {
+      console.error("Error during idle disconnect:", err);
+    }
+  }, IDLE_TIMEOUT_MS);
+}
 
 // 4. Wrapper Functions for Clean API
 const connectDB = async () => {
-  await prisma.$connect();
-  console.log("✅ Database connected successfully");
+  if (!_isConnected) {
+    await prisma.$connect();
+    _isConnected = true;
+    console.log("✅ Database connected successfully");
+  }
+  // (re)schedule idle disconnect after each explicit connect
+  _scheduleIdleDisconnect();
 };
 
 const disconnectDB = async () => {
-  await prisma.$disconnect();
-  console.log("🔌 Database disconnected");
+  _clearIdleTimer();
+  if (_isConnected) {
+    await prisma.$disconnect();
+    _isConnected = false;
+    console.log("🔌 Database disconnected");
+  }
 };
+
+// Prisma middleware: reset idle timer around each query and auto-reconnect if needed
+prisma.$use(async (params, next) => {
+  try {
+    if (!_isConnected) {
+      // reconnect on-demand before running a query
+      await connectDB();
+    } else {
+      // reset timer before running the query to avoid disconnecting mid-work
+      _scheduleIdleDisconnect();
+    }
+    const result = await next(params);
+    // after successful query, schedule disconnect again
+    _scheduleIdleDisconnect();
+    return result;
+  } catch (err) {
+    // ensure timer is scheduled to attempt cleanup even on error
+    _scheduleIdleDisconnect();
+    throw err;
+  }
+});
 
 export { prisma, connectDB, disconnectDB };
