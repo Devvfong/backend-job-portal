@@ -13,7 +13,8 @@ DNSSEC.md
 .env
 .env.*
 !.env.example
-
+.env.local
+.env.new
 # Prisma generated client
 /src/generated/prisma
 prisma/migrations/**/migration_lock.toml
