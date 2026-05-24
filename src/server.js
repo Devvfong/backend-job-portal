@@ -96,7 +96,6 @@ app.use("/auth", githubAuthRoutes);
 app.use("/auth", linkedinAuthRoutes);
 const docsPublicEnv = String(process.env.DOCS_PUBLIC || "").trim().toLowerCase();
 const docsArePublic =
-  process.env.NODE_ENV !== "production" ||
   docsPublicEnv === "true" ||
   docsPublicEnv === "1" ||
   docsPublicEnv === "yes";
