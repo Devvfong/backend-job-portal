@@ -19,6 +19,9 @@ const openApiDocument = {
     { name: "Companies", description: "Company profiles and logo management" },
     { name: "Applications", description: "Job application submissions and status tracking" },
     { name: "OAuth", description: "Third-party OAuth flows" },
+    { name: "Lookup", description: "Public lookup data such as categories and locations" },
+    { name: "Dashboard", description: "Global dashboard metrics" },
+    { name: "Notifications", description: "Authenticated notification feed" },
     { name: "Admin", description: "Super admin management endpoints" }
   ],
   components: {
@@ -190,6 +193,33 @@ const openApiDocument = {
           logo: { type: "string", example: "https://techcorp.com/logo.png" },
           email: { type: "string", format: "email", example: "contact@techcorp.com" }
         }
+      },
+      Category: {
+        type: "object",
+        properties: {
+          id: { type: "integer", example: 1 },
+          name: { type: "string", example: "Engineering" },
+        },
+      },
+      Location: {
+        type: "object",
+        properties: {
+          location: { type: "string", example: "Remote" },
+        },
+      },
+      GlobalStats: {
+        type: "object",
+        additionalProperties: { type: ["integer", "number", "string", "boolean", "null"] },
+      },
+      Notification: {
+        type: "object",
+        properties: {
+          id: { type: "integer", example: 1 },
+          title: { type: "string", example: "New application received" },
+          message: { type: "string", example: "A candidate has applied to your job posting." },
+          read: { type: "boolean", example: false },
+          createdAt: { type: "string", format: "date-time", example: "2026-05-24T12:00:00Z" },
+        },
       }
     },
   },
@@ -245,6 +275,17 @@ const openApiDocument = {
         security: [{ cookieAuth: [] }, { bearerAuth: [] }],
         responses: {
           200: { description: "Logged out successfully" },
+        },
+      },
+    },
+    "/api/v1/auth/refresh": {
+      post: {
+        tags: ["Auth"],
+        summary: "Refresh the access token using the refresh cookie",
+        security: [{ cookieAuth: [] }],
+        responses: {
+          200: { description: "Access token refreshed" },
+          401: { description: "Not authorized" },
         },
       },
     },
@@ -342,6 +383,85 @@ const openApiDocument = {
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
         responses: {
           200: { description: "Saved/unsaved successfully" },
+          401: { description: "Not authorized" },
+        },
+      },
+    },
+
+    // -------------------------------- LOOKUP / PUBLIC DATA --------------------------------
+    "/api/v1/categories": {
+      get: {
+        tags: ["Lookup"],
+        summary: "Get all job categories",
+        responses: {
+          200: {
+            description: "Categories returned",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "array",
+                  items: { $ref: "#/components/schemas/Category" },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/api/v1/locations": {
+      get: {
+        tags: ["Lookup"],
+        summary: "Get job locations",
+        responses: {
+          200: {
+            description: "Locations returned",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "array",
+                  items: { $ref: "#/components/schemas/Location" },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/api/v1/stats": {
+      get: {
+        tags: ["Dashboard"],
+        summary: "Get global platform stats",
+        responses: {
+          200: {
+            description: "Global stats returned",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/GlobalStats" },
+              },
+            },
+          },
+        },
+      },
+    },
+
+    // -------------------------------- NOTIFICATIONS --------------------------------
+    "/api/v1/notifications": {
+      get: {
+        tags: ["Notifications"],
+        summary: "Get notifications for the current user",
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        responses: {
+          200: {
+            description: "Notifications returned",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "array",
+                  items: { $ref: "#/components/schemas/Notification" },
+                },
+              },
+            },
+          },
           401: { description: "Not authorized" },
         },
       },
@@ -503,6 +623,36 @@ const openApiDocument = {
         responses: { 200: { description: "Logo deleted" } },
       },
     },
+    "/api/v1/companies/cover": {
+      post: {
+        tags: ["Companies"],
+        summary: "Upload company cover image",
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: { "multipart/form-data": { schema: { type: "object", properties: { cover: { type: "string", format: "binary" } } } } },
+        },
+        responses: { 200: { description: "Cover uploaded" } },
+      },
+      delete: {
+        tags: ["Companies"],
+        summary: "Delete company cover image",
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        responses: { 200: { description: "Cover deleted" } },
+      },
+    },
+    "/api/v1/companies/upload": {
+      post: {
+        tags: ["Companies"],
+        summary: "Upload a company gallery asset",
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: { "multipart/form-data": { schema: { type: "object", properties: { file: { type: "string", format: "binary" } } } } },
+        },
+        responses: { 200: { description: "Gallery asset uploaded" } },
+      },
+    },
     "/api/v1/companies/me/stats": {
       get: {
         tags: ["Companies"],
@@ -510,6 +660,41 @@ const openApiDocument = {
         security: [{ cookieAuth: [] }, { bearerAuth: [] }],
         responses: {
           200: { description: "Company stats returned" },
+          401: { description: "Not authorized" },
+          403: { description: "Forbidden - Requires company_admin role" },
+        },
+      },
+    },
+    "/api/v1/companies/me/jobs": {
+      get: {
+        tags: ["Companies"],
+        summary: "Get jobs posted by the current company",
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        responses: {
+          200: { description: "Company jobs returned" },
+          401: { description: "Not authorized" },
+          403: { description: "Forbidden - Requires company_admin role" },
+        },
+      },
+    },
+    "/api/v1/companies/me": {
+      get: {
+        tags: ["Companies"],
+        summary: "Get current company profile",
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        responses: {
+          200: { description: "Company profile returned" },
+          401: { description: "Not authorized" },
+          403: { description: "Forbidden - Requires company_admin role" },
+        },
+      },
+      put: {
+        tags: ["Companies"],
+        summary: "Update current company profile",
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        requestBody: { content: { "application/json": { schema: { $ref: "#/components/schemas/CreateCompanyRequest" } } } },
+        responses: {
+          200: { description: "Company profile updated" },
           401: { description: "Not authorized" },
           403: { description: "Forbidden - Requires company_admin role" },
         },
@@ -543,6 +728,18 @@ const openApiDocument = {
         responses: {
           200: { description: "Application withdrawn" },
           401: { description: "Not authorized" },
+        },
+      },
+    },
+    "/api/v1/applications/company": {
+      get: {
+        tags: ["Applications"],
+        summary: "Get all applicants for the current company",
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        responses: {
+          200: { description: "Company applicants returned" },
+          401: { description: "Not authorized" },
+          403: { description: "Forbidden - Requires company_admin role" },
         },
       },
     },
@@ -581,6 +778,25 @@ const openApiDocument = {
       get: {
         tags: ["OAuth"],
         summary: "GitHub OAuth callback (sets JWT cookie / redirects to frontend)",
+        responses: {
+          302: { description: "Redirect back to frontend with token query param" },
+          401: { description: "Authentication failed" },
+        },
+      },
+    },
+    "/auth/linkedin": {
+      get: {
+        tags: ["OAuth"],
+        summary: "Start LinkedIn OAuth login",
+        responses: {
+          302: { description: "Redirect to LinkedIn OAuth consent screen" },
+        },
+      },
+    },
+    "/auth/linkedin/callback": {
+      get: {
+        tags: ["OAuth"],
+        summary: "LinkedIn OAuth callback (sets JWT cookie / redirects to frontend)",
         responses: {
           302: { description: "Redirect back to frontend with token query param" },
           401: { description: "Authentication failed" },
