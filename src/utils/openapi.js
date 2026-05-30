@@ -97,6 +97,14 @@ const openApiDocument = {
           size: { type: "string", example: "50-200" },
           logo: { type: "string", example: "https://storage.example.com/logo.png" },
           email: { type: "string", example: "contact@techinnovators.com" },
+          coverImage: { type: "string", nullable: true, example: "https://storage.example.com/cover.png" },
+          foundedYear: { type: "integer", nullable: true, example: 2015 },
+          officeCount: { type: "integer", nullable: true, example: 3 },
+          gallery: { type: "array", items: { type: "string" }, example: ["https://storage.example.com/office1.jpg", "https://storage.example.com/office2.jpg"] },
+          specialties: { type: "array", items: { type: "string" }, example: ["AI", "Cloud", "SaaS"] },
+          mapUrl: { type: "string", nullable: true, example: "https://maps.google.com/?q=New+York" },
+          latitude: { type: "number", format: "float", nullable: true, example: 40.7128 },
+          longitude: { type: "number", format: "float", nullable: true, example: -74.0060 },
         },
       },
       Job: {
@@ -120,17 +128,17 @@ const openApiDocument = {
         type: "object",
         properties: {
           id: { type: "integer", example: 1 },
-          status: { type: "string", enum: ["pending", "reviewing", "shortlisted", "rejected", "accepted"], example: "pending" },
+          status: { type: "string", enum: ["pending", "reviewed", "accepted", "rejected"], example: "pending" },
           userId: { type: "integer", example: 1 },
           jobId: { type: "integer", example: 1 },
-          appliedAt: { type: "string", format: "date-time", example: "2023-10-01T12:00:00Z" }
+          appliedDate: { type: "string", format: "date-time", example: "2023-10-01T12:00:00Z" }
         }
       },
       UpdateApplicationStatusRequest: {
         type: "object",
         required: ["status"],
         properties: {
-          status: { type: "string", enum: ["pending", "reviewing", "shortlisted", "rejected", "accepted"], example: "reviewing" },
+          status: { type: "string", enum: ["pending", "reviewed", "accepted", "rejected"], example: "reviewed" },
         },
       },
       RegisterRequest: {

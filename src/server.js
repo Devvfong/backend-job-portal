@@ -108,6 +108,7 @@ app.get(
   ...(docsArePublic ? [] : [protect, authorize("company_admin")]),
   apiReference({
     theme: "kepler",
+    fetch: (input, init) => fetch(input, { ...init, credentials: "include" }),
     spec: {
       content: openApiDocument,
     },
