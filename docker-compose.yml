@@ -10,8 +10,8 @@ services:
     environment:
       - NODE_ENV=production
       - REDIS_URL=redis://jp-redis:6379
-    expose:
-      - "3000"
+    ports:
+      - "127.0.0.1:5000:5000"
     command: sh -c "npx prisma migrate deploy && npm start"
     depends_on:
       - jp-redis
@@ -24,21 +24,6 @@ services:
     restart: always
     expose:
       - "6379"
-    networks:
-      - job-portal-net
-
-  nginx:
-    image: nginx:stable-alpine
-    container_name: jp-proxy
-    restart: always
-    depends_on:
-      - backend
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx:/etc/nginx/conf.d:ro
-      - /etc/letsencrypt:/etc/letsencrypt:ro
     networks:
       - job-portal-net
 

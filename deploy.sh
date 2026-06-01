@@ -12,16 +12,13 @@ else
 fi
 
 echo "🔽 Stopping containers..."
-$DOCKER_COMPOSE down
+$DOCKER_COMPOSE down --remove-orphans
 
 echo "🔨 Building containers..."
 $DOCKER_COMPOSE build
 
 echo "🚀 Starting containers..."
 $DOCKER_COMPOSE up -d
-
-echo "🔁 Restarting nginx..."
-$DOCKER_COMPOSE restart nginx
 
 echo "📊 Showing status..."
 $DOCKER_COMPOSE ps
