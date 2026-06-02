@@ -31,6 +31,10 @@ const createJobController = async (req, res) => {
         .json({ message: "Admin account is not linked to a company" });
     }
 
+    if (e.message === "A job with identical details already exists for this company") {
+      return res.status(400).json({ message: e.message });
+    }
+
     return res.status(500).json({ error: e.message });
   }
 };

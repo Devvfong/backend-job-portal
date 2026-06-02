@@ -29,8 +29,11 @@ const baseJobSchema = z.object({
   requirements: z.string().optional().or(z.literal("")),
   benefits: z.string().optional().or(z.literal("")),
   salaryNegotiable: z.boolean().optional().default(false),
-  salaryMin: z.number().min(0).optional(),
-  salaryMax: z.number().min(0).optional(),
+  salaryMin: z.coerce.number().min(0).optional(),
+  salaryMax: z.coerce.number().min(0).optional(),
+  category: z.string().optional().or(z.literal("")),
+  skills: z.array(z.string()).optional().default([]),
+  tags: z.array(z.string()).optional().default([]),
   companyId: z.number().optional(),
   status: z.enum(["open", "closed"]).optional(),
 });

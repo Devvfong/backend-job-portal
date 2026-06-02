@@ -9,6 +9,11 @@ const createJobService = async (data, user) => {
   if (!companyId) {
     throw new Error("A companyId must be provided in the request body or linked to your account");
   }
+  const skills = Array.isArray(data.skills) ? data.skills : [];
+  const tags = Array.isArray(data.tags) ? data.tags : [];
+  const salaryMin = data.salaryMin != null ? Number(data.salaryMin) : null;
+  const salaryMax = data.salaryMax != null ? Number(data.salaryMax) : null;
+
   const duplicated = await prisma.job.findFirst({
     where: {
       companyId: Number(companyId),
@@ -16,13 +21,14 @@ const createJobService = async (data, user) => {
       location: data.location,
       jobType: data.jobType,
       description: data.description,
-      requirements: data.requirements,
-      benefits: data.benefits,
+      requirements: data.requirements || "",
+      benefits: data.benefits || "",
       salaryNegotiable: Boolean(data.salaryNegotiable),
-      salaryMin: data.salaryMin ? Number(data.salaryMin) : undefined,
-      salaryMax: data.salaryMax ? Number(data.salaryMax) : undefined,
-      skills: data.skills || [],
-      tags: data.tags || [],
+      salaryMin,
+      salaryMax,
+      category: data.category || null,
+      skills: { equals: skills },
+      tags: { equals: tags },
     },
   })
   if (duplicated) {
@@ -36,11 +42,14 @@ const createJobService = async (data, user) => {
         location: data.location,
         jobType: data.jobType,
         description: data.description,
-        requirements: data.requirements,
-        benefits: data.benefits,
+        requirements: data.requirements || "",
+        benefits: data.benefits || "",
         salaryNegotiable: Boolean(data.salaryNegotiable),
-        salaryMin: data.salaryMin ? Number(data.salaryMin) : undefined,
-        salaryMax: data.salaryMax ? Number(data.salaryMax) : undefined,
+        salaryMin,
+        salaryMax,
+        category: data.category || null,
+        skills,
+        tags,
       },
     });
   }
