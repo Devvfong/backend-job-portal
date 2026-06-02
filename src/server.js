@@ -47,19 +47,39 @@ const app = express(); // Create an Express application
 app.set("trust proxy", 1);
 app.use(helmet({
   contentSecurityPolicy: false,
+  referrerPolicy: { policy: "strict-origin-when-cross-origin" },
 }));
+
+const allowedOrigins = [
+  "https://jobportal.devqii.me",
+  "https://job-portal.devqii.me",
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+  ...(process.env.CORS_ORIGINS || "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean),
+];
+
 // Configure CORS to allow the frontend domain and include credentials
 app.use(
   cors({
-    origin: [
-      "https://jobportal.devqii.me",
-      "https://job-portal.devqii.me",
-      "http://localhost:3000",
-      "http://127.0.0.1:3000"
-    ],
+    origin: allowedOrigins,
     credentials: true,
   }),
 );
+
+app.use((req, res, next) => {
+  if (req.path.startsWith("/api/") || req.path === "/docs" || req.path === "/openapi.json") {
+    res.setHeader("X-Robots-Tag", "noindex, nofollow");
+  }
+  next();
+});
+
+app.get("/robots.txt", (req, res) => {
+  res.type("text/plain").send("User-agent: *\nDisallow: /\n");
+});
+
 // Serve static files from the public directory
 app.use(express.static("public"));
 const PORT = process.env.PORT || 5000;

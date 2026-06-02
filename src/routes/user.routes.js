@@ -35,7 +35,7 @@ const createProfileSchema = z.object({
 const updateProfileSchema = createProfileSchema.partial();
 const adminUpdateProfileSchema = updateProfileSchema.extend({
   role: z.enum(["job_seeker", "company_admin", "super_admin"]).optional(),
-  companyId: z.coerce.number().int().positive().nullable().optional(),
+  companyId: z.union([z.coerce.number().int().positive(), z.string().min(1)]).nullable().optional(),
 });
 
 // Wraps a multer .single() call and returns a clean JSON error on failure

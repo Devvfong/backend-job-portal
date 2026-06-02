@@ -115,7 +115,14 @@ const updateUserController = async (req, res) => {
 const getAllUsersController = async (req, res) => {
   try {
     const data = await getAllUsers();
-    const sanitizedUsers = data.user.map(u => ({ ...u, encryptedId: encryptId(u.id) }));
+    const sanitizedUsers = data.user.map(u => {
+      const { company, ...user } = u;
+      const sanitizedCompany = company
+        ? (({ id, ...rest }) => ({ ...rest, encryptedId: encryptId(id) }))(company)
+        : company;
+
+      return { ...user, encryptedId: encryptId(u.id), company: sanitizedCompany };
+    });
     return res.status(200).json({
       status: "success",
       data: { user: sanitizedUsers, total: data.total },

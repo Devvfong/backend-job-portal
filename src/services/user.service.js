@@ -1,9 +1,20 @@
 import { prisma } from "../config/db.js";
 import { deleteFileFromSupabase } from "./upload.service.js";
+import { decryptId } from "../utils/crypto.js";
 import dotenv from "dotenv";
 dotenv.config();
 
 const SUPER_ADMIN_ROLE = "super_admin";
+
+const normalizeCompanyId = (companyId) => {
+  if (companyId === null) return null;
+  if (companyId === undefined || companyId === "") return undefined;
+
+  const numericId = Number(companyId);
+  if (!Number.isNaN(numericId)) return numericId;
+
+  return Number(decryptId(companyId));
+};
 
 const createProfile = async (data, id) => {
   // Profile should update existing user, not create a new user row
@@ -112,6 +123,12 @@ const getAllUsers = async () => {
         email: true,
         role: true,
         companyId: true,
+        company: {
+          select: {
+            id: true,
+            companyName: true,
+          },
+        },
         headline: true,
         bio: true,
         location: true,
@@ -195,7 +212,7 @@ const updateProfile = async (data, id, currentUser) => {
   if (currentUser.role === SUPER_ADMIN_ROLE) {
     if (data.role) updateData.role = data.role; // this for change role of user
     if (Object.prototype.hasOwnProperty.call(data, "companyId")) {
-      updateData.companyId = data.companyId === null ? null : Number(data.companyId); // this for change company of user
+      updateData.companyId = normalizeCompanyId(data.companyId); // this for change company of user
     }
   }
 
