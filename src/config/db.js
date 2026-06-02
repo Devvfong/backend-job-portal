@@ -23,7 +23,8 @@
 // };
 
 // export { prisma, connectDB, disconnectDB };
-import { PrismaClient } from "@prisma/client";
+import prismaClientPackage from "@prisma/client";
+const { PrismaClient } = prismaClientPackage;
 
 // Global Singleton Pattern (Prevents connection leaks during hot-reloading)
 // We attach Prisma to globalThis so it survives server restarts in dev
