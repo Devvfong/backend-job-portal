@@ -305,6 +305,24 @@ const updateCompanyService = async (id, data, user) => {
     throw new Error("Company not found");
   }
 
+  if (!isSuperAdmin) {
+    const requestedCompanyName = data.companyName?.trim();
+    const requestedEmail = data.email?.trim().toLowerCase();
+    const isChangingCompanyName =
+      requestedCompanyName !== undefined &&
+      requestedCompanyName !== company.companyName;
+    const isChangingEmail =
+      requestedEmail !== undefined &&
+      requestedEmail !== company.email;
+
+    if (isChangingCompanyName || isChangingEmail) {
+      throw new Error("Company identity changes require super admin approval");
+    }
+
+    delete data.companyName;
+    delete data.email;
+  }
+
   return prisma.company.update({
     where: { id },
     data: {

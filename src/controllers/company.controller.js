@@ -106,6 +106,9 @@ const getMyCompanyController = async (req, res) => {
     if (error.message === "Company not found") {
       return res.status(404).json({ message: "Company not found" });
     }
+    if (error.message === "Company identity changes require super admin approval") {
+      return res.status(403).json({ message: error.message });
+    }
     return res.status(500).json({ error: error.message });
   }
 };
@@ -127,6 +130,9 @@ const updateCompanyController = async (req, res) => {
     }
     if (error.message === "Company not found") {
       return res.status(404).json({ message: "Company not found" });
+    }
+    if (error.message === "Company identity changes require super admin approval") {
+      return res.status(403).json({ message: error.message });
     }
     return res.status(500).json({ error: error.message });
   }
