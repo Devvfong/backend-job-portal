@@ -1,6 +1,7 @@
 import {
   createProfile,
   getProfile,
+  getPublicProfile,
   updateProfile,
   updateUserAvatar,
   updateUserResume,
@@ -220,7 +221,7 @@ const getUserStatsController = async (req, res) => {
 const getProfileByIdController = async (req, res) => {
   try {
     const { id } = req.params;
-    const profile = await getProfile(Number(id));
+    const profile = await getPublicProfile(Number(id));
 
     if (!profile) {
       return res.status(404).json({ message: "User not found" });

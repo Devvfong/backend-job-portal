@@ -178,15 +178,15 @@ const updateJobService = async (id, data, user) => {
     throw new Error("Job not found");
   }
 
-  // Verify permissions: process.env.SERVER bypass or company ownership
-  const isSuperAdmin = user?.role === process.env.SERVER;
+  // Verify permissions: super_admin bypass or company ownership
+  const isSuperAdmin = user?.role === "super_admin";
   const isCompanyAdmin = user?.role === "company_admin" && job.companyId === user.companyId;
 
   if (!isSuperAdmin && !isCompanyAdmin) {
     throw new Error("Forbidden");
   }
 
-  // Only allow updating companyId if process.env.SERVER
+  // Only allow updating companyId if super_admin
   const updateData = {
     title: data.title || job.title,
     location: data.location || job.location,
@@ -284,8 +284,8 @@ const deleteJobService = async (id, user) => {
     throw new Error("Job not found");
   }
 
-  // Verify permissions: process.env.SERVER bypass or company ownership
-  const isSuperAdmin = user?.role === process.env.SERVER;
+  // Verify permissions: super_admin bypass or company ownership
+  const isSuperAdmin = user?.role === "super_admin";
   const isCompanyAdmin = user?.role === 'company_admin' && job.companyId === user.companyId;
 
   if (!isSuperAdmin && !isCompanyAdmin) {

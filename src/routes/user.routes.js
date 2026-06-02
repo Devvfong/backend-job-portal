@@ -33,6 +33,10 @@ const createProfileSchema = z.object({
   resume: z.string().url().optional(),
 });
 const updateProfileSchema = createProfileSchema.partial();
+const adminUpdateProfileSchema = updateProfileSchema.extend({
+  role: z.enum(["job_seeker", "company_admin", "super_admin"]).optional(),
+  companyId: z.coerce.number().int().positive().nullable().optional(),
+});
 
 // Wraps a multer .single() call and returns a clean JSON error on failure
 const handleUploadError = (multerMiddleware) => (req, res, next) => {
@@ -59,7 +63,7 @@ router.put("/profile", protect, validate(updateProfileSchema), updateProfileCont
 // ─── Admin User Routes ──────────────────────────────────────────────────────
 // Super Admin can manage any user
 router.get("/", protect, authorize("super_admin"), getAllUsersController);
-router.put("/profile/:id", decryptMiddleware, protect, authorize("super_admin"), validate(updateProfileSchema), updateUserController);
+router.put("/profile/:id", decryptMiddleware, protect, authorize("super_admin"), validate(adminUpdateProfileSchema), updateUserController);
 router.delete("/:id", decryptMiddleware, protect, authorize("super_admin"), deleteUserController);
 
 // ─── Uploads ───────────────────────────────────────────────────────────────

@@ -1,5 +1,7 @@
 import { prisma } from "../config/db.js";
 
+const SUPER_ADMIN_ROLE = "super_admin";
+
 const applyToJobService = async (jobId, userId, data) => {
   // Check if job exists and is open
   const job = await prisma.job.findUnique({
@@ -53,7 +55,7 @@ const getApplicantsForJobService = async (jobId, user) => {
     throw new Error("Job not found");
   }
 
-  if (!user || user.companyId !== job.companyId) {
+  if (!user || (user.role !== SUPER_ADMIN_ROLE && user.companyId !== job.companyId)) {
     throw new Error("Forbidden: You can only view applicants for your own company jobs");
   }
 
@@ -88,7 +90,7 @@ const updateApplicationStatusService = async (applicationId, status, user) => {
   }
 
   // Check if user is the admin of the company that posted the job
-  if (!user || user.companyId !== application.job.companyId) {
+  if (!user || (user.role !== SUPER_ADMIN_ROLE && user.companyId !== application.job.companyId)) {
     throw new Error("Forbidden: You cannot manage applications for other companies");
   }
 
@@ -118,12 +120,18 @@ const withdrawApplicationService = async (applicationId, user) => {
 };
 
 const getCompanyApplicantsService = async (user) => {
-  if (!user || !user.companyId) {
+  if (!user) {
+    throw new Error("Forbidden: You must be associated with a company");
+  }
+
+  const isSuperAdmin = user.role === SUPER_ADMIN_ROLE;
+
+  if (!isSuperAdmin && !user.companyId) {
     throw new Error("Forbidden: You must be associated with a company");
   }
 
   return prisma.application.findMany({
-    where: {
+    where: isSuperAdmin ? {} : {
       job: {
         companyId: user.companyId,
       },

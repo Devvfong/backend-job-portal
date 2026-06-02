@@ -23,7 +23,9 @@ prisma/migrations/**/migration_lock.toml
 # uncomment the following line:
 scripts/
 scratch/
-docs/
+docs/*
+!docs/final_preview/
+!docs/final_preview/*.md
 # Logs
 npm-debug.log*
 yarn-debug.log*

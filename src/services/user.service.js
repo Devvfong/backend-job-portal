@@ -2,6 +2,9 @@ import { prisma } from "../config/db.js";
 import { deleteFileFromSupabase } from "./upload.service.js";
 import dotenv from "dotenv";
 dotenv.config();
+
+const SUPER_ADMIN_ROLE = "super_admin";
+
 const createProfile = async (data, id) => {
   // Profile should update existing user, not create a new user row
   const user = await prisma.user.findUnique({
@@ -74,12 +77,33 @@ const getProfile = async (id) => {
   return user;
 };
 
+const getPublicProfile = async (id) => {
+  const user = await prisma.user.findUnique({
+    where: {
+      id,
+    },
+    select: {
+      id: true,
+      name: true,
+      headline: true,
+      bio: true,
+      location: true,
+      avatar: true,
+      skills: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
+
+  return user;
+};
+
 const getAllUsers = async () => {
   const [user, total] = await Promise.all([
     prisma.user.findMany({
       where: {
         role: {
-          not: process.env.SERVER, // Exclude the high-level admins
+          not: SUPER_ADMIN_ROLE, // Exclude the high-level admins
         },
       },
       select: {
@@ -105,7 +129,7 @@ const getAllUsers = async () => {
     prisma.user.count({
       where: {
         role: {
-          not: process.env.SERVER,
+          not: SUPER_ADMIN_ROLE,
         },
       },
     }),
@@ -140,8 +164,8 @@ const deleteUser = async (id) => {
   });
 };
 const updateProfile = async (data, id, currentUser) => {
-  // Check permissions: only the owner or a user with the SERVER role can update this profile
-  if (currentUser.id !== Number(id) && currentUser.role !== process.env.SERVER) {
+  // Check permissions: only the owner or a super admin can update this profile
+  if (currentUser.id !== Number(id) && currentUser.role !== SUPER_ADMIN_ROLE) {
     throw new Error("Forbidden: You cannot update this profile");
   }
 
@@ -167,10 +191,12 @@ const updateProfile = async (data, id, currentUser) => {
     resume: data.resume || user.resume,
   };
 
-  // Only process.env.SERVER can change role or companyId
-  if (currentUser.role === process.env.SERVER) {
+  // Only super_admin can change role or companyId
+  if (currentUser.role === SUPER_ADMIN_ROLE) {
     if (data.role) updateData.role = data.role; // this for change role of user
-    if (data.companyId) updateData.companyId = Number(data.companyId); // this for change company of user
+    if (Object.prototype.hasOwnProperty.call(data, "companyId")) {
+      updateData.companyId = data.companyId === null ? null : Number(data.companyId); // this for change company of user
+    }
   }
 
   return prisma.user.update({
@@ -256,6 +282,7 @@ const getUserStatsService = async (userId) => {
 
 export {
   getProfile,
+  getPublicProfile,
   updateProfile,
   createProfile,
   updateUserAvatar,
