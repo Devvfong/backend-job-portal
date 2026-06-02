@@ -5,6 +5,11 @@ import { updateRefreshToken } from "../services/auth.service.js";
 
 const router = Router();
 
+function frontendOAuthCallbackUrl(token) {
+    const frontendUrl = (process.env.FRONTEND_URL || "https://jobportal.devqii.me").replace(/\/$/, "");
+    return `${frontendUrl}/auth/callback?token=${encodeURIComponent(token)}`;
+}
+
 // Initiate LinkedIn OAuth
 router.get(
     "/linkedin",
@@ -21,9 +26,7 @@ router.get(
         const { accessToken, refreshToken } = generateTokens(req.user.id, req.user.role, res);
         updateRefreshToken(req.user.id, refreshToken).catch(console.error);
 
-        // Redirect back to the frontend
-        const frontendUrl = process.env.FRONTEND_URL || "https://devqii.me";
-        res.redirect(`${frontendUrl}?token=${accessToken}`);
+        res.redirect(frontendOAuthCallbackUrl(accessToken));
     },
 );
 

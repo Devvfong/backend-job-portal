@@ -52,6 +52,7 @@ app.use(helmet({
 app.use(
   cors({
     origin: [
+      "https://jobportal.devqii.me",
       "https://job-portal.devqii.me",
       "http://localhost:3000",
       "http://127.0.0.1:3000"

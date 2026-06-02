@@ -10,6 +10,11 @@ const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID;
 const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
 const LINKEDIN_CLIENT_ID = process.env.LINKEDIN_CLIENT_ID;
 const LINKEDIN_CLIENT_SECRET = process.env.LINKEDIN_CLIENT_SECRET;
+const BACKEND_URL = (process.env.BACKEND_URL || process.env.API_URL || "https://devqii.me").replace(/\/$/, "");
+
+function oauthCallbackUrl(path) {
+  return BACKEND_URL ? `${BACKEND_URL}${path}` : path;
+}
 
 const resolveGitHubEmail = async (profile, accessToken) => {
   const strategyEmail = profile.emails?.[0]?.value?.toLowerCase();
@@ -79,7 +84,7 @@ passport.use(
     {
       clientID: GITHUB_CLIENT_ID,
       clientSecret: GITHUB_CLIENT_SECRET,
-      callbackURL: "/auth/github/callback",
+      callbackURL: oauthCallbackUrl("/auth/github/callback"),
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
@@ -145,7 +150,7 @@ if (LINKEDIN_CLIENT_ID && LINKEDIN_CLIENT_SECRET) {
       {
         clientID: LINKEDIN_CLIENT_ID,
         clientSecret: LINKEDIN_CLIENT_SECRET,
-        callbackURL: "/auth/linkedin/callback",
+        callbackURL: oauthCallbackUrl("/auth/linkedin/callback"),
         scope: ["openid", "profile", "email"],
       },
       async (accessToken, refreshToken, profile, done) => {
