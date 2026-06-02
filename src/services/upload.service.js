@@ -131,4 +131,28 @@ const deleteFileFromSupabase = async (publicUrl, bucket) => {
   }
 };
 
-export { uploadAvatar, uploadResume, uploadCompanyAsset, uploadGalleryAsset, deleteFileFromSupabase };
+const createSignedUrlFromSupabaseUrl = async (publicUrl, bucket, expiresIn = 300) => {
+  if (!publicUrl) return publicUrl;
+
+  const urlParts = publicUrl.split(`${bucket}/`);
+  if (urlParts.length < 2) return publicUrl;
+
+  const filePath = urlParts[1];
+  const { data, error } = await supabase.storage.from(bucket).createSignedUrl(filePath, expiresIn);
+
+  if (error) {
+    console.error(`Failed to create signed URL for ${bucket}: ${error.message}`);
+    return publicUrl;
+  }
+
+  return data.signedUrl;
+};
+
+export {
+  uploadAvatar,
+  uploadResume,
+  uploadCompanyAsset,
+  uploadGalleryAsset,
+  deleteFileFromSupabase,
+  createSignedUrlFromSupabaseUrl,
+};

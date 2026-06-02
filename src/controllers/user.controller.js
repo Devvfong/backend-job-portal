@@ -13,15 +13,26 @@ import {
   uploadAvatar as uploadAvatarToSupabase,
   uploadResume as uploadResumeToSupabase,
   deleteFileFromSupabase,
+  createSignedUrlFromSupabaseUrl,
 } from "../services/upload.service.js";
 import { encryptId } from "../utils/crypto.js";
+
+const withSignedResume = async (user) => {
+  if (!user?.resume) return user;
+
+  return {
+    ...user,
+    resume: await createSignedUrlFromSupabaseUrl(user.resume, "resumes"),
+  };
+};
 
 const createProfileController = async (req, res) => {
   try {
     const profile = await createProfile(req.body, req.user.id);
+    const signedProfile = await withSignedResume(profile);
     return res.status(200).json({
       status: "success",
-      data: { ...profile, encryptedId: encryptId(profile.id) },
+      data: { ...signedProfile, encryptedId: encryptId(profile.id) },
     });
   } catch (e) {
     console.error(e);
@@ -42,9 +53,11 @@ const getProfileController = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
+    const signedProfile = await withSignedResume(profile);
+
     return res.status(200).json({
       status: "success",
-      data: { ...profile, encryptedId: encryptId(profile.id) },
+      data: { ...signedProfile, encryptedId: encryptId(profile.id) },
     });
   } catch (e) {
     console.error(e);
@@ -56,10 +69,11 @@ const updateProfileController = async (req, res) => {
   try {
     // Current user updating their own profile
     const profile = await updateProfile(req.body, req.user.id, req.user);
+    const signedProfile = await withSignedResume(profile);
 
     return res.status(200).json({
       status: "success",
-      data: { ...profile, encryptedId: encryptId(profile.id) },
+      data: { ...signedProfile, encryptedId: encryptId(profile.id) },
     });
   } catch (e) {
     console.error(e);
@@ -77,10 +91,11 @@ const updateUserController = async (req, res) => {
     const { id } = req.params;
     // Super admin or owner updating a specific profile by ID
     const profile = await updateProfile(req.body, id, req.user);
+    const signedProfile = await withSignedResume(profile);
 
     return res.status(200).json({
       status: "success",
-      data: { ...profile, encryptedId: encryptId(profile.id) },
+      data: { ...signedProfile, encryptedId: encryptId(profile.id) },
     });
   } catch (e) {
     console.error(e);
@@ -197,7 +212,7 @@ const uploadResumeController = async (req, res) => {
     return res.status(200).json({
       status: "success",
       message: "Resume uploaded successfully",
-      data: { ...user, encryptedId: encryptId(user.id) },
+      data: { ...(await withSignedResume(user)), encryptedId: encryptId(user.id) },
     });
   } catch (e) {
     console.error(e);

@@ -4,6 +4,7 @@ import fs from "fs";
 import path from "path";
 import jwt from "jsonwebtoken";
 import { encryptId } from "../utils/crypto.js";
+import { createSignedUrlFromSupabaseUrl } from "../services/upload.service.js";
 import {
   findUserByEmail,
   createUser,
@@ -170,10 +171,15 @@ const logout = async (req, res) => {
 
 const getMe = async (req, res) => {
   try {
+    const resume = req.user.resume
+      ? await createSignedUrlFromSupabaseUrl(req.user.resume, "resumes")
+      : req.user.resume;
+
     return res.status(200).json({
       status: "success",
       data: {
         ...req.user,
+        resume,
         encryptedId: encryptId(req.user.id)
       }
     });

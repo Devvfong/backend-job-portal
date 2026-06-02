@@ -7,6 +7,19 @@ import {
   withdrawApplicationService,
 } from "../services/application.service.js";
 import { encryptId } from "../utils/crypto.js";
+import { createSignedUrlFromSupabaseUrl } from "../services/upload.service.js";
+
+const withSignedApplicantResume = async (app) => {
+  if (!app.user?.resume) return app;
+
+  return {
+    ...app,
+    user: {
+      ...app.user,
+      resume: await createSignedUrlFromSupabaseUrl(app.user.resume, "resumes"),
+    },
+  };
+};
 
 const applyToJobController = async (req, res) => {
   try {
@@ -47,7 +60,8 @@ const getApplicantsController = async (req, res) => {
   try {
     const jobId = Number(req.params.id); // convert string to number
     const applicants = await getApplicantsForJobService(jobId, req.user);
-    const sanitized = applicants.map(app => ({
+    const signedApplicants = await Promise.all(applicants.map(withSignedApplicantResume));
+    const sanitized = signedApplicants.map(app => ({
       ...app,
       user: app.user ? { ...app.user, encryptedId: encryptId(app.user.id) } : app.user
     }));
@@ -110,7 +124,8 @@ const withdrawApplicationController = async (req, res) => {
 const getCompanyApplicantsController = async (req, res) => {
   try {
     const applicants = await getCompanyApplicantsService(req.user);
-    const sanitized = applicants.map(app => ({
+    const signedApplicants = await Promise.all(applicants.map(withSignedApplicantResume));
+    const sanitized = signedApplicants.map(app => ({
       ...app,
       user: app.user ? { ...app.user, encryptedId: encryptId(app.user.id) } : app.user
     }));
