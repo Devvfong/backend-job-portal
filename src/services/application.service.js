@@ -23,6 +23,24 @@ const applyToJobService = async (jobId, userId, data) => {
       userId,
       coverLetter: data.coverLetter || null,
     },
+    include: {
+      user: {
+        select: {
+          name: true,
+          email: true,
+        },
+      },
+      job: {
+        select: {
+          title: true,
+          company: {
+            select: {
+              companyName: true,
+            },
+          },
+        },
+      },
+    },
   });
 };
 
@@ -97,6 +115,24 @@ const updateApplicationStatusService = async (applicationId, status, user) => {
   return prisma.application.update({
     where: { id: applicationId },
     data: { status },
+    include: {
+      user: {
+        select: {
+          name: true,
+          email: true,
+        },
+      },
+      job: {
+        select: {
+          title: true,
+          company: {
+            select: {
+              companyName: true,
+            },
+          },
+        },
+      },
+    },
   });
 };
 

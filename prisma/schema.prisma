@@ -30,11 +30,14 @@ model User {
   phone        String?
   skills       String[]
   refreshToken String?
+  resetPasswordToken String?
+  resetPasswordExpires DateTime?
   applications Application[]
   savedJobs    SavedJob[]
   company      Company?      @relation(fields: [companyId], references: [id])
 
   @@index([email])
+  @@index([resetPasswordToken])
 }
 
 model Company {

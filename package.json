@@ -43,6 +43,7 @@
     "passport": "^0.7.0",
     "passport-github2": "^0.1.12",
     "passport-linkedin-oauth2": "^2.0.0",
+    "resend": "^6.12.4",
     "swagger-jsdoc": "^6.2.8",
     "zod": "^4.3.6"
   },

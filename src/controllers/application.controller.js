@@ -8,6 +8,10 @@ import {
 } from "../services/application.service.js";
 import { encryptId } from "../utils/crypto.js";
 import { createSignedUrlFromSupabaseUrl } from "../services/upload.service.js";
+import {
+  sendApplicationStatusEmail,
+  sendApplicationSubmittedEmail,
+} from "../services/email.service.js";
 
 const withSignedApplicantResume = async (app) => {
   if (!app.user?.resume) return app;
@@ -27,6 +31,7 @@ const applyToJobController = async (req, res) => {
     const userId = req.user.id;
 
     const application = await applyToJobService(jobId, userId, req.body);
+    await sendApplicationSubmittedEmail(application);
 
     return res.status(201).json({
       status: "success",
@@ -87,6 +92,7 @@ const updateApplicationStatusController = async (req, res) => {
     }
 
     const application = await updateApplicationStatusService(applicationId, status, req.user);
+    await sendApplicationStatusEmail(application);
     
     return res.status(200).json({
       status: "success",

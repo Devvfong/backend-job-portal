@@ -10,8 +10,11 @@ import {
   createUser,
   verifyPassword,
   updateRefreshToken,
-  findUserById
+  findUserById,
+  createPasswordResetToken,
+  resetPassword
 } from "../services/auth.service.js";
+import { sendPasswordResetEmail, sendWelcomeEmail } from "../services/email.service.js";
 
 // Load Private Key for RSA Decryption
 let privateKey;
@@ -82,6 +85,7 @@ const register = async (req, res) => {
     // Generate token and set cookie
     const { accessToken, refreshToken } = generateTokens(user.id, user.role, res);
     await updateRefreshToken(user.id, refreshToken);
+    await sendWelcomeEmail(user);
 
     return res.status(201).json({
       status: "success",
@@ -221,4 +225,62 @@ const refresh = async (req, res) => {
   }
 };
 
-export { register, login, logout, getMe, refresh };
+const forgotPassword = async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    const user = await findUserByEmail(email);
+
+    if (user) {
+      const resetToken = await createPasswordResetToken(user.id);
+      const resetBaseUrl = process.env.FRONTEND_RESET_PASSWORD_URL
+        || `${process.env.FRONTEND_URL || "http://localhost:3000"}/reset-password`;
+      const tokenSeparator = resetBaseUrl.includes("?") ? "&" : "?";
+      const resetUrl = `${resetBaseUrl}${tokenSeparator}token=${encodeURIComponent(resetToken)}`;
+
+      await sendPasswordResetEmail(user, resetUrl);
+    }
+
+    return res.status(200).json({
+      status: "success",
+      message: "If an account exists for that email, a password reset link has been sent.",
+    });
+  } catch (error) {
+    console.error("Error requesting password reset:", error);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+const resetPasswordController = async (req, res) => {
+  const { token, password } = req.body;
+
+  try {
+    const decryptedPassword = decryptParam(password);
+    const didReset = await resetPassword(token, decryptedPassword);
+
+    if (!didReset) {
+      return res.status(400).json({ message: "Password reset link is invalid or expired" });
+    }
+
+    return res.status(200).json({
+      status: "success",
+      message: "Password reset successfully",
+    });
+  } catch (error) {
+    console.error("Error resetting password:", error);
+    if (error.message === "Invalid encrypted parameter" || error.message.includes("RSA private key not configured")) {
+      return res.status(400).json({ message: "Invalid encrypted password" });
+    }
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+export {
+  register,
+  login,
+  logout,
+  getMe,
+  refresh,
+  forgotPassword,
+  resetPasswordController,
+};
