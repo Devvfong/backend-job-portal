@@ -144,10 +144,14 @@ const getNotificationsController = async (req, res) => {
 
     // Sort by most recent
     notifications.sort((a, b) => new Date(b.time) - new Date(a.time));
+    const normalizedNotifications = notifications.slice(0, 15).map((notification) => ({
+      ...notification,
+      createdAt: notification.time,
+    }));
 
     return res.status(200).json({
       status: "success",
-      data: notifications.slice(0, 15),
+      data: normalizedNotifications,
       unread: notifications.length,
     });
   } catch (err) {
