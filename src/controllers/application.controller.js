@@ -12,7 +12,68 @@ import {
   sendApplicationStatusEmail,
   sendApplicationSubmittedEmail,
 } from "../services/email.service.js";
+import { sendToCompany, sendToUser } from "../realtime/websocket.js";
 
+
+const buildApplicationSubmittedNotification = (application) => {
+  const jobTitle = application.job?.title || "a job";
+  const companyName = application.job?.company?.companyName || "a company";
+
+  return {
+    id: `app-pending-${application.id}`,
+    type: "applied",
+    icon: "check",
+    title: "Application Submitted",
+    message: `You applied for "${jobTitle}" at ${companyName}. Good luck!`,
+    time: application.appliedDate,
+    createdAt: application.appliedDate,
+    read: false,
+    avatar: application.job?.company?.logo || null,
+    link: "/dashboard/seeker/applications",
+  };
+};
+
+const buildNewApplicantNotification = (application) => {
+  const applicantName = application.user?.name || "Someone";
+  const jobTitle = application.job?.title || "your job";
+
+  return {
+    id: `new-applicant-${application.id}`,
+    type: "new_applicant",
+    icon: "user",
+    title: "New Applicant",
+    message: `${applicantName} applied for "${jobTitle}".`,
+    time: application.appliedDate,
+    createdAt: application.appliedDate,
+    read: false,
+    avatar: application.user?.avatar || null,
+    link: "/dashboard/company/jobs",
+  };
+};
+
+const buildStatusNotification = (application) => {
+  const jobTitle = application.job?.title || "your application";
+  const companyName = application.job?.company?.companyName || "the company";
+  const statusTitles = {
+    reviewed: "Application Reviewed",
+    accepted: "Application Accepted!",
+    rejected: "Application Update",
+    pending: "Application Pending",
+  };
+
+  return {
+    id: `app-${application.status}-${application.id}`,
+    type: "status_change",
+    icon: "bell",
+    title: statusTitles[application.status] || "Application Update",
+    message: `Your application for "${jobTitle}" at ${companyName} is now ${application.status}.`,
+    time: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
+    read: false,
+    avatar: application.job?.company?.logo || null,
+    link: "/dashboard/seeker/applications",
+  };
+};
 const withSignedApplicantResume = async (app) => {
   if (!app.user?.resume) return app;
 
@@ -32,6 +93,8 @@ const applyToJobController = async (req, res) => {
 
     const application = await applyToJobService(jobId, userId, req.body);
     await sendApplicationSubmittedEmail(application);
+    sendToUser(userId, "notification:new", buildApplicationSubmittedNotification(application));
+    sendToCompany(application.job?.companyId, "notification:new", buildNewApplicantNotification(application));
 
     return res.status(201).json({
       status: "success",
@@ -96,6 +159,7 @@ const updateApplicationStatusController = async (req, res) => {
 
     const application = await updateApplicationStatusService(applicationId, status, req.user);
     await sendApplicationStatusEmail(application);
+    sendToUser(application.userId, "notification:new", buildStatusNotification(application));
     
     return res.status(200).json({
       status: "success",
@@ -160,3 +224,4 @@ export {
   updateApplicationStatusController,
   withdrawApplicationController,
 };
+

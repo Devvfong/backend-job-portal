@@ -45,6 +45,7 @@
     "passport-linkedin-oauth2": "^2.0.0",
     "resend": "^6.12.4",
     "swagger-jsdoc": "^6.2.8",
+    "ws": "^8.21.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {

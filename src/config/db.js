@@ -34,10 +34,7 @@ const prisma = globalForPrisma.prisma ?? new PrismaClient({
   datasources: {
     db: { url: process.env.DATABASE_URL }
   },
-  // Secure Logging Configuration
-  log: process.env.NODE_ENV === "development" 
-    ? ["query", "error", "warn"] // Verbose in dev
-    : ["error"],                 // Only errors in prod
+  log: ["error"],
 });
 
 // Store instance in global for next reload

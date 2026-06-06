@@ -25,6 +25,7 @@ import openApiDocument from "./utils/openapi.js";
 import protect from "./middlewares/protect.middleware.js";
 import authorize from "./middlewares/authorize.middleware.js";
 import "./utils/cron.js"; // Initialize the cron jobs
+import { initRealtime } from "./realtime/websocket.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -156,6 +157,8 @@ const server = app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server is running on port ${PORT}`);
 });
 
+initRealtime(server);
+
 // Connect after server boot so docs can still load without DB
 connectDB().catch((err) => {
   console.warn("⚠️  Database unavailable. API endpoints may fail until DB is up.");
@@ -191,3 +194,5 @@ process.on("uncaughtException", async (err) => {
 //   process.exit(0);
 // });
 // ================================================================================================================
+
+

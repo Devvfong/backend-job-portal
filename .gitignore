@@ -26,6 +26,10 @@ scratch/
 docs/*
 !docs/final_preview/
 !docs/final_preview/*.md
+!docs/auth_hardening/
+!docs/auth_hardening/*.md
+!docs/architecture/
+!docs/architecture/*.md
 # Logs
 npm-debug.log*
 yarn-debug.log*

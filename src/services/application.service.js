@@ -26,16 +26,22 @@ const applyToJobService = async (jobId, userId, data) => {
     include: {
       user: {
         select: {
+          id: true,
           name: true,
           email: true,
+          avatar: true,
+          headline: true,
         },
       },
       job: {
         select: {
+          id: true,
           title: true,
+          companyId: true,
           company: {
             select: {
               companyName: true,
+              logo: true,
             },
           },
         },
@@ -118,16 +124,22 @@ const updateApplicationStatusService = async (applicationId, status, user) => {
     include: {
       user: {
         select: {
+          id: true,
           name: true,
           email: true,
+          avatar: true,
+          headline: true,
         },
       },
       job: {
         select: {
+          id: true,
           title: true,
+          companyId: true,
           company: {
             select: {
               companyName: true,
+              logo: true,
             },
           },
         },
@@ -204,3 +216,5 @@ export {
   updateApplicationStatusService,
   withdrawApplicationService,
 };
+
+
