@@ -31,6 +31,10 @@ const createJobController = async (req, res) => {
         .json({ message: "Admin account is not linked to a company" });
     }
 
+    if (e.message === "Company not found") {
+      return res.status(404).json({ message: "Company not found" });
+    }
+
     if (e.message === "A job with identical details already exists for this company") {
       return res.status(400).json({ message: e.message });
     }
@@ -49,8 +53,7 @@ const getJobsController = async (req, res) => {
         query.companyId = decryptId(query.companyId);
       } catch (err) {
         console.error("[Search] CompanyID decryption failed:", err);
-        // If decryption fails, we might want to return 0 jobs or ignore the filter
-        // For now, we'll let it pass (it will likely result in 0 jobs if the ID is invalid)
+        return res.status(400).json({ message: "Invalid company id" });
       }
     }
 

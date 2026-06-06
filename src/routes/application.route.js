@@ -20,7 +20,7 @@ const updateApplicationStatusSchema = z.object({
 });
 
 // 💼 USER (Job Seeker) ENDPOINTS
-router.post("/job/:id/apply", decryptMiddleware, protect, applyToJobController);
+router.post("/job/:id/apply", decryptMiddleware, protect, authorize("job_seeker"), applyToJobController);
 router.get("/me", protect, getMyApplicationsController);
 router.delete("/:id", decryptMiddleware, protect, withdrawApplicationController);
 

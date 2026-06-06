@@ -45,6 +45,9 @@ const applyToJobController = async (req, res) => {
     if (err.message === "Job not found") {
       return res.status(404).json({ message: err.message });
     }
+    if (err.message === "Job is no longer accepting applications") {
+      return res.status(400).json({ message: err.message });
+    }
     return res.status(500).json({ error: err.message });
   }
 };
@@ -103,10 +106,12 @@ const updateApplicationStatusController = async (req, res) => {
     if (err.message.includes("Forbidden")) {
       return res.status(403).json({ message: err.message });
     }
+    if (err.message === "Application not found") {
+      return res.status(404).json({ message: err.message });
+    }
     return res.status(500).json({ error: err.message });
   }
 };
-
 const withdrawApplicationController = async (req, res) => {
   try {
     const applicationId = Number(req.params.id);

@@ -42,6 +42,11 @@ if (process.env.NODE_ENV === 'production') {
     // Exit with non-zero so the platform flags the deploy as failed
     process.exit(1);
   }
+  if (!process.env.SESSION_SECRET) {
+    console.error('FATAL: SESSION_SECRET is not set in environment.');
+    console.error('Please add SESSION_SECRET to your deployment environment.');
+    process.exit(1);
+  }
 }
 const app = express(); // Create an Express application
 app.set("trust proxy", 1);

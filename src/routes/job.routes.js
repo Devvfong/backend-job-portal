@@ -62,6 +62,6 @@ router.delete("/:id", decryptMiddleware, protect, authorize("company_admin"), de
 router.get("/", getJobsController);
 router.get("/saved", protect, getSavedJobsController);
 router.get("/:id", decryptMiddleware, getJobByIdController);
-router.post("/:id/save", decryptMiddleware, protect, toggleSaveJobController);
+router.post("/:id/save", decryptMiddleware, protect, authorize("job_seeker"), toggleSaveJobController);
 
 export default router;

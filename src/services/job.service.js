@@ -1,18 +1,25 @@
 import { prisma } from "../config/db.js";
 
 const createJobService = async (data, user) => {
-  if (!user) {
-    throw new Error("Forbidden user not authenticated");
-  }
+  const isSuperAdmin = user?.role === "super_admin";
+  const companyId = isSuperAdmin && data.companyId ? data.companyId : user?.companyId;
 
-  const companyId = data.companyId || user.companyId; // this for 
   if (!companyId) {
-    throw new Error("A companyId must be provided in the request body or linked to your account");
+    throw new Error("Admin account is not linked to a company");
   }
   const skills = Array.isArray(data.skills) ? data.skills : [];
   const tags = Array.isArray(data.tags) ? data.tags : [];
   const salaryMin = data.salaryMin != null ? Number(data.salaryMin) : null;
   const salaryMax = data.salaryMax != null ? Number(data.salaryMax) : null;
+  const storedSalaryMin = data.salaryNegotiable ? null : salaryMin;
+  const storedSalaryMax = data.salaryNegotiable ? null : salaryMax;
+  const company = await prisma.company.findUnique({
+    where: { id: Number(companyId) },
+    select: { id: true },
+  });
+  if (!company) {
+    throw new Error("Company not found");
+  }
 
   const duplicated = await prisma.job.findFirst({
     where: {
@@ -24,8 +31,8 @@ const createJobService = async (data, user) => {
       requirements: data.requirements || "",
       benefits: data.benefits || "",
       salaryNegotiable: Boolean(data.salaryNegotiable),
-      salaryMin,
-      salaryMax,
+      salaryMin: storedSalaryMin,
+      salaryMax: storedSalaryMax,
       category: data.category || null,
       skills: { equals: skills },
       tags: { equals: tags },
@@ -45,8 +52,8 @@ const createJobService = async (data, user) => {
         requirements: data.requirements || "",
         benefits: data.benefits || "",
         salaryNegotiable: Boolean(data.salaryNegotiable),
-        salaryMin,
-        salaryMax,
+        salaryMin: storedSalaryMin,
+        salaryMax: storedSalaryMax,
         category: data.category || null,
         skills,
         tags,
@@ -196,25 +203,38 @@ const updateJobService = async (id, data, user) => {
   }
 
   // Only allow updating companyId if super_admin
-  const updateData = {
-    title: data.title || job.title,
-    location: data.location || job.location,
-    jobType: data.jobType || job.jobType,
-    description: data.description || job.description,
-    requirements: data.requirements || job.requirements,
-    benefits: data.benefits || job.benefits,
-    salaryNegotiable:
-      typeof data.salaryNegotiable === "boolean"
-        ? data.salaryNegotiable
-        : job.salaryNegotiable,
-    salaryMin: data.salaryMin ? Number(data.salaryMin) : job.salaryMin,
-    salaryMax: data.salaryMax ? Number(data.salaryMax) : job.salaryMax,
-    status: data.status || job.status,
-    skills: data.skills || job.skills,
-    tags: data.tags || job.tags,
-  };
+  const updateData = {};
+  const has = (field) => Object.prototype.hasOwnProperty.call(data, field);
+
+  if (has("title")) updateData.title = data.title;
+  if (has("location")) updateData.location = data.location;
+  if (has("jobType")) updateData.jobType = data.jobType;
+  if (has("description")) updateData.description = data.description;
+  if (has("requirements")) updateData.requirements = data.requirements ?? "";
+  if (has("benefits")) updateData.benefits = data.benefits ?? "";
+  if (has("category")) updateData.category = data.category || null;
+  if (has("status")) updateData.status = data.status;
+  if (has("skills")) updateData.skills = data.skills;
+  if (has("tags")) updateData.tags = data.tags;
+
+  if (has("salaryNegotiable")) {
+    updateData.salaryNegotiable = data.salaryNegotiable;
+    if (data.salaryNegotiable) {
+      updateData.salaryMin = null;
+      updateData.salaryMax = null;
+    }
+  }
+
+  if (!data.salaryNegotiable) {
+    if (has("salaryMin")) updateData.salaryMin = data.salaryMin == null ? null : Number(data.salaryMin);
+    if (has("salaryMax")) updateData.salaryMax = data.salaryMax == null ? null : Number(data.salaryMax);
+  }
 
   if (isSuperAdmin && data.companyId) {
+    const company = await prisma.company.findUnique({ where: { id: Number(data.companyId) } });
+    if (!company) {
+      throw new Error("Company not found");
+    }
     updateData.companyId = Number(data.companyId);
   }
 

@@ -21,10 +21,18 @@ const uploadAvatar = multer({
 
 // ─── Resume ────────────────────────────────────────────────────────────────
 const allowedResumeExtensions = ['.pdf', '.doc', '.docx'];
+const allowedResumeMimeTypes = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+];
 
 const resumeFileFilter = (req, file, cb) => {
   const ext = path.extname(file.originalname).toLowerCase();
-  if (allowedResumeExtensions.includes(ext)) {
+  if (
+    allowedResumeExtensions.includes(ext) &&
+    allowedResumeMimeTypes.includes(file.mimetype)
+  ) {
     cb(null, true);
   } else {
     cb(new Error('Only PDF, DOC, and DOCX files are allowed for resumes.'));

@@ -28,6 +28,15 @@ const createCompanyController = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
+    if (error.message === "Unauthorized") {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+    if (error.message === "User is already linked to a company") {
+      return res.status(400).json({ message: error.message });
+    }
+    if (error.message === "Company already exists") {
+      return res.status(400).json({ message: error.message });
+    }
     return res.status(500).json({ error: error.message });
   }
 };

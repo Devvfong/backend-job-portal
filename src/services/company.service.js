@@ -83,11 +83,12 @@ const createCompanyService = async (data, user) => {
       },
     });
 
-    // Automatically link the admin to the created company
-    await tx.user.update({
-      where: { id: user.id },
-      data: { companyId: company.id },
-    });
+    if (user.role === "company_admin") {
+      await tx.user.update({
+        where: { id: user.id },
+        data: { companyId: company.id },
+      });
+    }
 
     return company;
   });
@@ -232,19 +233,19 @@ const getCompanyServiceById = async (id, includeSensitive = false) => {
         createdAt: true,
       },
     },
-    users: {
+  };
+
+  if (includeSensitive) {
+    select.email = true;
+    select.users = {
       select: {
         id: true,
         name: true,
         role: true,
         avatar: true,
         headline: true,
-      }
-    }
-  };
-
-  if (includeSensitive) {
-    select.email = true;
+      },
+    };
   }
 
   return prisma.company.findUnique({
@@ -481,11 +482,12 @@ const deleteCompanyCover = async (user, companyId) => {
 };
 
 const getCompanyStatsService = async (companyId) => {
-  const [activeJobs, totalApplications, statusCounts] = await Promise.all([
+  const [totalJobs, activeJobs, totalApplications, statusCounts] = await Promise.all([
+    prisma.job.count({ where: { companyId: Number(companyId) } }),
     prisma.job.count({
-      where: { 
+      where: {
         companyId: Number(companyId),
-        status: "open"  // Only count active/open jobs
+        status: "open",
       },
     }),
     prisma.application.count({
@@ -508,8 +510,10 @@ const getCompanyStatsService = async (companyId) => {
   }, {});
 
   return {
-    activeJobs,      // Changed from totalJobs to activeJobs
+    totalJobs,
+    activeJobs,
     totalApplications,
+    pendingApplications: statusSummary.pending ?? 0,
     statusSummary,
   };
 };

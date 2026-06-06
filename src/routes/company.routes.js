@@ -110,6 +110,7 @@ router.post(
 router.post(
   "/create",
   protect,
+  authorize("company_admin"),
   validate(createCompanySchema),
   createCompanyController,
 );
