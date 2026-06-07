@@ -6,74 +6,21 @@ import {
   updateApplicationStatusService,
   withdrawApplicationService,
 } from "../services/application.service.js";
+import {
+  buildNewApplicantNotification,
+  buildSeekerApplicationNotification,
+} from "../services/notification.service.js";
 import { encryptId } from "../utils/crypto.js";
 import { createSignedUrlFromSupabaseUrl } from "../services/upload.service.js";
 import {
   sendApplicationStatusEmail,
   sendApplicationSubmittedEmail,
 } from "../services/email.service.js";
-import { sendToCompany, sendToUser } from "../realtime/websocket.js";
+import {
+  emitNotificationToCompany,
+  emitNotificationToUser,
+} from "../realtime/websocket.js";
 
-
-const buildApplicationSubmittedNotification = (application) => {
-  const jobTitle = application.job?.title || "a job";
-  const companyName = application.job?.company?.companyName || "a company";
-
-  return {
-    id: `app-pending-${application.id}`,
-    type: "applied",
-    icon: "check",
-    title: "Application Submitted",
-    message: `You applied for "${jobTitle}" at ${companyName}. Good luck!`,
-    time: application.appliedDate,
-    createdAt: application.appliedDate,
-    read: false,
-    avatar: application.job?.company?.logo || null,
-    link: "/dashboard/seeker/applications",
-  };
-};
-
-const buildNewApplicantNotification = (application) => {
-  const applicantName = application.user?.name || "Someone";
-  const jobTitle = application.job?.title || "your job";
-
-  return {
-    id: `new-applicant-${application.id}`,
-    type: "new_applicant",
-    icon: "user",
-    title: "New Applicant",
-    message: `${applicantName} applied for "${jobTitle}".`,
-    time: application.appliedDate,
-    createdAt: application.appliedDate,
-    read: false,
-    avatar: application.user?.avatar || null,
-    link: "/dashboard/company/jobs",
-  };
-};
-
-const buildStatusNotification = (application) => {
-  const jobTitle = application.job?.title || "your application";
-  const companyName = application.job?.company?.companyName || "the company";
-  const statusTitles = {
-    reviewed: "Application Reviewed",
-    accepted: "Application Accepted!",
-    rejected: "Application Update",
-    pending: "Application Pending",
-  };
-
-  return {
-    id: `app-${application.status}-${application.id}`,
-    type: "status_change",
-    icon: "bell",
-    title: statusTitles[application.status] || "Application Update",
-    message: `Your application for "${jobTitle}" at ${companyName} is now ${application.status}.`,
-    time: new Date().toISOString(),
-    createdAt: new Date().toISOString(),
-    read: false,
-    avatar: application.job?.company?.logo || null,
-    link: "/dashboard/seeker/applications",
-  };
-};
 const withSignedApplicantResume = async (app) => {
   if (!app.user?.resume) return app;
 
@@ -93,8 +40,15 @@ const applyToJobController = async (req, res) => {
 
     const application = await applyToJobService(jobId, userId, req.body);
     await sendApplicationSubmittedEmail(application);
-    sendToUser(userId, "notification:new", buildApplicationSubmittedNotification(application));
-    sendToCompany(application.job?.companyId, "notification:new", buildNewApplicantNotification(application));
+
+    emitNotificationToUser(
+      userId,
+      buildSeekerApplicationNotification(application),
+    );
+    emitNotificationToCompany(
+      application.job?.companyId,
+      buildNewApplicantNotification(application),
+    );
 
     return res.status(201).json({
       status: "success",
@@ -129,7 +83,7 @@ const getMyApplicationsController = async (req, res) => {
 
 const getApplicantsController = async (req, res) => {
   try {
-    const jobId = Number(req.params.id); // convert string to number
+    const jobId = Number(req.params.id);
     const applicants = await getApplicantsForJobService(jobId, req.user);
     const signedApplicants = await Promise.all(applicants.map(withSignedApplicantResume));
     const sanitized = signedApplicants.map(app => ({
@@ -152,15 +106,18 @@ const updateApplicationStatusController = async (req, res) => {
   try {
     const applicationId = Number(req.params.id);
     const { status } = req.body;
-    
+
     if (!status) {
-        return res.status(400).json({ message: "Status is required" });
+      return res.status(400).json({ message: "Status is required" });
     }
 
     const application = await updateApplicationStatusService(applicationId, status, req.user);
     await sendApplicationStatusEmail(application);
-    sendToUser(application.userId, "notification:new", buildStatusNotification(application));
-    
+    emitNotificationToUser(
+      application.userId,
+      buildSeekerApplicationNotification(application, new Date()),
+    );
+
     return res.status(200).json({
       status: "success",
       message: "Application status updated",
@@ -176,6 +133,7 @@ const updateApplicationStatusController = async (req, res) => {
     return res.status(500).json({ error: err.message });
   }
 };
+
 const withdrawApplicationController = async (req, res) => {
   try {
     const applicationId = Number(req.params.id);
@@ -224,4 +182,3 @@ export {
   updateApplicationStatusController,
   withdrawApplicationController,
 };
-

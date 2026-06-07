@@ -2,18 +2,16 @@ import jwt from "jsonwebtoken";
 import { WebSocket, WebSocketServer } from "ws";
 import { prisma } from "../config/db.js";
 
+const WS_PATH = "/ws";
+const HEARTBEAT_MS = 30000;
+const REALTIME_EVENTS = {
+  CONNECTION_READY: "connection:ready",
+  NOTIFICATION_NEW: "notification:new",
+};
+
 const clientsByUser = new Map();
 const clientsByCompany = new Map();
 let wss;
-
-const parseCookies = (cookieHeader = "") => {
-  return cookieHeader.split(";").reduce((cookies, cookie) => {
-    const [rawKey, ...valueParts] = cookie.trim().split("=");
-    if (!rawKey) return cookies;
-    cookies[rawKey] = decodeURIComponent(valueParts.join("="));
-    return cookies;
-  }, {});
-};
 
 const addClient = (map, key, ws) => {
   if (!key) return;
@@ -42,14 +40,18 @@ const broadcast = (clients, event, payload) => {
   for (const client of clients) send(client, event, payload);
 };
 
-const authenticate = async (request) => {
+const authenticateAccessToken = async (request) => {
   const url = new URL(request.url, "http://localhost");
-  const cookies = parseCookies(request.headers.cookie);
-  const token = url.searchParams.get("token") || cookies.jwt || cookies.token;
+  const token = url.searchParams.get("token");
 
   if (!token) return null;
 
   const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+  if (!decoded?.id || !decoded?.role) {
+    return null;
+  }
+
   return prisma.user.findUnique({
     where: { id: decoded.id },
     select: {
@@ -62,11 +64,11 @@ const authenticate = async (request) => {
 };
 
 const initRealtime = (server) => {
-  wss = new WebSocketServer({ server, path: "/ws" });
+  wss = new WebSocketServer({ server, path: WS_PATH });
 
   wss.on("connection", async (ws, request) => {
     try {
-      const user = await authenticate(request);
+      const user = await authenticateAccessToken(request);
       if (!user) {
         ws.close(1008, "Unauthorized");
         return;
@@ -77,7 +79,10 @@ const initRealtime = (server) => {
       addClient(clientsByUser, user.id, ws);
       if (user.companyId) addClient(clientsByCompany, user.companyId, ws);
 
-      send(ws, "connection:ready", { userId: user.id, role: user.role });
+      send(ws, REALTIME_EVENTS.CONNECTION_READY, {
+        userId: user.id,
+        role: user.role,
+      });
 
       ws.on("pong", () => {
         ws.isAlive = true;
@@ -101,7 +106,7 @@ const initRealtime = (server) => {
       ws.isAlive = false;
       ws.ping();
     }
-  }, 30000);
+  }, HEARTBEAT_MS);
 
   wss.on("close", () => clearInterval(heartbeat));
 };
@@ -114,5 +119,19 @@ const sendToCompany = (companyId, event, payload) => {
   broadcast(clientsByCompany.get(String(companyId)), event, payload);
 };
 
-export { initRealtime, sendToUser, sendToCompany };
+const emitNotificationToUser = (userId, notification) => {
+  sendToUser(userId, REALTIME_EVENTS.NOTIFICATION_NEW, notification);
+};
 
+const emitNotificationToCompany = (companyId, notification) => {
+  sendToCompany(companyId, REALTIME_EVENTS.NOTIFICATION_NEW, notification);
+};
+
+export {
+  initRealtime,
+  sendToUser,
+  sendToCompany,
+  emitNotificationToUser,
+  emitNotificationToCompany,
+  REALTIME_EVENTS,
+};
