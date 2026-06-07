@@ -61,7 +61,7 @@ git status -sb
 | Done | Frontend read-state via `localStorage` |
 | Done | `init()` refresh-before-logout |
 | Done | Clear auth when refresh fails |
-| Done | `scripts/test-websocket.js` smoke script |
+| Done | `features/realtime/test-websocket.js` smoke script |
 | Not done | Persisted notifications table in Postgres |
 | Not done | Read/unread DB state |
 | Not done | Multi-instance WS client map (Redis/pub-sub) |
@@ -228,11 +228,16 @@ Refresh token payload only includes `id`, so it must **not** be accepted by WebS
 
 ### WebSocket auth rule
 
-WebSocket accepts only the access token from the query string:
+Preferred frontend auth sends the access token in the first socket message:
+
+```json
+{ "event": "auth", "payload": { "token": "<access_token>" } }
+```
+
+Legacy query-string auth is still supported:
 
 ```text
 ws://localhost:5000/ws?token=<access_token>
-wss://your-api-domain/ws?token=<access_token>
 ```
 
 It does not accept:

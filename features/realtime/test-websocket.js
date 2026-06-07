@@ -1,0 +1,36 @@
+import WebSocket from "ws";
+
+const baseUrl = process.env.WS_URL || "ws://localhost:5000/ws";
+const token = process.env.ACCESS_TOKEN;
+
+if (!token) {
+  console.error("Set ACCESS_TOKEN to a valid JWT access token before running this script.");
+  process.exit(1);
+}
+
+const socket = new WebSocket(baseUrl);
+
+socket.on("open", () => {
+  console.log("Socket opened, sending auth frame...");
+  socket.send(JSON.stringify({ event: "auth", payload: { token } }));
+});
+
+socket.on("message", (raw) => {
+  console.log("Message:", raw.toString());
+});
+
+socket.on("close", (code, reason) => {
+  console.log(`Socket closed: ${code} ${reason.toString()}`);
+  process.exit(code === 1000 ? 0 : 1);
+});
+
+socket.on("error", (error) => {
+  console.error("Socket error:", error.message);
+  process.exit(1);
+});
+
+setTimeout(() => {
+  console.error("Timed out waiting for websocket response");
+  socket.close();
+  process.exit(1);
+}, 10000);
