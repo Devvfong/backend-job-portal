@@ -598,7 +598,7 @@ Message: {"event":"connection:ready","payload":{"userId":...,"role":"..."}}
 | `POST /api/v1/applications/job/:id/apply` | `job_seeker` |
 | `PATCH /api/v1/applications/:id/status` | `company_admin` |
 | `DELETE /api/v1/applications/:id` | `job_seeker` (own application) |
-| `POST /api/v1/jobs` | `company_admin` |
+| `POST /api/v1/jobs/create` | `company_admin` |
 | `GET /api/v1/notifications` | any logged-in user |
 
 `super_admin` bypasses `authorize()` middleware, but normal tests should use seeker + company admin accounts.
