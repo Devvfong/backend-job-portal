@@ -5,6 +5,14 @@ const normalizeNotification = (notification) => ({
   createdAt: notification.createdAt ?? notification.time,
 });
 
+const getApplicationNotificationIds = (applicationId) => ([
+  `app-pending-${applicationId}`,
+  `app-reviewed-${applicationId}`,
+  `app-accepted-${applicationId}`,
+  `app-rejected-${applicationId}`,
+  `new-applicant-${applicationId}`,
+]);
+
 const buildSeekerApplicationNotification = (application, eventTime = null) => {
   const jobTitle = application.job?.title || "a job";
   const companyName = application.job?.company?.companyName || "a company";
@@ -14,6 +22,7 @@ const buildSeekerApplicationNotification = (application, eventTime = null) => {
   if (application.status === "reviewed") {
     return normalizeNotification({
       id: `app-reviewed-${application.id}`,
+      applicationId: application.id,
       type: "status_change",
       icon: "eye",
       title: "Application Reviewed",
@@ -28,6 +37,7 @@ const buildSeekerApplicationNotification = (application, eventTime = null) => {
   if (application.status === "accepted") {
     return normalizeNotification({
       id: `app-accepted-${application.id}`,
+      applicationId: application.id,
       type: "accepted",
       icon: "star",
       title: "Application Accepted! 🎉",
@@ -42,6 +52,7 @@ const buildSeekerApplicationNotification = (application, eventTime = null) => {
   if (application.status === "rejected") {
     return normalizeNotification({
       id: `app-rejected-${application.id}`,
+      applicationId: application.id,
       type: "rejected",
       icon: "x",
       title: "Application Update",
@@ -55,6 +66,7 @@ const buildSeekerApplicationNotification = (application, eventTime = null) => {
 
   return normalizeNotification({
     id: `app-pending-${application.id}`,
+    applicationId: application.id,
     type: "applied",
     icon: "check",
     title: "Application Submitted",
@@ -72,6 +84,7 @@ const buildNewApplicantNotification = (application) => {
 
   return normalizeNotification({
     id: `new-applicant-${application.id}`,
+    applicationId: application.id,
     type: "new_applicant",
     icon: "user",
     title: "New Applicant",
@@ -82,6 +95,47 @@ const buildNewApplicantNotification = (application) => {
     link: "/dashboard/company/jobs",
   });
 };
+
+const buildSuperAdminApplicationNotification = (application) => {
+  const applicantName = application.user?.name || "Someone";
+  const jobTitle = application.job?.title || "a job";
+  const companyName = application.job?.company?.companyName || "a company";
+
+  return normalizeNotification({
+    id: `admin-applicant-${application.id}`,
+    applicationId: application.id,
+    type: "new_applicant",
+    icon: "shield",
+    title: "Platform Application Activity",
+    message: `${applicantName} applied for "${jobTitle}" at ${companyName}.`,
+    time: application.appliedDate,
+    read: false,
+    avatar: application.user?.avatar || null,
+    link: "/dashboard/admin",
+  });
+};
+
+const buildNewJobNotification = (job) => {
+  const companyName = job.company?.companyName || "a company";
+
+  return normalizeNotification({
+    id: `new-job-${job.id}`,
+    jobId: job.id,
+    type: "new_job",
+    icon: "briefcase",
+    title: "New Job Match",
+    message: `New opening for "${job.title}" at ${companyName}. Check it out!`,
+    time: job.createdAt,
+    read: false,
+    avatar: job.company?.logo || null,
+    link: `/jobs?id=${job.id}`,
+  });
+};
+
+const buildApplicationRemovalPayload = (applicationId) => ({
+  applicationId,
+  ids: getApplicationNotificationIds(applicationId),
+});
 
 const getNotificationsForUser = async (user) => {
   const notifications = [];
@@ -114,19 +168,7 @@ const getNotificationsForUser = async (user) => {
     });
 
     for (const job of recentJobs) {
-      notifications.push(
-        normalizeNotification({
-          id: `new-job-${job.id}`,
-          type: "new_job",
-          icon: "briefcase",
-          title: "New Job Match",
-          message: `New opening for "${job.title}" at ${job.company.companyName}. Check it out!`,
-          time: job.createdAt,
-          read: false,
-          avatar: job.company.logo,
-          link: `/jobs?id=${job.id}`,
-        }),
-      );
+      notifications.push(buildNewJobNotification(job));
     }
   } else if (user.role === "company_admin" && user.companyId) {
     const applications = await prisma.application.findMany({
@@ -147,6 +189,30 @@ const getNotificationsForUser = async (user) => {
     for (const application of applications) {
       notifications.push(buildNewApplicantNotification(application));
     }
+  } else if (user.role === "super_admin") {
+    const applications = await prisma.application.findMany({
+      where: {
+        appliedDate: {
+          gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+        },
+      },
+      include: {
+        job: {
+          select: {
+            id: true,
+            title: true,
+            company: { select: { companyName: true, logo: true } },
+          },
+        },
+        user: { select: { id: true, name: true, avatar: true, headline: true } },
+      },
+      orderBy: { appliedDate: "desc" },
+      take: 20,
+    });
+
+    for (const application of applications) {
+      notifications.push(buildSuperAdminApplicationNotification(application));
+    }
   }
 
   notifications.sort((a, b) => new Date(b.time) - new Date(a.time));
@@ -157,5 +223,8 @@ const getNotificationsForUser = async (user) => {
 export {
   buildSeekerApplicationNotification,
   buildNewApplicantNotification,
+  buildSuperAdminApplicationNotification,
+  buildNewJobNotification,
+  buildApplicationRemovalPayload,
   getNotificationsForUser,
 };

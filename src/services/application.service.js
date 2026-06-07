@@ -164,6 +164,15 @@ const withdrawApplicationService = async (applicationId, user) => {
 
   return prisma.application.delete({
     where: { id: applicationId },
+    include: {
+      job: {
+        select: {
+          id: true,
+          title: true,
+          companyId: true,
+        },
+      },
+    },
   });
 };
 

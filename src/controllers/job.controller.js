@@ -8,11 +8,24 @@ import {
   getSavedJobsService,
   getMyCompanyJobsService,
 } from "../services/job.service.js";
+import { buildNewJobNotification } from "../services/notification.service.js";
+import { emitNotificationToRole } from "../realtime/websocket.js";
+import { prisma } from "../config/db.js";
 import { encryptId, decryptId } from "../utils/crypto.js";
 
 const createJobController = async (req, res) => {
   try {
     const job = await createJobService(req.body, req.user);
+    const jobWithCompany = await prisma.job.findUnique({
+      where: { id: job.id },
+      include: {
+        company: { select: { companyName: true, logo: true } },
+      },
+    });
+
+    if (jobWithCompany?.status === "open") {
+      emitNotificationToRole("job_seeker", buildNewJobNotification(jobWithCompany));
+    }
 
     return res.status(201).json({
       status: "success",

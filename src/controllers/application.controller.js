@@ -7,8 +7,10 @@ import {
   withdrawApplicationService,
 } from "../services/application.service.js";
 import {
+  buildApplicationRemovalPayload,
   buildNewApplicantNotification,
   buildSeekerApplicationNotification,
+  buildSuperAdminApplicationNotification,
 } from "../services/notification.service.js";
 import { encryptId } from "../utils/crypto.js";
 import { createSignedUrlFromSupabaseUrl } from "../services/upload.service.js";
@@ -18,7 +20,9 @@ import {
 } from "../services/email.service.js";
 import {
   emitNotificationToCompany,
+  emitNotificationToRole,
   emitNotificationToUser,
+  removeNotificationFromUser,
 } from "../realtime/websocket.js";
 
 const withSignedApplicantResume = async (app) => {
@@ -48,6 +52,10 @@ const applyToJobController = async (req, res) => {
     emitNotificationToCompany(
       application.job?.companyId,
       buildNewApplicantNotification(application),
+    );
+    emitNotificationToRole(
+      "super_admin",
+      buildSuperAdminApplicationNotification(application),
     );
 
     return res.status(201).json({
@@ -137,7 +145,12 @@ const updateApplicationStatusController = async (req, res) => {
 const withdrawApplicationController = async (req, res) => {
   try {
     const applicationId = Number(req.params.id);
-    await withdrawApplicationService(applicationId, req.user);
+    const application = await withdrawApplicationService(applicationId, req.user);
+
+    removeNotificationFromUser(
+      req.user.id,
+      buildApplicationRemovalPayload(application.id),
+    );
 
     return res.status(200).json({
       status: "success",

@@ -53,11 +53,18 @@ git status -sb
 | Done | Realtime emits on apply + status update |
 | Done | Frontend hook, bell UI, token refresh, HTTP fallback |
 | Done | Nginx `/ws` upgrade in `nginx/default.conf` |
-| Not done | Persisted notifications table |
+| Done | Status-change dedupe via `applicationId` |
+| Done | Withdraw realtime removal event |
+| Done | New job push to connected `job_seeker` clients |
+| Done | Super admin application notifications |
+| Done | First-message WebSocket auth (no token in URL by default) |
+| Done | Frontend read-state via `localStorage` |
+| Done | `init()` refresh-before-logout |
+| Done | Clear auth when refresh fails |
+| Done | `scripts/test-websocket.js` smoke script |
+| Not done | Persisted notifications table in Postgres |
 | Not done | Read/unread DB state |
-| Not done | Automated `/ws` integration tests |
-| Not done | Realtime push for withdraw/new-job/super-admin |
-| Not done | Commit/push of backend + frontend websocket changes |
+| Not done | Multi-instance WS client map (Redis/pub-sub) |
 
 ---
 
@@ -170,6 +177,10 @@ Important rules:
 | `connection:ready` | server → client | successful WebSocket auth |
 | `notification:new` | server → client | application submitted |
 | `notification:new` | server → client | application status updated |
+| `notification:new` | server → client | new open job created |
+| `notification:new` | server → client | super admin application activity |
+| `notification:remove` | server → client | application withdrawn |
+| `auth` | client → server | authenticate socket without URL token |
 
 ---
 
