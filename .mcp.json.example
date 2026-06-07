@@ -6,6 +6,15 @@
       "headers": {
         "Authorization": "Bearer <NEON_API_KEY>"
       }
+    },
+    "job-portal-realtime": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "C:/job-portal/backend/features/realtime",
+        "C:/job-portal/backend/AGENTS.md"
+      ]
     }
   }
 }
