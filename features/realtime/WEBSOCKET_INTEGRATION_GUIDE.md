@@ -1,220 +1,173 @@
 # WebSocket Integration Guide
 
-This document is the handoff reference for realtime notifications in the Job Portal project.
+Complete reference for realtime notifications in the Job Portal project.
 
-Use this file first before changing WebSocket code.
+**Read this file before changing any WebSocket or notification code.**
 
 ---
 
-## Agent Handoff
+## Contents
 
-### Repository locations
+1. [Quick Start](#1-quick-start)
+2. [What This Feature Does](#2-what-this-feature-does)
+3. [Architecture](#3-architecture)
+4. [Auth: Access vs Refresh Token](#4-auth-access-token-vs-refresh-token)
+5. [WebSocket Auth Detail](#5-websocket-auth-detail)
+6. [Realtime Events](#6-realtime-events)
+7. [Backend Reference](#7-backend-reference)
+8. [Frontend Reference](#8-frontend-reference)
+9. [Testing](#9-testing)
+10. [Deployment](#10-deployment)
+11. [How To Add A New Realtime Event](#11-how-to-add-a-new-realtime-event)
+12. [Done vs Not Done](#12-done-vs-not-done)
+13. [Do Not Change Lightly](#13-do-not-change-lightly)
+14. [Related Docs](#14-related-docs)
 
-| Repo | Path | Branch |
-| --- | --- | --- |
-| Backend | `C:\job-portal\backend` | `websocket` |
-| Frontend | `C:\Users\devqii\Downloads\job-portal-ui` | check with `git branch --show-current` |
+---
 
-The frontend is **not** inside `C:\job-portal`. It is a separate project in Downloads.
+## At a Glance
 
-### Current backend git state
+| Topic | Rule |
+| --- | --- |
+| Payloads | Build in `notification.service.js` only |
+| Emit timing | After DB action succeeds |
+| WebSocket auth | Access token only (never refresh token) |
+| Preferred connect | `ws://host/ws` + first-message `auth` frame |
+| Fallback | HTTP `GET /api/v1/notifications` always works |
 
-Branch:
+---
 
-```text
-websocket
-```
+## 1. Quick Start
 
-Important changed/new files for WebSocket work:
+### Repositories
 
-```text
-M  nginx/default.conf
-M  src/controllers/application.controller.js
-M  src/controllers/notification.controller.js
-M  src/realtime/websocket.js
-?? features/realtime/WEBSOCKET_INTEGRATION_GUIDE.md
-?? features/...
-?? src/services/notification.service.js
-```
+| Project | Local path | Branch | Remote |
+| --- | --- | --- | --- |
+| Backend | `C:\job-portal\backend` | `websocket` | `github.com/Devvfong/backend-job-portal` |
+| Frontend | `C:\Users\devqii\Downloads\job-portal-ui` | `websocket` | `github.com/Devvfong/job-portal-ui` |
 
-Before continuing, run:
+The frontend is a **separate repo**. It is not inside `C:\job-portal`.
+
+### Run locally
 
 ```bash
+# Terminal 1 — Backend
 cd C:\job-portal\backend
-git status -sb
+git checkout websocket
+npm install
+npm run dev
+
+# Terminal 2 — Frontend
+cd C:\Users\devqii\Downloads\job-portal-ui
+git checkout websocket
+npm install
+npm run dev
 ```
 
-### What is complete vs what is next
+### Environment
 
-| Status | Item |
-| --- | --- |
-| Done | Backend `/ws` server, auth, heartbeat, client tracking |
-| Done | Shared `notification.service.js` payloads |
-| Done | Realtime emits on apply + status update |
-| Done | Frontend hook, bell UI, token refresh, HTTP fallback |
-| Done | Nginx `/ws` upgrade in `nginx/default.conf` |
-| Done | Status-change dedupe via `applicationId` |
-| Done | Withdraw realtime removal event |
-| Done | New job push to connected `job_seeker` clients |
-| Done | Super admin application notifications |
-| Done | First-message WebSocket auth (no token in URL by default) |
-| Done | Frontend read-state via `localStorage` |
-| Done | `init()` refresh-before-logout |
-| Done | Clear auth when refresh fails |
-| Done | `features/realtime/test-websocket.js` smoke script |
-| Not done | Persisted notifications table in Postgres |
-| Not done | Read/unread DB state |
-| Not done | Multi-instance WS client map (Redis/pub-sub) |
+Backend `.env`:
 
----
+```env
+DATABASE_URL=...
+JWT_SECRET=...
+JWT_REFRESH_SECRET=...
+SESSION_SECRET=...
+CORS_ORIGINS=http://localhost:3000
+```
 
-## Goal
+Frontend `.env.local`:
 
-Add realtime notifications on top of the existing HTTP notification flow.
+```env
+NEXT_PUBLIC_API_URL=http://localhost:5000/api/v1
+```
 
-The project already computes notifications from application data on `GET /api/v1/notifications`. WebSocket does **not** replace that endpoint. It pushes fresh notification objects when important application events happen.
+### URLs in local dev
 
-Current realtime use cases:
-
-- job seeker receives confirmation after applying
-- company admin receives a new applicant alert
-- job seeker receives application status updates
-
-Current non-realtime notification cases (HTTP only today):
-
-- seeker "new job match" discovery notifications
-- super admin notification feed (not implemented)
+```text
+Frontend   http://localhost:3000
+Backend    http://localhost:5000
+WebSocket  ws://localhost:5000/ws
+```
 
 ---
 
-## Architecture
+## 2. What This Feature Does
 
-```mermaid
-flowchart TD
-  FE[Next.js Frontend]
-  BELL[NotificationBell]
-  HOOK[useRealtimeNotifications]
-  API[HTTP /api/v1/notifications]
-  WS[WebSocket /ws]
+HTTP `GET /api/v1/notifications` still loads the notification list.
 
-  APP_CTRL[application.controller]
-  NOTIF_CTRL[notification.controller]
-  NOTIF_SVC[notification.service]
-  RT[realtime/websocket.js]
-  DB[(Neon Postgres)]
+WebSocket adds **live pushes** when something important happens:
 
-  FE --> BELL
-  BELL --> API
-  BELL --> HOOK
-  HOOK --> WS
+- seeker applies to a job
+- company admin gets a new applicant
+- seeker application status changes
+- seeker withdraws an application (notification removed)
+- new open job is created (pushed to connected seekers)
+- super admin sees platform application activity
 
-  API --> NOTIF_CTRL
-  NOTIF_CTRL --> NOTIF_SVC
-  NOTIF_SVC --> DB
+If WebSocket is down, the app still works through HTTP and email.
 
-  APP_CTRL --> NOTIF_SVC
-  APP_CTRL --> RT
-  RT --> WS
+---
+
+## 3. Architecture
+
+```text
+Browser
+  |
+  +-- NotificationBell
+  |     |
+  |     +-- GET /api/v1/notifications  (initial load)
+  |     +-- useRealtimeNotifications   (live updates)
+  |
+  v
+WebSocket /ws
+  ^
+  |
+realtime/websocket.js  (transport only)
+  ^
+  |
+application.controller.js / job.controller.js  (emit after success)
+  ^
+  |
+notification.service.js  (single payload builder)
+  ^
+  |
+Prisma / Postgres
 ```
 
 ### Layer rules
 
-| Layer | Responsibility |
+| Layer | Job |
 | --- | --- |
-| `notification.service.js` | Build notification payloads and fetch notification lists |
-| `notification.controller.js` | HTTP response only |
-| `application.controller.js` | HTTP response + trigger realtime emit after business action |
-| `realtime/websocket.js` | Connection auth, client tracking, transport only |
-| `useRealtimeNotifications.ts` | Browser WebSocket lifecycle |
-| `NotificationBell.tsx` | UI state: initial HTTP fetch + prepend realtime messages |
+| `notification.service.js` | Build notification payloads. Fetch HTTP notification lists. |
+| `notification.controller.js` | Return HTTP JSON only. |
+| `application.controller.js` | Run business action, then emit realtime events. |
+| `job.controller.js` | Create job, then emit new-job event to seekers. |
+| `realtime/websocket.js` | Auth, client tracking, send messages. No Prisma. No payload building. |
+| `useRealtimeNotifications.ts` | Connect, auth, refresh, reconnect. |
+| `NotificationBell.tsx` | Show list. Merge HTTP + realtime. Track read state. |
 
-Important rules:
+### Golden rules
 
-- notification shape is defined once in `notification.service.js`
-- HTTP and WebSocket must use the same payload builders
-- do not build separate notification objects inside `websocket.js`
-- do not query Prisma inside `websocket.js`
-- emit only after the business action succeeds in the controller
-
----
-
-## Implemented
-
-### Backend (`websocket` branch)
-
-| Item | Status | Location |
-| --- | --- | --- |
-| `ws` dependency | Done | `package.json` |
-| WebSocket server on same HTTP server | Done | `src/server.js` |
-| Realtime transport module | Done | `src/realtime/websocket.js` |
-| Access-token-only WebSocket auth | Done | `src/realtime/websocket.js` |
-| Client tracking by `userId` | Done | `src/realtime/websocket.js` |
-| Client tracking by `companyId` | Done | `src/realtime/websocket.js` |
-| Heartbeat ping/pong (30s) | Done | `src/realtime/websocket.js` |
-| Shared notification payload service | Done | `src/services/notification.service.js` |
-| Thin notification HTTP controller | Done | `src/controllers/notification.controller.js` |
-| Emit on application submit | Done | `src/controllers/application.controller.js` |
-| Emit on application status update | Done | `src/controllers/application.controller.js` |
-| Nginx `/ws` upgrade proxy | Done | `nginx/default.conf` |
-| Email on apply/status | Done | `src/services/email.service.js` |
-
-### Frontend
-
-| Item | Status | Location |
-| --- | --- | --- |
-| Realtime utility helpers | Done | `lib/realtime.ts` |
-| WebSocket hook with reconnect | Done | `hooks/useRealtimeNotifications.ts` |
-| Notification bell realtime wiring | Done | `components/shared/NotificationBell.tsx` |
-| Notification type contract | Done | `types/index.ts` |
-| Access token refresh before reconnect | Done | `hooks/useRealtimeNotifications.ts` |
-| Bearer token HTTP interceptor | Done | `lib/api-backend.ts` |
-| Auth cookie separation (`token` vs backend `jwt`) | Done | `store/auth.store.ts`, `proxy.ts`, `components/forms/OAuthCallbackClient.tsx` |
-
-### Realtime events currently supported
-
-| Event | Direction | Trigger |
-| --- | --- | --- |
-| `connection:ready` | server → client | successful WebSocket auth |
-| `notification:new` | server → client | application submitted |
-| `notification:new` | server → client | application status updated |
-| `notification:new` | server → client | new open job created |
-| `notification:new` | server → client | super admin application activity |
-| `notification:remove` | server → client | application withdrawn |
-| `auth` | client → server | authenticate socket without URL token |
+1. Build every notification payload in `notification.service.js`.
+2. HTTP and WebSocket must use the **same builders**.
+3. Emit only **after** the database action succeeds.
+4. Never put business logic inside `websocket.js`.
 
 ---
 
-## Implementing / Planned
+## 4. Auth: Access Token vs Refresh Token
 
-These are the recommended next steps for the next agent.
+This is the most important part to understand.
 
-| Item | Priority | Notes |
-| --- | --- | --- |
-| Commit backend websocket changes | High | branch exists but key files are still uncommitted |
-| Commit/sync frontend websocket changes | High | frontend lives in separate Downloads repo |
-| Fix `auth.store.ts` login/register user shape | Done | fixed in frontend `websocket` branch |
-| Automated integration tests for `/ws` | Medium | login, connect, apply, status update |
-| Persisted notification table | Medium | current notifications are derived, not stored |
-| Read/unread state in database | Medium | UI currently treats pushed items as unread |
-| Super admin realtime alerts | Low | only seeker + company flows are wired today |
-| Withdraw-application realtime event | Low | no push event on withdraw yet |
-| New job discovery push | Low | still only available through HTTP fetch |
-| Dedicated notification worker/service | Low | fits future microservice plan |
-| Frontend dev-server proxy for `/ws` | Low | only needed if API and UI use different local origins |
-| Rate limiting / connection caps for `/ws` | Low | useful before high traffic |
+### Two tokens, two jobs
 
----
-
-## Auth Model
-
-The project uses two different token types.
-
-| Token | Lifetime | Storage | Used for |
+| Token | Expires | Stored where | Used for |
 | --- | --- | --- | --- |
-| Access token | 5 minutes | `localStorage`, `token` cookie, `Authorization: Bearer` | HTTP protected routes, WebSocket `?token=` |
-| Refresh token | 1 day | httpOnly `jwt` cookie from backend only | `POST /api/v1/auth/refresh` only |
+| **Access token** | 5 minutes | `localStorage`, `token` cookie, `Authorization: Bearer` | API routes, WebSocket auth |
+| **Refresh token** | 1 day | httpOnly `jwt` cookie (backend sets this) | `POST /api/v1/auth/refresh` only |
 
-Access token payload must include:
+### Access token payload (required for WebSocket)
 
 ```json
 {
@@ -224,116 +177,233 @@ Access token payload must include:
 }
 ```
 
-Refresh token payload only includes `id`, so it must **not** be accepted by WebSocket auth.
-
-### WebSocket auth rule
-
-Preferred frontend auth sends the access token in the first socket message:
+### Refresh token payload
 
 ```json
-{ "event": "auth", "payload": { "token": "<access_token>" } }
+{
+  "id": 4,
+  "exp": 1710000000
+}
 ```
 
-Legacy query-string auth is still supported:
+Refresh tokens have **no `role`**. WebSocket must reject them.
+
+### Cookie rules
+
+| Cookie name | Owner | Purpose |
+| --- | --- | --- |
+| `token` | Frontend | Access token for dashboard route protection |
+| `jwt` | Backend only | Refresh token. httpOnly. Frontend must never write this. |
+
+### Auth flows (current code)
+
+#### Login / register
 
 ```text
-ws://localhost:5000/ws?token=<access_token>
+Backend returns { user, token }
+  -> store user in Zustand + localStorage
+  -> store access token in localStorage + token cookie
+  -> backend sets httpOnly jwt refresh cookie
 ```
 
-It does not accept:
+#### API request when access token expired
 
-- refresh cookies
-- frontend-written `jwt` cookies
-- tokens signed without a `role` claim
+```text
+API returns 401
+  -> POST /auth/refresh (browser sends jwt cookie)
+  -> new access token
+  -> persistAccessToken() updates localStorage, token cookie, Zustand
+  -> retry original request
+```
 
-Unauthorized connections close with code `1008`.
+If refresh fails:
 
-### Frontend auth rule
+```text
+clearAccessSession()
+  -> remove token + user from storage
+  -> Zustand user/token set to null
+```
 
-- frontend stores access token in `token` cookie for dashboard route protection
-- backend owns the httpOnly `jwt` refresh cookie
-- frontend must not write access tokens into a cookie named `jwt`
+#### App reload (`auth.store.ts init`)
 
-### Auth token sync (fixed)
+```text
+Read access token from localStorage
+  -> if expired: try /auth/refresh first
+  -> if refresh works: load /auth/me and stay logged in
+  -> if refresh fails: clear session
+```
 
-Frontend `websocket` branch now includes:
+#### WebSocket connection
 
-- `lib/auth-session.ts` for token persistence without circular imports
-- `store/auth.store.ts` uses `data.user` and `data.token` on login/register
-- `lib/api-backend.ts` and `lib/realtime.ts` call `persistAccessToken()` so Zustand updates on refresh
+```mermaid
+sequenceDiagram
+  participant Client
+  participant Server
+
+  Client->>Server: Connect ws://host/ws (no token in URL)
+  Client->>Server: { event: "auth", payload: { token } }
+  Server->>Server: Verify JWT_SECRET + role claim
+  Server->>Client: { event: "connection:ready", payload: { userId, role } }
+  Note over Client: Schedule refresh ~1 min before expiry
+  Server-->>Client: { event: "notification:new", payload: {...} }
+```
+
+Legacy support: `ws://host/ws?token=<access_token>` still works (URL auth skips the auth frame).
 
 ---
 
-## Backend Guide
+## 5. WebSocket Auth Detail
 
-### 1. Server boot
+### Preferred client auth (frontend uses this)
 
-`src/server.js` creates the Express HTTP server, then mounts realtime on the same port:
+**Step 1.** Connect:
+
+```text
+ws://localhost:5000/ws
+```
+
+**Step 2.** Send immediately after open:
+
+```json
+{
+  "event": "auth",
+  "payload": {
+    "token": "<access_token>"
+  }
+}
+```
+
+**Step 3.** Wait for:
+
+```json
+{
+  "event": "connection:ready",
+  "payload": {
+    "userId": 4,
+    "role": "job_seeker"
+  }
+}
+```
+
+### Server rejects connection when
+
+- no auth within 10 seconds
+- token missing `id` or `role`
+- token fails JWT verify
+- user not found in database
+
+Rejected connections close with code `1008`.
+
+### Frontend auth files
+
+| File | Role |
+| --- | --- |
+| `lib/auth-session.ts` | `persistAccessToken()`, `clearAccessSession()`, sync to Zustand |
+| `store/auth.store.ts` | Login state, `init()` refresh-before-logout |
+| `lib/api-backend.ts` | Bearer header + 401 refresh interceptor |
+| `lib/realtime.ts` | `refreshAccessToken()` for WebSocket |
+| `hooks/useRealtimeNotifications.ts` | Send auth frame, reconnect, refresh |
+
+---
+
+## 6. Realtime Events
+
+| Event | Direction | When it fires | Who receives it |
+| --- | --- | --- | --- |
+| `auth` | client → server | right after socket open | server only |
+| `connection:ready` | server → client | auth success | connecting client |
+| `notification:new` | server → client | application submitted | seeker, company, super_admin |
+| `notification:new` | server → client | status updated | seeker |
+| `notification:new` | server → client | open job created (`status === "open"`) | all connected `job_seeker` |
+| `notification:remove` | server → client | application withdrawn | seeker who withdrew only |
+
+**Note:** Company admins and super admins do not receive realtime updates for status changes or withdraws. They still see data via HTTP refresh.
+
+---
+
+## 7. Backend Reference
+
+### Main files
+
+```text
+src/server.js                          # calls initRealtime(server)
+src/realtime/websocket.js              # WebSocket server at /ws
+src/services/notification.service.js   # payload builders
+src/controllers/application.controller.js
+src/controllers/job.controller.js
+src/controllers/notification.controller.js
+nginx/default.conf                     # /ws upgrade proxy
+features/realtime/test-websocket.js  # manual smoke test
+```
+
+### WebSocket exports
 
 ```js
-const server = app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Server is running on port ${PORT}`);
-});
-
-initRealtime(server);
+initRealtime(server)
+emitNotificationToUser(userId, notification)
+emitNotificationToCompany(companyId, notification)
+emitNotificationToRole(role, notification)
+removeNotificationFromUser(userId, payload)
+REALTIME_EVENTS
 ```
 
-WebSocket path:
+### Client tracking
 
-```text
-/ws
+| Map | Key | Used for |
+| --- | --- | --- |
+| `clientsByUser` | `userId` | seeker status updates, withdraw removal |
+| `clientsByCompany` | `companyId` | new applicant alerts |
+| `clientsByRole` | `role` | new jobs to seekers, super_admin alerts |
+
+Only **connected** clients receive pushes. No connected client = no realtime message (HTTP still works).
+
+Server sends a heartbeat ping every 30 seconds. Clients that do not respond are disconnected.
+
+### Notification builders
+
+```js
+buildSeekerApplicationNotification(application, eventTime?)
+buildNewApplicantNotification(application)
+buildSuperAdminApplicationNotification(application)
+buildNewJobNotification(job)
+buildApplicationRemovalPayload(applicationId)
+getNotificationsForUser(user)
 ```
 
-Default port:
+### Emit points
 
-```text
-5000
+**Apply** (`application.controller.js`):
+
+```js
+emitNotificationToUser(userId, buildSeekerApplicationNotification(application));
+emitNotificationToCompany(companyId, buildNewApplicantNotification(application));
+emitNotificationToRole("super_admin", buildSuperAdminApplicationNotification(application));
 ```
 
-### 2. Realtime module
+**Status update**:
 
-File:
-
-```text
-src/realtime/websocket.js
+```js
+emitNotificationToUser(
+  application.userId,
+  buildSeekerApplicationNotification(application, new Date()),
+);
 ```
 
-Responsibilities:
+**Withdraw**:
 
-- authenticate incoming socket with access token from `?token=`
-- track open sockets by user and company
-- broadcast JSON messages
-- keep connections alive with heartbeat
-
-Exports:
-
-- `initRealtime(server)`
-- `emitNotificationToUser(userId, notification)`
-- `emitNotificationToCompany(companyId, notification)`
-- `REALTIME_EVENTS`
-
-### 3. Notification payload source
-
-File:
-
-```text
-src/services/notification.service.js
+```js
+removeNotificationFromUser(userId, buildApplicationRemovalPayload(application.id));
 ```
 
-Exports:
+**Create job** (`job.controller.js`) — only when `status === "open"`:
 
-- `buildSeekerApplicationNotification(application)`
-- `buildNewApplicantNotification(application)`
-- `getNotificationsForUser(user)`
+```js
+if (jobWithCompany?.status === "open") {
+  emitNotificationToRole("job_seeker", buildNewJobNotification(jobWithCompany));
+}
+```
 
-Used by:
-
-- `GET /api/v1/notifications`
-- application realtime emits
-
-### 4. Required application shape for builders
-
-When emitting from `application.controller.js`, the `application` object must include:
+### Required application shape for builders
 
 ```js
 {
@@ -341,80 +411,39 @@ When emitting from `application.controller.js`, the `application` object must in
   status: "pending" | "reviewed" | "accepted" | "rejected",
   appliedDate: Date,
   userId: number,
-  user: {
-    name: string,
-    avatar?: string
-  },
+  user: { name: string, avatar?: string },
   job: {
     title: string,
     companyId: number,
-    company: {
-      companyName: string,
-      logo?: string
-    }
+    company: { companyName: string, logo?: string }
   }
 }
 ```
 
-`applyToJobService()` and `updateApplicationStatusService()` already return this shape. Do not emit before the service call succeeds.
+`applyToJobService()` and `updateApplicationStatusService()` already return this shape.
 
-### 5. Where events are emitted
+### Notification ID format
 
-File:
-
-```text
-src/controllers/application.controller.js
-```
-
-Current emits:
-
-```js
-// After apply
-emitNotificationToUser(
-  userId,
-  buildSeekerApplicationNotification(application),
-);
-emitNotificationToCompany(
-  application.job?.companyId,
-  buildNewApplicantNotification(application),
-);
-
-// After status update
-emitNotificationToUser(
-  application.userId,
-  buildSeekerApplicationNotification(application),
-);
-```
-
-### 6. Route/auth notes for testing
-
-Application routes in `src/routes/application.route.js`:
-
-| Route | Auth |
+| Case | ID |
 | --- | --- |
-| `POST /api/v1/applications/job/:id/apply` | `protect` + `authorize("job_seeker")` |
-| `PATCH /api/v1/applications/:id/status` | `protect` + `authorize("company_admin")` |
-| `GET /api/v1/notifications` | `protect` only |
+| Pending application | `app-pending-{applicationId}` |
+| Reviewed | `app-reviewed-{applicationId}` |
+| Accepted | `app-accepted-{applicationId}` |
+| Rejected | `app-rejected-{applicationId}` |
+| New applicant (company) | `new-applicant-{applicationId}` |
+| Super admin activity | `admin-applicant-{applicationId}` |
+| New job | `new-job-{jobId}` |
 
-`authorize.middleware.js` lets `super_admin` bypass role lists, but normal smoke tests should use:
+Payloads also include `applicationId` or `jobId` for deduplication on the frontend.
 
-- one `job_seeker` account
-- one `company_admin` linked to the job's company
-
-Company admins only receive company realtime messages if:
-
-- they are connected to `/ws`
-- their user record has `companyId` matching the job company
-
-### 7. Message contract
-
-All realtime messages use this envelope:
+### Message envelope
 
 ```json
 {
   "event": "notification:new",
   "payload": {
     "id": "app-pending-12",
+    "applicationId": 12,
     "type": "applied",
     "icon": "check",
     "title": "Application Submitted",
@@ -428,231 +457,95 @@ All realtime messages use this envelope:
 }
 ```
 
-Connection success message:
+Remove event:
 
 ```json
 {
-  "event": "connection:ready",
+  "event": "notification:remove",
   "payload": {
-    "userId": 4,
-    "role": "job_seeker"
+    "applicationId": 12,
+    "ids": [
+      "app-pending-12",
+      "app-reviewed-12",
+      "app-accepted-12",
+      "app-rejected-12",
+      "new-applicant-12"
+    ]
   }
 }
 ```
 
-### 8. Notification ID rules
-
-These IDs must stay consistent between HTTP and WebSocket:
-
-| Scenario | ID format |
-| --- | --- |
-| Pending application | `app-pending-{applicationId}` |
-| Reviewed application | `app-reviewed-{applicationId}` |
-| Accepted application | `app-accepted-{applicationId}` |
-| Rejected application | `app-rejected-{applicationId}` |
-| New applicant | `new-applicant-{applicationId}` |
-| New job discovery (HTTP only today) | `new-job-{jobId}` |
-
-If you change these IDs, update both HTTP and realtime consumers together.
-
 ---
 
-## Frontend Guide
+## 8. Frontend Reference
 
-### 1. Environment
-
-Backend:
-
-```env
-DATABASE_URL=...
-JWT_SECRET=...
-JWT_REFRESH_SECRET=...
-SESSION_SECRET=...
-CORS_ORIGINS=http://localhost:3000
-```
-
-Frontend:
-
-```env
-NEXT_PUBLIC_API_URL=http://localhost:5000/api/v1
-```
-
-Production API example:
-
-```env
-NEXT_PUBLIC_API_URL=https://devqii.me/api/v1
-```
-
-The frontend derives the socket origin from `NEXT_PUBLIC_API_URL` and connects to `/ws` on that same host.
-
-### 2. Realtime helpers
-
-File:
+### Main files
 
 ```text
 lib/realtime.ts
-```
-
-Provides:
-
-- `getWebSocketUrl(token)`
-- `refreshAccessToken()`
-- `prependNotification(current, notification)`
-- `REALTIME_EVENTS`
-
-### 3. WebSocket hook
-
-File:
-
-```text
+lib/auth-session.ts
+lib/notification-read.ts
 hooks/useRealtimeNotifications.ts
+components/shared/NotificationBell.tsx
+store/auth.store.ts
+lib/api-backend.ts
+proxy.ts
+types/index.ts
 ```
 
-Behavior:
-
-- connects only when `useAuthStore().token` exists
-- sends access token in `?token=`
-- refreshes token before expiry
-- reconnects with exponential backoff up to 10s
-- reconnects after close code `1008` by refreshing access token
-
-Usage:
+### Hook usage (current API)
 
 ```tsx
-useRealtimeNotifications((notification) => {
-  setNotifications((current) => prependNotification(current, notification))
+useRealtimeNotifications({
+  onNotification: (notification) => {
+    setNotifications((current) =>
+      withReadState(prependNotification(current, notification)),
+    )
+  },
+  onRemove: (payload) => {
+    setNotifications((current) => removeNotifications(current, payload))
+  },
 })
 ```
 
-### 4. Notification bell
+### Hook behavior
 
-File:
+1. Runs only when `useAuthStore().token` exists.
+2. Opens `ws://<api-host>/ws` with **no token in URL**.
+3. Sends `{ event: "auth", payload: { token } }` on open.
+4. Waits for `connection:ready`.
+5. Refreshes access token about 1 minute before expiry.
+6. Reconnects with backoff on disconnect.
+7. On close code `1008`, tries refresh then reconnects.
+
+### Notification bell flow
 
 ```text
-components/shared/NotificationBell.tsx
+1. Wait for auth token
+2. GET /notifications (server returns up to 15 items)
+3. Apply local read-state from localStorage
+4. Listen for notification:new -> prepend (dedupe by id + applicationId, keep 15 max)
+5. Listen for notification:remove -> remove matching items
+6. When dropdown opens -> mark first 8 visible items as read
+7. UI renders first 8 notifications in the dropdown
 ```
 
-Flow:
+### Dedup logic
 
-1. wait for auth token
-2. fetch initial list from `GET /notifications`
-3. subscribe to realtime pushes
-4. prepend new notifications without duplicates
-5. keep only the latest 15 items
+`prependNotification()` removes:
 
-Mounted in:
+- same `id`
+- same `applicationId` (fixes status-change duplicates)
 
-- `components/layout/Navbar.tsx` (only when `user` exists)
-- `components/layout/DashboardTopbarActions.tsx`
+### Read state
 
-### 5. HTTP fallback
+Stored in `localStorage` via `lib/notification-read.ts`.
 
-If WebSocket is unavailable:
-
-- `GET /api/v1/notifications` still works
-- email notifications still work
-- UI still loads on page refresh
-
-WebSocket is an enhancement layer, not the only source of truth.
+This is **frontend only**. Not saved in Postgres yet.
 
 ---
 
-## Deployment Guide
-
-### Backend nginx
-
-Configured in:
-
-```text
-nginx/default.conf
-```
-
-`/ws` must proxy with:
-
-```nginx
-proxy_set_header Upgrade $http_upgrade;
-proxy_set_header Connection "upgrade";
-```
-
-### Backend CORS defaults
-
-`src/server.js` already allows:
-
-```text
-https://jobportal.devqii.me
-https://job-portal.devqii.me
-http://localhost:3000
-http://127.0.0.1:3000
-```
-
-Plus any extra origins from `CORS_ORIGINS`.
-
-### Local development
-
-```text
-Frontend:  http://localhost:3000
-Backend:   http://localhost:5000
-WebSocket: ws://localhost:5000/ws?token=<access_token>
-```
-
-Start commands:
-
-```bash
-cd C:\job-portal\backend
-npm install
-npm run dev
-
-cd C:\Users\devqii\Downloads\job-portal-ui
-npm install
-npm run dev
-```
-
-### Production
-
-Use secure WebSocket:
-
-```text
-wss://your-api-domain/ws?token=<access_token>
-```
-
-Make sure:
-
-- `JWT_SECRET` is set
-- `CORS_ORIGINS` includes the frontend domain
-- refresh cookies work on the deployed domain
-- nginx or your reverse proxy forwards `/ws` correctly
-
----
-
-## How To Add A New Realtime Event
-
-Follow this order:
-
-1. add or reuse a payload builder in `notification.service.js`
-2. make sure the service returns the fields that builder needs
-3. emit from the correct controller after the business action succeeds
-4. add a constant in `REALTIME_EVENTS` if it is a new event name
-5. handle the event in `useRealtimeNotifications.ts`
-6. update UI state in the consuming component
-7. document the event in this file
-
-Do not:
-
-- query the database inside `websocket.js`
-- build different notification shapes in controller and service
-- authenticate WebSocket with refresh cookies
-- emit before the DB write succeeds
-
-Example pattern:
-
-```js
-const payload = buildSomeNotification(record);
-emitNotificationToUser(userId, payload);
-```
-
----
-
-## Manual Test Checklist
+## 9. Testing
 
 ### Backend syntax
 
@@ -662,7 +555,6 @@ node --check src/server.js
 node --check src/realtime/websocket.js
 node --check src/services/notification.service.js
 node --check src/controllers/application.controller.js
-node --check src/controllers/notification.controller.js
 ```
 
 ### Frontend checks
@@ -674,81 +566,153 @@ npx tsc --noEmit
 npm run build
 ```
 
-### End-to-end smoke test
+### WebSocket smoke test
 
-1. Login as `job_seeker`
-2. Open dashboard and confirm notification bell loads
-3. Apply to an open job
-4. Confirm seeker receives `Application Submitted` instantly
-5. Login as `company_admin` for that job's company
-6. Confirm `New Applicant` appears instantly
-7. Update application status to `reviewed`
-8. Confirm seeker receives status notification instantly
-9. Refresh page and confirm HTTP `/notifications` still returns matching items
+```bash
+cd C:\job-portal\backend
+ACCESS_TOKEN=<valid_access_token> node features/realtime/test-websocket.js
+```
 
-### WebSocket auth test
+Expected output includes:
 
-1. connect without `?token=` → connection should close with `1008`
-2. connect with expired access token → should close with `1008`
-3. connect with valid access token → should receive `connection:ready`
+```text
+Socket opened, sending auth frame...
+Message: {"event":"connection:ready","payload":{"userId":...,"role":"..."}}
+```
+
+### End-to-end manual test
+
+1. Login as `job_seeker`.
+2. Confirm bell loads notifications.
+3. Apply to an open job -> seeker sees instant "Application Submitted".
+4. Login as `company_admin` for that company -> sees "New Applicant".
+5. Update status to `reviewed` -> seeker sees updated notification (old pending one replaced).
+6. Withdraw application -> seeker notification disappears.
+7. Create a new open job as company admin -> connected seekers get "New Job Match".
+8. Refresh page -> HTTP `/notifications` still matches.
+
+### Route auth for testing
+
+| Route | Roles |
+| --- | --- |
+| `POST /api/v1/applications/job/:id/apply` | `job_seeker` |
+| `PATCH /api/v1/applications/:id/status` | `company_admin` |
+| `DELETE /api/v1/applications/:id` | `job_seeker` (own application) |
+| `POST /api/v1/jobs` | `company_admin` |
+| `GET /api/v1/notifications` | any logged-in user |
+
+`super_admin` bypasses `authorize()` middleware, but normal tests should use seeker + company admin accounts.
 
 ---
 
-## File Map
+## 10. Deployment
 
-### Backend (`C:\job-portal\backend`)
+### Nginx `/ws` block
 
-```text
-package.json
-src/server.js
-src/realtime/websocket.js
-src/services/notification.service.js
-src/controllers/notification.controller.js
-src/controllers/application.controller.js
-src/routes/notification.routes.js
-src/routes/application.route.js
-src/utils/generateToken.js
-nginx/default.conf
-features/realtime/WEBSOCKET_INTEGRATION_GUIDE.md
+File: `nginx/default.conf`
+
+Required headers:
+
+```nginx
+proxy_set_header Upgrade $http_upgrade;
+proxy_set_header Connection "upgrade";
 ```
 
-### Frontend (`C:\Users\devqii\Downloads\job-portal-ui`)
+### Production WebSocket URL
 
 ```text
-lib/auth-session.ts
-lib/realtime.ts
-lib/api-backend.ts
-hooks/useRealtimeNotifications.ts
-components/shared/NotificationBell.tsx
-components/layout/Navbar.tsx
-components/layout/DashboardTopbarActions.tsx
-components/forms/OAuthCallbackClient.tsx
-store/auth.store.ts
-types/index.ts
-proxy.ts
+wss://your-api-domain/ws
 ```
+
+Derived from `NEXT_PUBLIC_API_URL` on the frontend.
+
+### CORS defaults in `server.js`
+
+```text
+https://jobportal.devqii.me
+https://job-portal.devqii.me
+http://localhost:3000
+http://127.0.0.1:3000
+```
+
+Plus values from `CORS_ORIGINS`.
+
+### Production checklist
+
+- [ ] `JWT_SECRET` set
+- [ ] `JWT_REFRESH_SECRET` set
+- [ ] `SESSION_SECRET` set
+- [ ] `CORS_ORIGINS` includes frontend domain
+- [ ] Refresh cookie works on deployed domain (same-site / secure settings)
+- [ ] Nginx forwards `/ws` with upgrade headers
 
 ---
 
-## Do Not Change Lightly
+## 11. How To Add A New Realtime Event
+
+Do these steps in order:
+
+1. Add payload builder in `notification.service.js`.
+2. Make sure the service returns the fields that builder needs.
+3. Emit from the controller after the DB action succeeds.
+4. Add event name to `REALTIME_EVENTS` (backend + frontend) if new.
+5. Handle the event in `useRealtimeNotifications.ts`.
+6. Update UI state in the consuming component.
+7. Update this guide.
+
+Do not:
+
+- query Prisma inside `websocket.js`
+- build different shapes in controller vs service
+- authenticate WebSocket with refresh cookies
+- emit before the mutation succeeds
+
+---
+
+## 12. Done vs Not Done
+
+### Done
+
+- WebSocket server at `/ws`
+- First-message auth + legacy `?token=` support
+- Access/refresh token separation
+- Token refresh on init, API 401, and WebSocket reconnect
+- Shared notification payloads
+- Apply, status, withdraw, new job, super admin emits
+- Status-change dedupe via `applicationId`
+- Frontend read state in `localStorage`
+- Nginx upgrade proxy
+- Smoke test script
+
+### Not done yet
+
+| Item | Why it still matters |
+| --- | --- |
+| Postgres `Notification` table | notifications are computed, not stored |
+| DB read/unread state | read state is browser-only today |
+| Multi-server WebSocket | in-memory client map does not scale horizontally |
+| Automated integration tests | only manual smoke test exists |
+| Rate limiting on `/ws` | optional hardening |
+
+---
+
+## 13. Do Not Change Lightly
 
 - access-token-only WebSocket auth
-- shared notification builders in `notification.service.js`
+- `token` vs `jwt` cookie separation
+- shared builders in `notification.service.js`
 - notification ID formats
-- separation of access token (`token`) and refresh cookie (`jwt`)
+- `applicationId` on application-related payloads
 - HTTP `/api/v1/notifications` fallback
-- emit calls after successful application mutations only
-- `application.service.js` include shape used by notification builders
+- emit-after-success pattern in controllers
 
 ---
 
-## Related Docs
+## 14. Related Docs
 
 ```text
 features/auth_hardening/AUTH_FLOW_OVERVIEW.md
 features/auth_hardening/API_CONTRACT_NOTES.md
-features/architecture/MICROSERVICE_ARCHITECTURE.md
 features/final_preview/01_api_endpoints_roles_authorization.md
+features/architecture/MICROSERVICE_ARCHITECTURE.md
 ```
-
-For future scaling, the architecture doc recommends extracting notification/email into a background worker before splitting core business services.
