@@ -333,7 +333,8 @@ src/controllers/application.controller.js
 src/controllers/job.controller.js
 src/controllers/notification.controller.js
 nginx/default.conf                     # /ws upgrade proxy
-features/realtime/test-websocket.js  # manual smoke test
+features/realtime/test-websocket.js    # auth smoke test
+features/realtime/e2e-websocket.js     # full live E2E test
 ```
 
 ### WebSocket exports
@@ -580,6 +581,31 @@ Socket opened, sending auth frame...
 Message: {"event":"connection:ready","payload":{"userId":...,"role":"..."}}
 ```
 
+### Live E2E test (automated)
+
+Runs the full realtime flow over HTTP + WebSocket: apply, status change, withdraw, new job, and HTTP fallback.
+
+```bash
+# Terminal 1 — start backend (use node, not nodemon, so the server stays stable)
+cd C:\job-portal\backend
+node src/server.js
+
+# Terminal 2 — run E2E
+cd C:\job-portal\backend
+node features/realtime/e2e-websocket.js
+```
+
+Expected: `12 passed, 0 failed`.
+
+The script signs JWTs for test users in the DB (seeker, company admin, super admin). Edit the user/job IDs at the top of `e2e-websocket.js` if your seed data differs.
+
+Optional env overrides:
+
+```env
+E2E_API_BASE=http://localhost:5000/api/v1
+E2E_WS_URL=ws://localhost:5000/ws
+```
+
 ### End-to-end manual test
 
 1. Login as `job_seeker`.
@@ -683,6 +709,7 @@ Do not:
 - Frontend read state in `localStorage`
 - Nginx upgrade proxy
 - Smoke test script
+- Live E2E script (`e2e-websocket.js`, 12 checks)
 
 ### Not done yet
 
