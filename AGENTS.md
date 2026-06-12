@@ -1,4 +1,4 @@
-# AGENTS.md — Job Portal Backend
+# AGENTS.md — NextHire Backend
 
 Instructions for AI agents working on this repo. Read this before changing auth, notifications, or WebSocket code.
 
@@ -8,8 +8,8 @@ Instructions for AI agents working on this repo. Read this before changing auth,
 
 | Project | Local path | Branch | Remote |
 | --- | --- | --- | --- |
-| Backend | `C:\job-portal\backend` | `websocket` | `github.com/Devvfong/backend-job-portal` |
-| Frontend | `C:\Users\devqii\Downloads\job-portal-ui` | `websocket` | `github.com/Devvfong/job-portal-ui` |
+| Backend | `C:\job-portal\backend` | `websocket` | `github.com/Devvfong/nexthire-backend` |
+| Frontend | `C:\Users\devqii\Downloads\job-portal-ui` | `websocket` | `github.com/Devvfong/nexthire-ui` |
 
 Frontend is a **separate repo**. It is not inside `C:\job-portal`.
 

@@ -1,4 +1,4 @@
-digraph JobPortal {
+digraph NextHire {
   rankdir=LR;
   node [shape=box, style=rounded, fontname="Arial"];
 

@@ -1,6 +1,6 @@
 # WebSocket Integration Guide
 
-Complete reference for realtime notifications in the Job Portal project.
+Complete reference for realtime notifications in the NextHire project.
 
 **Read this file before changing any WebSocket or notification code.**
 
@@ -43,8 +43,8 @@ Complete reference for realtime notifications in the Job Portal project.
 
 | Project | Local path | Branch | Remote |
 | --- | --- | --- | --- |
-| Backend | `C:\job-portal\backend` | `websocket` | `github.com/Devvfong/backend-job-portal` |
-| Frontend | `C:\Users\devqii\Downloads\job-portal-ui` | `websocket` | `github.com/Devvfong/job-portal-ui` |
+| Backend | `C:\job-portal\backend` | `websocket` | `github.com/Devvfong/nexthire-backend` |
+| Frontend | `C:\Users\devqii\Downloads\job-portal-ui` | `websocket` | `github.com/Devvfong/nexthire-ui` |
 
 The frontend is a **separate repo**. It is not inside `C:\job-portal`.
 
@@ -652,23 +652,7 @@ wss://your-api-domain/ws
 
 Derived from `NEXT_PUBLIC_API_URL` on the frontend.
 
-### CORS defaults in `server.js`
-
-```text
-https://jobportal.devqii.me
-https://job-portal.devqii.me
-http://localhost:3000
-http://127.0.0.1:3000
-```
-
-Plus values from `CORS_ORIGINS`.
-
-### Production checklist
-
-- [ ] `JWT_SECRET` set
-- [ ] `JWT_REFRESH_SECRET` set
-- [ ] `SESSION_SECRET` set
-- [ ] `CORS_ORIGINS` includes frontend domain
+- [ ] `CORS_ORIGINS` includes frontend domain (e.g. `https://nexthire.devqii.me` or `https://next-hire.devqii.me`)
 - [ ] Refresh cookie works on deployed domain (same-site / secure settings)
 - [ ] Nginx forwards `/ws` with upgrade headers
 

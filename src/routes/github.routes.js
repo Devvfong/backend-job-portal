@@ -6,7 +6,7 @@ import { updateRefreshToken } from "../services/auth.service.js";
 const router = Router();
 
 function frontendOAuthCallbackUrl(token) {
-  const frontendUrl = (process.env.FRONTEND_URL || "https://jobportal.devqii.me").replace(/\/$/, "");
+  const frontendUrl = (process.env.FRONTEND_URL || "https://nexthire.devqii.me").replace(/\/$/, "");
   return `${frontendUrl}/auth/callback?token=${encodeURIComponent(token)}`;
 }
 

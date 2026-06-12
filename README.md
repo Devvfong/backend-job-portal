@@ -1,6 +1,6 @@
-# Job Portal Backend
+# NextHire Backend
 
-Express 5 API for the Job Portal application, backed by PostgreSQL and Prisma.
+Express 5 API for the NextHire application, backed by PostgreSQL and Prisma.
 
 ## Stack
 

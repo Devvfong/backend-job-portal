@@ -28,7 +28,7 @@ const resolveGitHubEmail = async (profile, accessToken) => {
       headers: {
         Authorization: `Bearer ${accessToken}`,
         Accept: "application/vnd.github+json",
-        "User-Agent": "job-portal-backend",
+        "User-Agent": "nexthire-backend",
       },
     });
 

@@ -3,30 +3,30 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.prod
-    container_name: jp-backend
+    container_name: nexthire-backend
     restart: always
     env_file:
       - .env
     environment:
       - NODE_ENV=production
-      - REDIS_URL=redis://jp-redis:6379
+      - REDIS_URL=redis://nexthire-redis:6379
     ports:
       - "127.0.0.1:5000:5000"
     command: sh -c "npx prisma migrate deploy && npm start"
     depends_on:
-      - jp-redis
+      - nexthire-redis
     networks:
-      - job-portal-net
+      - nexthire-net
 
-  jp-redis:
+  nexthire-redis:
     image: redis:alpine
-    container_name: jp-redis
+    container_name: nexthire-redis
     restart: always
     expose:
       - "6379"
     networks:
-      - job-portal-net
+      - nexthire-net
 
 networks:
-  job-portal-net:
+  nexthire-net:
     driver: bridge

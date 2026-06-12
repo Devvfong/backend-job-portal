@@ -57,8 +57,8 @@ app.use(helmet({
 }));
 
 const allowedOrigins = [
-  "https://jobportal.devqii.me",
-  "https://job-portal.devqii.me",
+  "https://nexthire.devqii.me",
+  "https://next-hire.devqii.me",
   "http://localhost:3000",
   "http://127.0.0.1:3000",
   ...(process.env.CORS_ORIGINS || "")

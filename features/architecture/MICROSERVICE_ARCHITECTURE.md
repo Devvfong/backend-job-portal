@@ -1,6 +1,6 @@
 # Complete Microservice Architecture
 
-This document shows how the current Job Portal project could evolve from one Express backend into a complete microservice architecture.
+This document shows how the current NextHire project could evolve from one Express backend into a complete microservice architecture.
 
 ## Current Project Shape
 

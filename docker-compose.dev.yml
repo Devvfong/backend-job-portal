@@ -5,7 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: job-portal-backend-dev
+    container_name: nexthire-backend-dev
     ports:
       - "3000:3000"
     volumes:

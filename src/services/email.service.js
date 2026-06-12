@@ -32,7 +32,7 @@ const sendEmail = async ({ to, subject, html, text }) => {
 
   try {
     const result = await client.emails.send({
-      from: process.env.EMAIL_FROM || "JobPortal <onboarding@resend.dev>",
+      from: process.env.EMAIL_FROM || "NextHire <onboarding@resend.dev>",
       to,
       subject,
       html,
@@ -61,13 +61,13 @@ const sendWelcomeEmail = async (user) => {
 
   return sendEmail({
     to: user.email,
-    subject: "Welcome to JobPortal",
+    subject: "Welcome to NextHire",
     html: `
       <h1>Welcome, ${name}</h1>
-      <p>Your JobPortal account is ready. You can now browse jobs, save roles, and submit applications.</p>
+      <p>Your NextHire account is ready. You can now browse jobs, save roles, and submit applications.</p>
       <p><a href="${frontendUrl}/jobs">Browse jobs</a></p>
     `,
-    text: `Welcome, ${user.name || "there"}! Your JobPortal account is ready. Browse jobs: ${frontendUrl}/jobs`,
+    text: `Welcome, ${user.name || "there"}! Your NextHire account is ready. Browse jobs: ${frontendUrl}/jobs`,
   });
 };
 
@@ -114,14 +114,14 @@ const sendPasswordResetEmail = async (user, resetUrl) => {
 
   return sendEmail({
     to: user.email,
-    subject: "Reset your JobPortal password",
+    subject: "Reset your NextHire password",
     html: `
       <h1>Reset your password</h1>
-      <p>Hi ${name}, use the link below to reset your JobPortal password. This link expires in 15 minutes.</p>
+      <p>Hi ${name}, use the link below to reset your NextHire password. This link expires in 15 minutes.</p>
       <p><a href="${safeResetUrl}">Reset password</a></p>
       <p>If you did not request this, you can ignore this email.</p>
     `,
-    text: `Hi ${user.name || "there"}, reset your JobPortal password here: ${resetUrl}. This link expires in 15 minutes. If you did not request this, you can ignore this email.`,
+    text: `Hi ${user.name || "there"}, reset your NextHire password here: ${resetUrl}. This link expires in 15 minutes. If you did not request this, you can ignore this email.`,
   });
 };
 

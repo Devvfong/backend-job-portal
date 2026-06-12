@@ -1,7 +1,7 @@
 const openApiDocument = {
   openapi: "3.1.0",
   info: {
-    title: "Job Portal Backend API",
+    title: "NextHire Backend API",
     version: "1.0.0",
     description: "API documentation for the Web-Based Job Finder System. Includes endpoints for Job Seekers and Company Admins.",
   },
