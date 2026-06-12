@@ -131,7 +131,7 @@ const deleteFileFromSupabase = async (publicUrl, bucket) => {
   }
 };
 
-const createSignedUrlFromSupabaseUrl = async (publicUrl, bucket, expiresIn = 300) => {
+const createSignedUrlFromSupabaseUrl = async (publicUrl, bucket, expiresIn = 86400) => {
   if (!publicUrl) return publicUrl;
 
   const urlParts = publicUrl.split(`${bucket}/`);
