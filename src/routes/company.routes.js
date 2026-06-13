@@ -29,7 +29,7 @@ const createCompanySchema = z.object({
   website: z.string().url().optional(),
   industry: z.string().min(1),
   size: z.string().min(1),
-  logo: z.string().url().optional(),
+  logo: z.string().optional(),
   email: z.string().email(),
   foundedYear: z.number().nullable().optional(),
   officeCount: z.number().nullable().optional(),

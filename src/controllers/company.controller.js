@@ -97,7 +97,7 @@ const getMyCompanyController = async (req, res) => {
     if (!req.user?.companyId) {
       return res.status(404).json({ message: "Company not found" });
     }
-
+    //this req.user.companyId mean the companyId of the user who is logged in
     const company = await getMyCompanyService(req.user.companyId);
     if (!company) {
       return res.status(404).json({ message: "Company not found" });

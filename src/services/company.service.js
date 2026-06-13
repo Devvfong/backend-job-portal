@@ -324,6 +324,13 @@ const updateCompanyService = async (id, data, user) => {
     delete data.email;
   }
 
+  if (data.logo === "logo.dev") {
+    data.logo = getCompanyLogoUrl({
+      website: data.website !== undefined ? data.website : company.website,
+      email: company.email,
+    });
+  }
+
   return prisma.company.update({
     where: { id },
     data: {
