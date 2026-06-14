@@ -8,6 +8,7 @@ import {
   refresh,
   forgotPassword,
   resetPasswordController,
+  verifyEmail,
 } from "../controllers/auth.controller.js";
 import validate from "../middlewares/validate.middleware.js";
 import protect from "../middlewares/protect.middleware.js";
@@ -55,11 +56,15 @@ const resetPasswordSchema = z.object({
   token: z.string().min(32),
   password: z.string().min(6),
 });
+const verifyEmailSchema = z.object({
+  token: z.string().min(1),
+});
 
 router.post("/register", authRateLimiter, validate(registerSchema), register); // validate middleware will validate the request body against the registerSchema before calling the register controller
 router.post("/login", authRateLimiter, validate(loginSchema), login); // validate middleware will validate the request body against the loginSchema before calling the login controller
 router.post("/forgot-password", passwordResetRateLimiter, validate(forgotPasswordSchema), forgotPassword);
 router.post("/reset-password", authRateLimiter, validate(resetPasswordSchema), resetPasswordController);
+router.post("/verify-email", validate(verifyEmailSchema), verifyEmail);
 router.get("/me", protect, getMe);
 router.post("/refresh", refresh);
 router.post("/logout", protect, logout);

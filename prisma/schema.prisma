@@ -32,12 +32,16 @@ model User {
   refreshToken String?
   resetPasswordToken String?
   resetPasswordExpires DateTime?
+  isVerified   Boolean       @default(false)
+  verificationToken String?   @unique
+  verificationExpires DateTime?
   applications Application[]
   savedJobs    SavedJob[]
   company      Company?      @relation(fields: [companyId], references: [id])
 
   @@index([email])
   @@index([resetPasswordToken])
+  @@index([verificationToken])
 }
 
 model Company {

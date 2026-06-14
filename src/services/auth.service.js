@@ -27,6 +27,11 @@ const createUser = async ({ name, email, password, role }) => {
   const salt = await bcrypt.genSalt(10);
   const hashedPassword = await bcrypt.hash(password, salt);
 
+  // Generate verification token
+  const verificationToken = crypto.randomBytes(32).toString("hex");
+  const hashedToken = crypto.createHash("sha256").update(verificationToken).digest("hex");
+  const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
   // Create user in database
   const user = await prisma.user.create({
     data: {
@@ -35,6 +40,9 @@ const createUser = async ({ name, email, password, role }) => {
       password: hashedPassword,
       role: role,
       skills: [],
+      isVerified: false,
+      verificationToken: hashedToken,
+      verificationExpires: expires,
     },
     select: {
       id: true,
@@ -43,7 +51,7 @@ const createUser = async ({ name, email, password, role }) => {
       role: true,
     },
   });
-  return user;
+  return { user, verificationToken };
 };
 
 const verifyPassword = async (plainPassword, hashedPassword) => {
@@ -97,6 +105,36 @@ const resetPassword = async (token, password) => {
   return result.count > 0;
 };
 
+const verifyEmailToken = async (token) => {
+  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+  // Find user by verification token and expiration
+  const user = await prisma.user.findFirst({
+    where: {
+      verificationToken: hashedToken,
+      verificationExpires: {
+        gt: new Date(),
+      },
+    },
+  });
+
+  if (!user) {
+    return false;
+  }
+
+  // Update user: isVerified = true, clear token and expiration
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      isVerified: true,
+      verificationToken: null,
+      verificationExpires: null,
+    },
+  });
+
+  return true;
+};
+
 export {
   findUserByEmail,
   createUser,
@@ -105,4 +143,5 @@ export {
   findUserById,
   createPasswordResetToken,
   resetPassword,
+  verifyEmailToken,
 };

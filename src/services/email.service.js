@@ -125,9 +125,27 @@ const sendPasswordResetEmail = async (user, resetUrl) => {
   });
 };
 
+const sendVerificationEmail = async (user, verifyUrl) => {
+  const name = escapeHtml(user.name || "there");
+  const safeVerifyUrl = escapeHtml(verifyUrl);
+
+  return sendEmail({
+    to: user.email,
+    subject: "Verify your NextHire account",
+    html: `
+      <h1>Verify your email</h1>
+      <p>Hi ${name}, thank you for registering with NextHire. Please use the link below to verify your email address and activate your account. This link expires in 24 hours.</p>
+      <p><a href="${safeVerifyUrl}">Verify Email</a></p>
+      <p>If you did not create this account, you can ignore this email.</p>
+    `,
+    text: `Hi ${user.name || "there"}, verify your NextHire account here: ${verifyUrl}. This link expires in 24 hours. If you did not create this account, you can ignore this email.`,
+  });
+};
+
 export {
   sendWelcomeEmail,
   sendApplicationSubmittedEmail,
   sendApplicationStatusEmail,
   sendPasswordResetEmail,
+  sendVerificationEmail,
 };

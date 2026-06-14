@@ -12,9 +12,10 @@ import {
   updateRefreshToken,
   findUserById,
   createPasswordResetToken,
-  resetPassword
+  resetPassword,
+  verifyEmailToken
 } from "../services/auth.service.js";
-import { sendPasswordResetEmail, sendWelcomeEmail } from "../services/email.service.js";
+import { sendPasswordResetEmail, sendWelcomeEmail, sendVerificationEmail } from "../services/email.service.js";
 
 // Load Private Key for RSA Decryption
 let privateKey;
@@ -74,22 +75,22 @@ const register = async (req, res) => {
       return res.status(400).json({ message: "User already exists" });
     }
 
-    // Create user (hashing handled in service)
-    const user = await createUser({
+    // Create user (returns { user, verificationToken })
+    const { user, verificationToken } = await createUser({
       name,
       email,
       password: decryptedPassword,
-      role: "job_seeker", //prevent hacker patch if leak endpoint, only allow register as job seeker, company admin must be created by admin
+      role: "job_seeker",
     });
 
-    // Generate token and set cookie
-    const { accessToken, refreshToken } = generateTokens(user.id, user.role, res);
-    await updateRefreshToken(user.id, refreshToken);
-    await sendWelcomeEmail(user);
+    // Send verification email
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+    const verifyUrl = `${frontendUrl}/verify-email?token=${encodeURIComponent(verificationToken)}`;
+    await sendVerificationEmail(user, verifyUrl);
 
     return res.status(201).json({
       status: "success",
-      message: "User registered successfully",
+      message: "User registered successfully. Please check your email to verify your account.",
       data: {
         user: {
           id: user.id,
@@ -98,7 +99,6 @@ const register = async (req, res) => {
           email: user.email,
           role: user.role,
         },
-        token: accessToken,
       },
     });
   } catch (error) {
@@ -124,6 +124,11 @@ const login = async (req, res) => {
     const isPasswordValid = await verifyPassword(decryptedPassword, user.password);
     if (!isPasswordValid) {
       return res.status(400).json({ message: "Invalid email or password" });
+    }
+
+    // Check if user is verified
+    if (!user.isVerified) {
+      return res.status(403).json({ message: "Please verify your email address to log in." });
     }
 
     // Generate token and set cookie
@@ -275,6 +280,24 @@ const resetPasswordController = async (req, res) => {
   }
 };
 
+const verifyEmail = async (req, res) => {
+  const { token } = req.body;
+  try {
+    const verified = await verifyEmailToken(token);
+    if (!verified) {
+      return res.status(400).json({ message: "Verification token is invalid or has expired." });
+    }
+
+    return res.status(200).json({
+      status: "success",
+      message: "Email verified successfully.",
+    });
+  } catch (error) {
+    console.error("Error verifying email:", error);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
 export {
   register,
   login,
@@ -283,4 +306,5 @@ export {
   refresh,
   forgotPassword,
   resetPasswordController,
+  verifyEmail,
 };
