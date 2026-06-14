@@ -24,13 +24,13 @@ const router = express.Router();
 const createProfileSchema = z.object({
   name: z.string().min(1),
   email: z.string().email(),
-  headline: z.string().max(200).optional(),
-  bio: z.string().max(500).optional(),
-  location: z.string().max(500).optional(),
-  phone: z.string().max(20).optional(),
-  avatar: z.string().url().optional(),
-  skills: z.array(z.string()).optional(),
-  resume: z.string().url().optional(),
+  headline: z.string().max(200).nullable().optional(),
+  bio: z.string().max(500).nullable().optional(),
+  location: z.string().max(500).nullable().optional(),
+  phone: z.string().max(20).nullable().optional(),
+  avatar: z.string().url().nullable().optional(),
+  skills: z.array(z.string()).nullable().optional(),
+  resume: z.string().url().nullable().optional(),
 });
 const updateProfileSchema = createProfileSchema.partial();
 const adminUpdateProfileSchema = updateProfileSchema.extend({
