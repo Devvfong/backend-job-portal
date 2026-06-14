@@ -5,7 +5,6 @@ import { Strategy as GitHubStrategy } from "passport-github2";
 import { Strategy as LinkedInStrategy } from "passport-linkedin-oauth2";
 import bcrypt from "bcryptjs";
 import { prisma } from "./db.js";
-import axios from "axios";
 
 const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID;
 const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
@@ -212,14 +211,20 @@ if (LINKEDIN_CLIENT_ID && LINKEDIN_CLIENT_SECRET) {
   );
 
   linkedinStrategy.userProfile = function (accessToken, done) {
-    axios
-      .get("https://api.linkedin.com/v2/userinfo", {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      })
+    fetch("https://api.linkedin.com/v2/userinfo", {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    })
       .then((res) => {
-        const data = res.data;
+        if (!res.ok) {
+          return res.text().then((text) => {
+            throw new Error(`Failed to fetch user profile: ${res.status} ${text}`);
+          });
+        }
+        return res.json();
+      })
+      .then((data) => {
         const profile = {
           provider: "linkedin",
           id: data.sub,
