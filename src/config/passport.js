@@ -5,6 +5,7 @@ import { Strategy as GitHubStrategy } from "passport-github2";
 import { Strategy as LinkedInStrategy } from "passport-linkedin-oauth2";
 import bcrypt from "bcryptjs";
 import { prisma } from "./db.js";
+import axios from "axios";
 
 const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID;
 const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
@@ -145,72 +146,97 @@ passport.use(
 );
 
 if (LINKEDIN_CLIENT_ID && LINKEDIN_CLIENT_SECRET) {
-  passport.use(
-    new LinkedInStrategy(
-      {
-        clientID: LINKEDIN_CLIENT_ID,
-        clientSecret: LINKEDIN_CLIENT_SECRET,
-        callbackURL: oauthCallbackUrl("/auth/linkedin/callback"),
-        scope: ["openid", "profile", "email"],
-      },
-      async (accessToken, refreshToken, profile, done) => {
-        try {
-          const email = profile.emails?.[0]?.value?.toLowerCase();
-          if (!email) {
-            return done(new Error("No email found from LinkedIn"));
-          }
-
-          const displayName = profile.displayName || "LinkedIn User";
-          const avatarUrl = profile.photos?.[0]?.value || null;
-
-          const existingUser = await prisma.user.findUnique({
-            where: { email },
-          });
-
-          let user;
-          if (existingUser) {
-            user = await prisma.user.update({
-              where: { email },
-              data: {
-                name: displayName,
-                avatar: avatarUrl,
-              },
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                role: true,
-                avatar: true,
-              },
-            });
-          } else {
-            const randomPassword = randomUUID();
-            const hashedPassword = await bcrypt.hash(randomPassword, 10);
-            user = await prisma.user.create({
-              data: {
-                name: displayName,
-                email,
-                password: hashedPassword,
-                avatar: avatarUrl,
-                role: "job_seeker",
-              },
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                role: true,
-                avatar: true,
-              },
-            });
-          }
-
-          return done(null, user);
-        } catch (error) {
-          return done(error);
+  const linkedinStrategy = new LinkedInStrategy(
+    {
+      clientID: LINKEDIN_CLIENT_ID,
+      clientSecret: LINKEDIN_CLIENT_SECRET,
+      callbackURL: oauthCallbackUrl("/auth/linkedin/callback"),
+      scope: ["openid", "profile", "email"],
+    },
+    async (accessToken, refreshToken, profile, done) => {
+      try {
+        const email = profile.emails?.[0]?.value?.toLowerCase();
+        if (!email) {
+          return done(new Error("No email found from LinkedIn"));
         }
+
+        const displayName = profile.displayName || "LinkedIn User";
+        const avatarUrl = profile.photos?.[0]?.value || null;
+
+        const existingUser = await prisma.user.findUnique({
+          where: { email },
+        });
+
+        let user;
+        if (existingUser) {
+          user = await prisma.user.update({
+            where: { email },
+            data: {
+              name: displayName,
+              avatar: avatarUrl,
+            },
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              role: true,
+              avatar: true,
+            },
+          });
+        } else {
+          const randomPassword = randomUUID();
+          const hashedPassword = await bcrypt.hash(randomPassword, 10);
+          user = await prisma.user.create({
+            data: {
+              name: displayName,
+              email,
+              password: hashedPassword,
+              avatar: avatarUrl,
+              role: "job_seeker",
+            },
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              role: true,
+              avatar: true,
+            },
+          });
+        }
+
+        return done(null, user);
+      } catch (error) {
+        return done(error);
       }
-    )
+    }
   );
+
+  linkedinStrategy.userProfile = function (accessToken, done) {
+    axios
+      .get("https://api.linkedin.com/v2/userinfo", {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      })
+      .then((res) => {
+        const data = res.data;
+        const profile = {
+          provider: "linkedin",
+          id: data.sub,
+          displayName: data.name,
+          emails: [{ value: data.email }],
+          photos: data.picture ? [{ value: data.picture }] : [],
+          _raw: JSON.stringify(data),
+          _json: data,
+        };
+        done(null, profile);
+      })
+      .catch((err) => {
+        done(err);
+      });
+  };
+
+  passport.use(linkedinStrategy);
 } else {
   console.warn("Missing LinkedIn OAuth env vars. LinkedIn login disabled.");
 }
