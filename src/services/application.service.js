@@ -16,37 +16,65 @@ const applyToJobService = async (jobId, userId, data) => {
     throw new Error("Job is no longer accepting applications");
   }
 
+  const existingApplication = await prisma.application.findUnique({
+    where: {
+      userId_jobId: { userId: Number(userId), jobId: Number(jobId) },
+    },
+  });
+
+  const includeConfig = {
+    user: {
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        avatar: true,
+        headline: true,
+      },
+    },
+    job: {
+      select: {
+        id: true,
+        title: true,
+        companyId: true,
+        company: {
+          select: {
+            companyName: true,
+            logo: true,
+          },
+        },
+      },
+    },
+  };
+
+  if (existingApplication) {
+    const nextCount = existingApplication.applyCount + 1;
+    const nextStatus = nextCount > 3 ? "spam" : "pending";
+
+    return prisma.application.update({
+      where: {
+        id: existingApplication.id,
+      },
+      data: {
+        coverLetter: data.coverLetter || null,
+        applyCount: nextCount,
+        status: nextStatus,
+        appliedDate: new Date(),
+      },
+      include: includeConfig,
+    });
+  }
+
   // Create application
   return prisma.application.create({
     data: {
       jobId,
       userId,
       coverLetter: data.coverLetter || null,
+      applyCount: 1,
+      status: "pending",
     },
-    include: {
-      user: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          avatar: true,
-          headline: true,
-        },
-      },
-      job: {
-        select: {
-          id: true,
-          title: true,
-          companyId: true,
-          company: {
-            select: {
-              companyName: true,
-              logo: true,
-            },
-          },
-        },
-      },
-    },
+    include: includeConfig,
   });
 };
 
@@ -96,6 +124,7 @@ const getApplicantsForJobService = async (jobId, user) => {
           avatar: true,
           resume: true,
           skills: true,
+          phone: true,
         },
       },
     },
@@ -210,6 +239,8 @@ const getCompanyApplicantsService = async (user) => {
           avatar: true,
           resume: true,
           skills: true,
+          bio: true,
+          phone: true,
         },
       },
     },

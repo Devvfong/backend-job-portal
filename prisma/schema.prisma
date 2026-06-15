@@ -111,6 +111,7 @@ model Application {
   jobId       Int
   status      ApplicationStatus @default(pending)
   coverLetter String?
+  applyCount  Int               @default(1)
   job         Job               @relation(fields: [jobId], references: [id], onDelete: Cascade)
   user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -173,4 +174,5 @@ enum ApplicationStatus {
   reviewed
   accepted
   rejected
+  spam
 }
