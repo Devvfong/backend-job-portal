@@ -211,9 +211,27 @@ const updateProfile = async (data, id, currentUser) => {
 
   // Only super_admin can change role or companyId
   if (currentUser.role === SUPER_ADMIN_ROLE) {
-    if (data.role) updateData.role = data.role; // this for change role of user
+    let finalRole = user.role;
+    if (data.role) {
+      updateData.role = data.role;
+      finalRole = data.role;
+    }
+
+    let finalCompanyId = user.companyId;
     if (Object.prototype.hasOwnProperty.call(data, "companyId")) {
-      updateData.companyId = normalizeCompanyId(data.companyId); // this for change company of user
+      finalCompanyId = normalizeCompanyId(data.companyId);
+      updateData.companyId = finalCompanyId;
+    }
+
+    // Auto-clear company link if role is no longer company_admin
+    if (finalRole !== "company_admin") {
+      updateData.companyId = null;
+      finalCompanyId = null;
+    }
+
+    // Validate that only company_admins can be linked to a company
+    if (finalCompanyId !== null && finalCompanyId !== undefined && finalRole !== "company_admin") {
+      throw new Error("Only users with the role 'company_admin' can be linked to a company");
     }
   }
 

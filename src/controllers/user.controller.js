@@ -82,6 +82,10 @@ const updateProfileController = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
+    if (e.message.includes("can be linked to a company")) {
+      return res.status(400).json({ message: e.message });
+    }
+
     return res.status(500).json({ error: e.message });
   }
 };
@@ -106,6 +110,10 @@ const updateUserController = async (req, res) => {
 
     if (e.message.startsWith("Forbidden")) {
       return res.status(403).json({ message: e.message });
+    }
+
+    if (e.message.includes("can be linked to a company")) {
+      return res.status(400).json({ message: e.message });
     }
 
     return res.status(500).json({ error: e.message });
