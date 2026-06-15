@@ -178,6 +178,7 @@ const getCompanyService = async (query = {}) => {
         latitude: true,
         longitude: true,
         createdAt: true,
+        isVerified: true,
         _count: {
           select: { jobs: true }
         }
@@ -217,6 +218,7 @@ const getCompanyServiceById = async (id, includeSensitive = false) => {
     latitude: true,
     longitude: true,
     createdAt: true,
+    isVerified: true,
     jobs: {
       where: { status: "open" },
       select: {
@@ -275,6 +277,7 @@ const getMyCompanyJobsService = async (companyId) => {
           id: true,
           companyName: true,
           logo: true,
+          isVerified: true,
         },
       },
       _count: {
@@ -322,6 +325,7 @@ const updateCompanyService = async (id, data, user) => {
 
     delete data.companyName;
     delete data.email;
+    delete data.isVerified;
   }
 
   if (data.logo === "logo.dev") {

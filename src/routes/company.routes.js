@@ -36,7 +36,9 @@ const createCompanySchema = z.object({
   gallery: z.array(z.string()).optional(),
   specialties: z.array(z.string()).optional(),
 });
-const updateCompanySchema = createCompanySchema.partial(); // All fields are optional for update
+const updateCompanySchema = createCompanySchema.partial().extend({
+  isVerified: z.boolean().optional(),
+}); // All fields are optional for update
 
 router.get("/", getCompanyController);
 

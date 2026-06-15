@@ -127,6 +127,7 @@ const getAllUsers = async () => {
           select: {
             id: true,
             companyName: true,
+            isVerified: true,
           },
         },
         headline: true,

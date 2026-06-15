@@ -66,6 +66,7 @@ model Company {
   mapUrl      String?
   latitude    Float?
   longitude   Float?
+  isVerified  Boolean  @default(false)
   jobs        Job[]
   users       User[]
 }

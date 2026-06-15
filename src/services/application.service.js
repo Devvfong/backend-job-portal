@@ -41,6 +41,7 @@ const applyToJobService = async (jobId, userId, data) => {
           select: {
             companyName: true,
             logo: true,
+            isVerified: true,
           },
         },
       },
@@ -88,6 +89,7 @@ const getMyApplicationsService = async (userId) => {
             select: {
               companyName: true,
               logo: true,
+              isVerified: true,
             },
           },
         },
@@ -169,6 +171,7 @@ const updateApplicationStatusService = async (applicationId, status, user) => {
             select: {
               companyName: true,
               logo: true,
+              isVerified: true,
             },
           },
         },

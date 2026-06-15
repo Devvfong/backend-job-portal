@@ -32,7 +32,8 @@ const protect = async (req, res, next) => {
         company: {
           select: {
             companyName: true,
-            logo: true
+            logo: true,
+            isVerified: true,
           }
         },
         avatar: true,

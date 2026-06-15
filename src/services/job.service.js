@@ -138,6 +138,7 @@ const getJobService = async (query) => {
             companyName: true,
             logo: true,
             location: true,
+            isVerified: true,
           },
         },
       },
@@ -176,6 +177,7 @@ const getJobByIdService = async (id) => {
           logo: true,
           industry: true,
           location: true,
+          isVerified: true,
         }
       }
     }
@@ -291,6 +293,7 @@ const getSavedJobsService = async (userId) => {
               id: true,
               companyName: true,
               logo: true,
+              isVerified: true,
             },
           },
         },
