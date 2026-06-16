@@ -1,0 +1,29 @@
+name: Deploy Backend
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to DigitalOcean VPS
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            # Navigate to the backend directory (adjust this path if your backend is in a different folder)
+            cd ~/backend-job-portal || cd /var/www/backend-job-portal
+            
+            # Pull the latest changes from the main branch
+            git pull origin main
+            
+            # Make sure the deploy script is executable
+            chmod +x deploy.sh
+            
+            # Run the deploy script (this stops containers, rebuilds, and starts them in detached mode)
+            ./deploy.sh
