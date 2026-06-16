@@ -61,7 +61,7 @@ const decryptParam = (encrypted) => {
     }
 
     console.error("RSA Decryption Error:", e);
-    throw new Error('Invalid encrypted parameter');
+    throw new Error('Invalid encrypted parameter', { cause: e });
   }
 };
 

@@ -15,6 +15,7 @@
     "mcp:add:with-key": "npx add-mcp https://mcp.neon.tech/mcp --header \"Authorization: Bearer $NEON_API_KEY\"",
     "mcp:local": "npx -y @neondatabase/mcp-server-neon start $NEON_API_KEY",
     "mcp:local:win": "cmd /c \"npx -y @neondatabase/mcp-server-neon start %NEON_API_KEY%\"",
+    "lint": "eslint src/",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -49,7 +50,10 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.59.1",
+    "eslint": "^10.5.0",
+    "globals": "^17.6.0",
     "nodemon": "^3.1.14",
     "prisma": "^6.7.0"
   },
