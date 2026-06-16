@@ -131,6 +131,10 @@ const login = async (req, res) => {
       return res.status(403).json({ message: "Please verify your email address to log in." });
     }
 
+    if (user.isSuspended) {
+      return res.status(403).json({ message: "Your account has been suspended by an administrator. Please contact support for more information." });
+    }
+
     // Generate token and set cookie
     const { accessToken, refreshToken } = generateTokens(user.id, user.role, res);
     await updateRefreshToken(user.id, refreshToken);
