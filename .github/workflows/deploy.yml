@@ -17,7 +17,7 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
             # Navigate to the backend directory on your server
-            cd ~/job-portal/backend || cd /var/www/job-portal/backend
+            cd /home/backend/job-portal
             
             # Pull the latest changes from the main branch
             git pull origin main
