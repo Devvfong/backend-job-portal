@@ -33,6 +33,8 @@ model User {
   resetPasswordToken String?
   resetPasswordExpires DateTime?
   isVerified   Boolean       @default(false)
+  isSuspended  Boolean       @default(false)
+  warningCount Int           @default(0)
   verificationToken String?   @unique
   verificationExpires DateTime?
   applications Application[]
@@ -67,6 +69,8 @@ model Company {
   latitude    Float?
   longitude   Float?
   isVerified  Boolean  @default(false)
+  isSuspended Boolean  @default(false)
+  warningCount Int     @default(0)
   jobs        Job[]
   users       User[]
 }

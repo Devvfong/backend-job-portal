@@ -10,6 +10,8 @@ import {
   updateCompanyCover,
   deleteCompanyCover,
   getCompanyStatsService,
+  suspendCompanyService,
+  warnCompanyService,
 } from "../services/company.service.js";
 import {
   uploadCompanyAsset,
@@ -379,13 +381,45 @@ const getCompanyStatsController = async (req, res) => {
     }
 
     const stats = await getCompanyStatsService(req.user.companyId);
-
+ 
     return res.status(200).json({
       status: "success",
       data: stats,
     });
   } catch (error) {
     console.error(error);
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+const suspendCompanyController = async (req, res) => {
+  try {
+    const updated = await suspendCompanyService(req.params.id);
+    return res.status(200).json({
+      status: "success",
+      data: { ...updated, encryptedId: encryptId(updated.id) },
+    });
+  } catch (error) {
+    console.error(error);
+    if (error.message === "Company not found") {
+      return res.status(404).json({ message: "Company not found" });
+    }
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+const warnCompanyController = async (req, res) => {
+  try {
+    const updated = await warnCompanyService(req.params.id);
+    return res.status(200).json({
+      status: "success",
+      data: { ...updated, encryptedId: encryptId(updated.id) },
+    });
+  } catch (error) {
+    console.error(error);
+    if (error.message === "Company not found") {
+      return res.status(404).json({ message: "Company not found" });
+    }
     return res.status(500).json({ error: error.message });
   }
 };
@@ -404,4 +438,6 @@ export {
   deleteCoverController,
   uploadGalleryController,
   getCompanyStatsController,
+  suspendCompanyController,
+  warnCompanyController,
 };

@@ -179,6 +179,8 @@ const getCompanyService = async (query = {}) => {
         longitude: true,
         createdAt: true,
         isVerified: true,
+        isSuspended: true,
+        warningCount: true,
         _count: {
           select: { jobs: true }
         }
@@ -219,6 +221,8 @@ const getCompanyServiceById = async (id, includeSensitive = false) => {
     longitude: true,
     createdAt: true,
     isVerified: true,
+    isSuspended: true,
+    warningCount: true,
     jobs: {
       where: { status: "open" },
       select: {
@@ -529,6 +533,32 @@ const getCompanyStatsService = async (companyId) => {
   };
 };
 
+const suspendCompanyService = async (id) => {
+  const company = await prisma.company.findUnique({
+    where: { id: Number(id) },
+  });
+  if (!company) {
+    throw new Error("Company not found");
+  }
+  return prisma.company.update({
+    where: { id: Number(id) },
+    data: { isSuspended: !company.isSuspended },
+  });
+};
+
+const warnCompanyService = async (id) => {
+  const company = await prisma.company.findUnique({
+    where: { id: Number(id) },
+  });
+  if (!company) {
+    throw new Error("Company not found");
+  }
+  return prisma.company.update({
+    where: { id: Number(id) },
+    data: { warningCount: company.warningCount + 1 },
+  });
+};
+
 export {
   createCompanyService,
   getCompanyService,
@@ -542,4 +572,6 @@ export {
   updateCompanyCover,
   deleteCompanyCover,
   getCompanyStatsService,
+  suspendCompanyService,
+  warnCompanyService,
 };

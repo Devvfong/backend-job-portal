@@ -8,6 +8,8 @@ import {
   getAllUsers,
   deleteUser,
   getUserStatsService,
+  suspendUser,
+  warnUser,
 } from "../services/user.service.js";
 import {
   uploadAvatar as uploadAvatarToSupabase,
@@ -267,6 +269,40 @@ const getProfileByIdController = async (req, res) => {
   }
 };
 
+const suspendUserController = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updated = await suspendUser(id);
+    return res.status(200).json({
+      status: "success",
+      data: { ...updated, encryptedId: encryptId(updated.id) },
+    });
+  } catch (e) {
+    console.error(e);
+    if (e.message === "User not found") {
+      return res.status(404).json({ message: "User not found" });
+    }
+    return res.status(500).json({ error: e.message });
+  }
+};
+
+const warnUserController = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updated = await warnUser(id);
+    return res.status(200).json({
+      status: "success",
+      data: { ...updated, encryptedId: encryptId(updated.id) },
+    });
+  } catch (e) {
+    console.error(e);
+    if (e.message === "User not found") {
+      return res.status(404).json({ message: "User not found" });
+    }
+    return res.status(500).json({ error: e.message });
+  }
+};
+
 export {
   createProfileController,
   getProfileController,
@@ -278,5 +314,7 @@ export {
   uploadAvatarController,
   uploadResumeController,
   getUserStatsController,
+  suspendUserController,
+  warnUserController,
 };
 

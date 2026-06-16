@@ -123,6 +123,8 @@ const getAllUsers = async () => {
         email: true,
         role: true,
         companyId: true,
+        isSuspended: true,
+        warningCount: true,
         company: {
           select: {
             id: true,
@@ -212,9 +214,8 @@ const updateProfile = async (data, id, currentUser) => {
   // Only super_admin can change role or companyId
   if (currentUser.role === SUPER_ADMIN_ROLE) {
     let finalRole = user.role;
-    if (data.role) {
-      updateData.role = data.role;
-      finalRole = data.role;
+    if (data.role && data.role !== user.role) {
+      throw new Error("User roles cannot be modified");
     }
 
     let finalCompanyId = user.companyId;
@@ -336,6 +337,32 @@ const getUserStatsService = async (userId) => {
   };
 };
 
+const suspendUser = async (id) => {
+  const user = await prisma.user.findUnique({
+    where: { id: Number(id) },
+  });
+  if (!user) {
+    throw new Error("User not found");
+  }
+  return prisma.user.update({
+    where: { id: Number(id) },
+    data: { isSuspended: !user.isSuspended },
+  });
+};
+
+const warnUser = async (id) => {
+  const user = await prisma.user.findUnique({
+    where: { id: Number(id) },
+  });
+  if (!user) {
+    throw new Error("User not found");
+  }
+  return prisma.user.update({
+    where: { id: Number(id) },
+    data: { warningCount: user.warningCount + 1 },
+  });
+};
+
 export {
   getProfile,
   getPublicProfile,
@@ -346,4 +373,6 @@ export {
   getAllUsers,
   deleteUser,
   getUserStatsService,
+  suspendUser,
+  warnUser,
 };

@@ -16,6 +16,8 @@ import {
   uploadAvatarController,
   uploadResumeController,
   getUserStatsController,
+  suspendUserController,
+  warnUserController,
 } from "../controllers/user.controller.js";
 import authorize from "../middlewares/authorize.middleware.js";
 
@@ -65,6 +67,8 @@ router.put("/profile", protect, validate(updateProfileSchema), updateProfileCont
 router.get("/", protect, authorize("super_admin"), getAllUsersController);
 router.put("/profile/:id", decryptMiddleware, protect, authorize("super_admin"), validate(adminUpdateProfileSchema), updateUserController);
 router.delete("/:id", decryptMiddleware, protect, authorize("super_admin"), deleteUserController);
+router.put("/:id/suspend", decryptMiddleware, protect, authorize("super_admin"), suspendUserController);
+router.put("/:id/warn", decryptMiddleware, protect, authorize("super_admin"), warnUserController);
 
 // ─── Uploads ───────────────────────────────────────────────────────────────
 router.post("/avatar", protect, handleUploadError(uploadAvatar.single("avatar")), uploadAvatarController);

@@ -13,6 +13,8 @@ import {
   deleteCoverController,
   uploadGalleryController,
   getCompanyStatsController,
+  suspendCompanyController,
+  warnCompanyController,
 } from "../controllers/company.controller.js";
 import { getMyCompanyJobsController } from "../controllers/job.controller.js";
 import protect from "../middlewares/protect.middleware.js";
@@ -124,6 +126,20 @@ router.put(
   protect,
   validate(updateCompanySchema),
   updateCompanyController,
+);
+router.put(
+  "/:id/suspend",
+  decryptMiddleware,
+  protect,
+  authorize("super_admin"),
+  suspendCompanyController,
+);
+router.put(
+  "/:id/warn",
+  decryptMiddleware,
+  protect,
+  authorize("super_admin"),
+  warnCompanyController,
 );
 router.delete("/:id", decryptMiddleware, protect, deleteCompanyController);
 

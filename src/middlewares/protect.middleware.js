@@ -28,6 +28,7 @@ const protect = async (req, res, next) => {
         name: true,
         email: true,
         role: true, //to check if the user is company admin or not in the authorize middleware
+        isSuspended: true,
         companyId: true,
         company: {
           select: {
@@ -49,6 +50,11 @@ const protect = async (req, res, next) => {
       return res
         .status(401)
         .json({ message: "Not authorized, user not found" });
+    }
+    if (req.user.isSuspended) {
+      return res
+        .status(403)
+        .json({ message: "Your account has been suspended" });
     }
     console.log("Protect Middleware - User:", req.user.id, "Company:", req.user.company ? req.user.company.companyName : "No Company");
     next();
