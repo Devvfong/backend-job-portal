@@ -1,4 +1,9 @@
 import {
+  BadRequestError,
+  NotFoundError,
+  ForbiddenError,
+} from '../lib/errors.js';
+import {
   createProfile,
   getProfile,
   getPublicProfile,
@@ -22,14 +27,13 @@ import { prisma } from "../config/db.js";
 
 const withSignedResume = async (user) => {
   if (!user?.resume) return user;
-
   return {
     ...user,
     resume: await createSignedUrlFromSupabaseUrl(user.resume, "resumes"),
   };
 };
 
-const createProfileController = async (req, res) => {
+const createProfileController = async (req, res, next) => {
   try {
     const profile = await createProfile(req.body, req.user.id);
     const signedProfile = await withSignedResume(profile);
@@ -37,93 +41,55 @@ const createProfileController = async (req, res) => {
       status: "success",
       data: { ...signedProfile, encryptedId: encryptId(profile.id) },
     });
-  } catch (e) {
-    console.error(e);
-
-    if (e.message === "User not found") {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    return res.status(500).json({ error: e.message });
+  } catch (error) {
+    next(error);
   }
 };
 
-const getProfileController = async (req, res) => {
+const getProfileController = async (req, res, next) => {
   try {
     const profile = await getProfile(req.user.id);
-
     if (!profile) {
-      return res.status(404).json({ message: "User not found" });
+      throw new NotFoundError("User not found");
     }
-
     const signedProfile = await withSignedResume(profile);
-
     return res.status(200).json({
       status: "success",
       data: { ...signedProfile, encryptedId: encryptId(profile.id) },
     });
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({ error: e.message });
+  } catch (error) {
+    next(error);
   }
 };
 
-const updateProfileController = async (req, res) => {
+const updateProfileController = async (req, res, next) => {
   try {
-    // Current user updating their own profile
     const profile = await updateProfile(req.body, req.user.id, req.user);
     const signedProfile = await withSignedResume(profile);
-
     return res.status(200).json({
       status: "success",
       data: { ...signedProfile, encryptedId: encryptId(profile.id) },
     });
-  } catch (e) {
-    console.error(e);
-
-    if (e.message === "User not found") {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    if (e.message.includes("can be linked to a company")) {
-      return res.status(400).json({ message: e.message });
-    }
-
-    return res.status(500).json({ error: e.message });
+  } catch (error) {
+    next(error);
   }
 };
 
-const updateUserController = async (req, res) => {
+const updateUserController = async (req, res, next) => {
   try {
     const { id } = req.params;
-    // Super admin or owner updating a specific profile by ID
     const profile = await updateProfile(req.body, id, req.user);
     const signedProfile = await withSignedResume(profile);
-
     return res.status(200).json({
       status: "success",
       data: { ...signedProfile, encryptedId: encryptId(profile.id) },
     });
-  } catch (e) {
-    console.error(e);
-
-    if (e.message === "User not found") {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    if (e.message.startsWith("Forbidden")) {
-      return res.status(403).json({ message: e.message });
-    }
-
-    if (e.message.includes("can be linked to a company")) {
-      return res.status(400).json({ message: e.message });
-    }
-
-    return res.status(500).json({ error: e.message });
+  } catch (error) {
+    next(error);
   }
 };
 
-const getAllUsersController = async (req, res) => {
+const getAllUsersController = async (req, res, next) => {
   try {
     const data = await getAllUsers();
     const sanitizedUsers = data.user.map(u => {
@@ -131,53 +97,42 @@ const getAllUsersController = async (req, res) => {
       const sanitizedCompany = company
         ? (({ id, ...rest }) => ({ ...rest, encryptedId: encryptId(id) }))(company)
         : company;
-
       return { ...user, encryptedId: encryptId(u.id), company: sanitizedCompany };
     });
     return res.status(200).json({
       status: "success",
       data: { user: sanitizedUsers, total: data.total },
     });
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({ error: e.message });
+  } catch (error) {
+    next(error);
   }
 };
 
-const deleteUserController = async (req, res) => {
+const deleteUserController = async (req, res, next) => {
   try {
     const { id } = req.params;
     await deleteUser(id);
-
     return res.status(200).json({
       status: "success",
       message: "User deleted successfully",
     });
-  } catch (e) {
-    console.error(e);
-
-    if (e.message === "User not found") {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    return res.status(500).json({ error: e.message });
+  } catch (error) {
+    next(error);
   }
 };
 
-const uploadAvatarController = async (req, res) => {
+const uploadAvatarController = async (req, res, next) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ message: "No avatar file provided" });
+      throw new BadRequestError("No avatar file provided");
     }
 
-    // 1. Get current profile to check for old avatar
     const currentProfile = await prisma.user.findUnique({
       where: { id: req.user.id },
       select: { avatar: true },
     });
     const oldAvatarUrl = currentProfile?.avatar;
 
-    // 2. Upload new avatar
     const publicUrl = await uploadAvatarToSupabase(
       req.file.buffer,
       req.file.mimetype,
@@ -185,10 +140,8 @@ const uploadAvatarController = async (req, res) => {
       req.user.id,
     );
 
-    // 3. Update database
     const user = await updateUserAvatar(req.user.id, publicUrl);
 
-    // 4. Cleanup old avatar if it exists
     if (oldAvatarUrl) {
       await deleteFileFromSupabase(oldAvatarUrl, "avatars");
     }
@@ -198,26 +151,23 @@ const uploadAvatarController = async (req, res) => {
       message: "Avatar uploaded successfully",
       data: { ...user, encryptedId: encryptId(user.id) },
     });
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({ error: e.message });
+  } catch (error) {
+    next(error);
   }
 };
 
-const uploadResumeController = async (req, res) => {
+const uploadResumeController = async (req, res, next) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ message: "No resume file provided" });
+      throw new BadRequestError("No resume file provided");
     }
 
-    // 1. Get current profile to check for old resume
     const currentProfile = await prisma.user.findUnique({
       where: { id: req.user.id },
       select: { resume: true },
     });
     const oldResumeUrl = currentProfile?.resume;
 
-    // 2. Upload new resume
     const publicUrl = await uploadResumeToSupabase(
       req.file.buffer,
       req.file.mimetype,
@@ -225,10 +175,8 @@ const uploadResumeController = async (req, res) => {
       req.user.id,
     );
 
-    // 3. Update database
     const user = await updateUserResume(req.user.id, publicUrl);
 
-    // 4. Cleanup old resume if it exists
     if (oldResumeUrl) {
       await deleteFileFromSupabase(oldResumeUrl, "resumes");
     }
@@ -238,45 +186,40 @@ const uploadResumeController = async (req, res) => {
       message: "Resume uploaded successfully",
       data: { ...(await withSignedResume(user)), encryptedId: encryptId(user.id) },
     });
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({ error: e.message });
+  } catch (error) {
+    next(error);
   }
 };
 
-const getUserStatsController = async (req, res) => {
+const getUserStatsController = async (req, res, next) => {
   try {
     const stats = await getUserStatsService(req.user.id);
     return res.status(200).json({
       status: "success",
       data: stats,
     });
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({ error: e.message });
+  } catch (error) {
+    next(error);
   }
 };
 
-const getProfileByIdController = async (req, res) => {
+const getProfileByIdController = async (req, res, next) => {
   try {
     const { id } = req.params;
     const profile = await getPublicProfile(Number(id));
-
     if (!profile) {
-      return res.status(404).json({ message: "User not found" });
+      throw new NotFoundError("User not found");
     }
-
     return res.status(200).json({
       status: "success",
       data: { ...profile, encryptedId: encryptId(profile.id) },
     });
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({ error: e.message });
+  } catch (error) {
+    next(error);
   }
 };
 
-const suspendUserController = async (req, res) => {
+const suspendUserController = async (req, res, next) => {
   try {
     const { id } = req.params;
     const updated = await suspendUser(id);
@@ -284,16 +227,12 @@ const suspendUserController = async (req, res) => {
       status: "success",
       data: { ...updated, encryptedId: encryptId(updated.id) },
     });
-  } catch (e) {
-    console.error(e);
-    if (e.message === "User not found") {
-      return res.status(404).json({ message: "User not found" });
-    }
-    return res.status(500).json({ error: e.message });
+  } catch (error) {
+    next(error);
   }
 };
 
-const warnUserController = async (req, res) => {
+const warnUserController = async (req, res, next) => {
   try {
     const { id } = req.params;
     const updated = await warnUser(id);
@@ -301,12 +240,8 @@ const warnUserController = async (req, res) => {
       status: "success",
       data: { ...updated, encryptedId: encryptId(updated.id) },
     });
-  } catch (e) {
-    console.error(e);
-    if (e.message === "User not found") {
-      return res.status(404).json({ message: "User not found" });
-    }
-    return res.status(500).json({ error: e.message });
+  } catch (error) {
+    next(error);
   }
 };
 
@@ -324,4 +259,3 @@ export {
   suspendUserController,
   warnUserController,
 };
-

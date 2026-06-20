@@ -1,4 +1,9 @@
 import {
+  BadRequestError,
+  ForbiddenError,
+  NotFoundError,
+} from '../lib/errors.js';
+import {
   createCompanyService,
   getCompanyService,
   getCompanyServiceById,
@@ -16,33 +21,22 @@ import {
 import {
   uploadCompanyAsset,
 } from "../services/upload.service.js";
-
 import { encryptId, decryptId } from "../utils/crypto.js";
 
-const createCompanyController = async (req, res) => {
+const createCompanyController = async (req, res, next) => {
   try {
     const company = await createCompanyService(req.body, req.user);
-    // Remove raw id from response and expose only encryptedId
     const { id, ...rest } = company;
     return res.status(201).json({
       status: "success",
       data: { ...rest, id: encryptId(id), encryptedId: encryptId(id) },
     });
   } catch (error) {
-    console.error(error);
-    if (error.message === "Unauthorized") {
-      return res.status(403).json({ message: "Forbidden" });
-    }
-    if (error.message === "User is already linked to a company") {
-      return res.status(400).json({ message: error.message });
-    }
-    if (error.message === "Company already exists") {
-      return res.status(400).json({ message: error.message });
-    }
-    return res.status(500).json({ error: error.message });
+    next(error);
   }
 };
-const getCompanyController = async (req, res) => {
+
+const getCompanyController = async (req, res, next) => {
   try {
     const result = await getCompanyService(req.query);
     const companies = result.companies.map(({ id, ...rest }) => ({ ...rest, encryptedId: encryptId(id) }));
@@ -51,14 +45,12 @@ const getCompanyController = async (req, res) => {
       data: { companies, meta: result.meta },
     });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
-const getCompanyControllerById = async (req, res) => {
+const getCompanyControllerById = async (req, res, next) => {
   try {
-    // Accept either numeric IDs or encrypted IDs
     let idParam = req.params.id;
     let id = Number(idParam);
     if (Number.isNaN(id)) {
@@ -66,7 +58,7 @@ const getCompanyControllerById = async (req, res) => {
         const decrypted = decryptId(idParam);
         id = Number(decrypted);
       } catch (err) {
-        return res.status(400).json({ message: "Invalid company id" });
+        throw new BadRequestError("Invalid company id");
       }
     }
 
@@ -76,10 +68,9 @@ const getCompanyControllerById = async (req, res) => {
 
     const company = await getCompanyServiceById(Number(id), includeSensitive);
     if (!company) {
-      return res.status(404).json({ message: "Company not found" });
+      throw new NotFoundError("Company not found");
     }
 
-    // Remove raw id and map nested jobs to include encryptedId instead of id
     const { id: companyId, jobs = [], ...companyRest } = company;
     const jobsSanitized = (jobs || []).map(({ id: jobId, ...jobRest }) => ({ ...jobRest, encryptedId: encryptId(jobId) }));
     const out = { ...companyRest, id: encryptId(companyId), encryptedId: encryptId(companyId), jobs: jobsSanitized };
@@ -89,20 +80,18 @@ const getCompanyControllerById = async (req, res) => {
       data: out,
     });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
-const getMyCompanyController = async (req, res) => {
+const getMyCompanyController = async (req, res, next) => {
   try {
     if (!req.user?.companyId) {
-      return res.status(404).json({ message: "Company not found" });
+      throw new NotFoundError("Company not found");
     }
-    //this req.user.companyId mean the companyId of the user who is logged in
     const company = await getMyCompanyService(req.user.companyId);
     if (!company) {
-      return res.status(404).json({ message: "Company not found" });
+      throw new NotFoundError("Company not found");
     }
 
     const { id: myId, jobs = [], ...companyRest } = company;
@@ -113,17 +102,11 @@ const getMyCompanyController = async (req, res) => {
       data: { ...companyRest, id: encryptId(myId), encryptedId: encryptId(myId), jobs: jobsSanitized },
     });
   } catch (error) {
-    console.error(error);
-    if (error.message === "Company not found") {
-      return res.status(404).json({ message: "Company not found" });
-    }
-    if (error.message === "Company identity changes require super admin approval") {
-      return res.status(403).json({ message: error.message });
-    }
-    return res.status(500).json({ error: error.message });
+    next(error);
   }
 };
-const updateCompanyController = async (req, res) => {
+
+const updateCompanyController = async (req, res, next) => {
   try {
     const company = await updateCompanyService(
       Number(req.params.id),
@@ -135,51 +118,40 @@ const updateCompanyController = async (req, res) => {
       data: company,
     });
   } catch (error) {
-    console.error(error);
-    if (error.message === "Unauthorized") {
-      return res.status(403).json({ message: "Forbidden" });
-    }
-    if (error.message === "Company not found") {
-      return res.status(404).json({ message: "Company not found" });
-    }
-    if (error.message === "Company identity changes require super admin approval") {
-      return res.status(403).json({ message: error.message });
-    }
-    return res.status(500).json({ error: error.message });
+    next(error);
   }
 };
-const updateMyCompanyController = async (req, res) => {
+
+const updateMyCompanyController = async (req, res, next) => {
   try {
     if (!req.user.companyId) {
-      return res.status(403).json({ message: "Forbidden: No company associated" });
+      throw new ForbiddenError("Forbidden: No company associated");
     }
-    
-    // Only allow expected premium fields and base fields
-    // Only allow expected premium fields and base fields, excluding immutable IDs
-    const { 
-      id, 
-      encryptedId, 
-      companyId, 
-      userId, 
-      createdAt, 
+
+    const {
+      id,
+      encryptedId,
+      companyId,
+      userId,
+      createdAt,
       updatedAt,
-      foundedYear, 
-      officeCount, 
-      gallery, 
+      foundedYear,
+      officeCount,
+      gallery,
       specialties,
       mapUrl,
       latitude,
       longitude,
-      ...restBody 
+      ...restBody
     } = req.body;
-    
+
     const company = await updateCompanyService(
       req.user.companyId,
-      { 
-        ...restBody, 
-        foundedYear, 
-        officeCount, 
-        gallery, 
+      {
+        ...restBody,
+        foundedYear,
+        officeCount,
+        gallery,
         specialties,
         mapUrl,
         latitude,
@@ -196,27 +168,18 @@ const updateMyCompanyController = async (req, res) => {
       data: { ...updatedRest, encryptedId: encryptId(updatedId), jobs: jobsSanitized },
     });
   } catch (error) {
-    console.error(error);
-    if (error.message === "Unauthorized") {
-      return res.status(403).json({ message: "Forbidden" });
-    }
-    if (error.message === "Company not found") {
-      return res.status(404).json({ message: "Company not found" });
-    }
-    return res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
-const uploadGalleryController = async (req, res) => {
+const uploadGalleryController = async (req, res, next) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ message: "No file provided" });
+      throw new BadRequestError("No file provided");
     }
 
     if (!req.user.companyId) {
-      return res
-        .status(403)
-        .json({ message: "Forbidden: No company associated" });
+      throw new ForbiddenError("Forbidden: No company associated");
     }
 
     const { uploadGalleryAsset } = await import("../services/upload.service.js");
@@ -231,12 +194,11 @@ const uploadGalleryController = async (req, res) => {
       data: { url: publicUrl },
     });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
-const deleteCompanyController = async (req, res) => {
+const deleteCompanyController = async (req, res, next) => {
   try {
     await deleteCompanyService(Number(req.params.id), req.user);
     return res.status(200).json({
@@ -244,29 +206,20 @@ const deleteCompanyController = async (req, res) => {
       message: "Company deleted successfully",
     });
   } catch (error) {
-    console.error(error);
-    if (error.message === "Unauthorized") {
-      return res.status(403).json({ message: "Forbidden" });
-    }
-    if (error.message === "Company not found") {
-      return res.status(404).json({ message: "Company not found" });
-    }
-    return res.status(500).json({ error: error.message });
+    next(error);
   }
 };
-const uploadLogoController = async (req, res) => {
+
+const uploadLogoController = async (req, res, next) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ message: "No logo file provided" });
+      throw new BadRequestError("No logo file provided");
     }
 
     if (!req.user.companyId) {
-      return res
-        .status(403)
-        .json({ message: "Forbidden: No company associated" });
+      throw new ForbiddenError("Forbidden: No company associated");
     }
 
-    // 2. Upload new logo
     const publicUrl = await uploadCompanyAsset(
       req.file.buffer,
       req.file.mimetype,
@@ -275,9 +228,7 @@ const uploadLogoController = async (req, res) => {
       "logo"
     );
 
-    // 3. Update database (shadow deletion is handled in the service for the old logo)
     const updatedCompany = await updateCompanyLogo(req.user.companyId, publicUrl);
-
     const { id: updatedId, jobs = [], ...updatedRest } = updatedCompany;
     const jobsSanitized = (jobs || []).map(({ id: jobId, ...jobRest }) => ({ ...jobRest, encryptedId: encryptId(jobId) }));
 
@@ -287,20 +238,17 @@ const uploadLogoController = async (req, res) => {
       data: { ...updatedRest, encryptedId: encryptId(updatedId), jobs: jobsSanitized },
     });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: error.message });
+    next(error);
   }
 };
-const deleteLogoController = async (req, res) => {
+
+const deleteLogoController = async (req, res, next) => {
   try {
     if (!req.user.companyId) {
-      return res
-        .status(403)
-        .json({ message: "Forbidden: No company associated" });
+      throw new ForbiddenError("Forbidden: No company associated");
     }
 
     const company = await deleteCompanyLogo(req.user, req.user.companyId);
-
     const { id: deletedId, jobs = [], ...deletedRest } = company;
     const jobsSanitized = (jobs || []).map(({ id: jobId, ...jobRest }) => ({ ...jobRest, encryptedId: encryptId(jobId) }));
 
@@ -310,21 +258,18 @@ const deleteLogoController = async (req, res) => {
       data: { ...deletedRest, encryptedId: encryptId(deletedId), jobs: jobsSanitized },
     });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
-const uploadCoverController = async (req, res) => {
+const uploadCoverController = async (req, res, next) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ message: "No cover file provided" });
+      throw new BadRequestError("No cover file provided");
     }
 
     if (!req.user.companyId) {
-      return res
-        .status(403)
-        .json({ message: "Forbidden: No company associated" });
+      throw new ForbiddenError("Forbidden: No company associated");
     }
 
     const publicUrl = await uploadCompanyAsset(
@@ -336,7 +281,6 @@ const uploadCoverController = async (req, res) => {
     );
 
     const updatedCompany = await updateCompanyCover(req.user.companyId, publicUrl);
-
     const { id: updatedId, jobs = [], ...updatedRest } = updatedCompany;
     const jobsSanitized = (jobs || []).map(({ id: jobId, ...jobRest }) => ({ ...jobRest, encryptedId: encryptId(jobId) }));
 
@@ -346,21 +290,17 @@ const uploadCoverController = async (req, res) => {
       data: { ...updatedRest, encryptedId: encryptId(updatedId), jobs: jobsSanitized },
     });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
-const deleteCoverController = async (req, res) => {
+const deleteCoverController = async (req, res, next) => {
   try {
     if (!req.user.companyId) {
-      return res
-        .status(403)
-        .json({ message: "Forbidden: No company associated" });
+      throw new ForbiddenError("Forbidden: No company associated");
     }
 
     const company = await deleteCompanyCover(req.user, req.user.companyId);
-
     const { id: deletedId, jobs = [], ...deletedRest } = company;
     const jobsSanitized = (jobs || []).map(({ id: jobId, ...jobRest }) => ({ ...jobRest, encryptedId: encryptId(jobId) }));
 
@@ -370,29 +310,27 @@ const deleteCoverController = async (req, res) => {
       data: { ...deletedRest, encryptedId: encryptId(deletedId), jobs: jobsSanitized },
     });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: error.message });
+    next(error);
   }
 };
-const getCompanyStatsController = async (req, res) => {
+
+const getCompanyStatsController = async (req, res, next) => {
   try {
     if (!req.user.companyId) {
-      return res.status(403).json({ message: "Forbidden: No company associated" });
+      throw new ForbiddenError("Forbidden: No company associated");
     }
 
     const stats = await getCompanyStatsService(req.user.companyId);
- 
     return res.status(200).json({
       status: "success",
       data: stats,
     });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
-const suspendCompanyController = async (req, res) => {
+const suspendCompanyController = async (req, res, next) => {
   try {
     const updated = await suspendCompanyService(req.params.id);
     return res.status(200).json({
@@ -400,15 +338,11 @@ const suspendCompanyController = async (req, res) => {
       data: { ...updated, encryptedId: encryptId(updated.id) },
     });
   } catch (error) {
-    console.error(error);
-    if (error.message === "Company not found") {
-      return res.status(404).json({ message: "Company not found" });
-    }
-    return res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
-const warnCompanyController = async (req, res) => {
+const warnCompanyController = async (req, res, next) => {
   try {
     const updated = await warnCompanyService(req.params.id);
     return res.status(200).json({
@@ -416,11 +350,7 @@ const warnCompanyController = async (req, res) => {
       data: { ...updated, encryptedId: encryptId(updated.id) },
     });
   } catch (error) {
-    console.error(error);
-    if (error.message === "Company not found") {
-      return res.status(404).json({ message: "Company not found" });
-    }
-    return res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 

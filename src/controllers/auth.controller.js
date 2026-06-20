@@ -1,3 +1,9 @@
+import {
+  BadRequestError,
+  UnauthorizedError,
+  ForbiddenError,
+  NotFoundError,
+} from '../lib/errors.js';
 import generateTokens from "../utils/generateToken.js";
 import crypto from "crypto";
 import fs from "fs";
@@ -17,12 +23,9 @@ import {
 } from "../services/auth.service.js";
 import { sendPasswordResetEmail, sendWelcomeEmail, sendVerificationEmail } from "../services/email.service.js";
 
-// Load Private Key for RSA Decryption
 let privateKey;
 try {
-  // Prefer environment variable (for Render/production), fallback to local file
   if (process.env.RSA_PRIVATE_KEY) {
-    // In case the env var represents newlines as literal '\n'
     privateKey = process.env.RSA_PRIVATE_KEY.replace(/\\n/g, '\n');
   } else {
     const privateKeyPath = path.join(process.cwd(), "private_key.pem");
@@ -41,9 +44,7 @@ const decryptParam = (encrypted) => {
   }
 
   if (!privateKey) {
-    const msg = 'RSA private key not configured on the server. Set RSA_PRIVATE_KEY env var.';
-    console.error(msg);
-    throw new Error(msg);
+    throw new BadRequestError('RSA private key not configured on the server');
   }
 
   try {
@@ -59,23 +60,20 @@ const decryptParam = (encrypted) => {
     if (!looksEncrypted) {
       return value;
     }
-
-    console.error("RSA Decryption Error:", e);
-    throw new Error('Invalid encrypted parameter', { cause: e });
+    throw new BadRequestError('Invalid encrypted parameter');
   }
 };
 
-const register = async (req, res) => {
-  const { name, email, password } = req.body;
+const register = async (req, res, next) => {
   try {
+    const { name, email, password } = req.body;
     const decryptedPassword = decryptParam(password);
-    // Check if user already exists
+
     const userExists = await findUserByEmail(email);
     if (userExists) {
-      return res.status(400).json({ message: "User already exists" });
+      throw new BadRequestError("User already exists");
     }
 
-    // Create user (returns { user, verificationToken })
     const { user, verificationToken } = await createUser({
       name,
       email,
@@ -83,12 +81,9 @@ const register = async (req, res) => {
       role: "job_seeker",
     });
 
-    // Send verification email
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
     const verifyUrl = `${frontendUrl}/verify-email?token=${encodeURIComponent(verificationToken)}`;
     await sendVerificationEmail(user, verifyUrl);
-
-    // Send welcome email (non-blocking)
     sendWelcomeEmail(user).catch(() => {});
 
     return res.status(201).json({
@@ -105,40 +100,33 @@ const register = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error registering user:", error);
-    if (error.message === "Invalid encrypted parameter" || error.message.includes("RSA private key not configured")) {
-      return res.status(400).json({ message: "Invalid encrypted password" });
-    }
-    return res.status(500).json({ message: "Server error" });
+    next(error);
   }
 };
 
-const login = async (req, res) => {
-  const { email, password } = req.body;
+const login = async (req, res, next) => {
   try {
+    const { email, password } = req.body;
     const decryptedPassword = decryptParam(password);
-    // Check if user exists
+
     const user = await findUserByEmail(email);
     if (!user) {
-      return res.status(400).json({ message: "Invalid email or password" });
+      throw new BadRequestError("Invalid email or password");
     }
 
-    // Check if password is correct
     const isPasswordValid = await verifyPassword(decryptedPassword, user.password);
     if (!isPasswordValid) {
-      return res.status(400).json({ message: "Invalid email or password" });
+      throw new BadRequestError("Invalid email or password");
     }
 
-    // Check if user is verified
     if (!user.isVerified) {
-      return res.status(403).json({ message: "Please verify your email address to log in." });
+      throw new ForbiddenError("Please verify your email address to log in.");
     }
 
     if (user.isSuspended) {
-      return res.status(403).json({ message: "Your account has been suspended by an administrator. Please contact support for more information." });
+      throw new ForbiddenError("Your account has been suspended by an administrator. Please contact support for more information.");
     }
 
-    // Generate token and set cookie
     const { accessToken, refreshToken } = generateTokens(user.id, user.role, res);
     await updateRefreshToken(user.id, refreshToken);
 
@@ -157,35 +145,31 @@ const login = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error logging in:", error);
-    if (error.message === "Invalid encrypted parameter" || error.message.includes("RSA private key not configured")) {
-      return res.status(400).json({ message: "Invalid encrypted password" });
+    next(error);
+  }
+};
+
+const logout = async (req, res, next) => {
+  try {
+    if (req.user && req.user.id) {
+      await updateRefreshToken(req.user.id, null);
     }
-    return res.status(500).json({
-      message: "Server error",
-      error: error.message,
-      stack: process.env.NODE_ENV === "development" ? error.stack : undefined
+    res.cookie("jwt", "", {
+      expires: new Date(0),
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
     });
+    return res.status(200).json({
+      status: "success",
+      message: "Logged out successfully",
+    });
+  } catch (error) {
+    next(error);
   }
 };
 
-const logout = async (req, res) => {
-  if (req.user && req.user.id) {
-    await updateRefreshToken(req.user.id, null);
-  }
-  res.cookie("jwt", "", {
-    expires: new Date(0),
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-  });
-  return res.status(200).json({
-    status: "success",
-    message: "Logged out successfully",
-  });
-};
-
-const getMe = async (req, res) => {
+const getMe = async (req, res, next) => {
   try {
     const resume = req.user.resume
       ? await createSignedUrlFromSupabaseUrl(req.user.resume, "resumes")
@@ -199,30 +183,25 @@ const getMe = async (req, res) => {
         encryptedId: encryptId(req.user.id)
       }
     });
-  } catch (e) {
-    return res.status(500).json({ message: "Server error" });
+  } catch (error) {
+    next(error);
   }
 };
 
-const refresh = async (req, res) => {
+const refresh = async (req, res, next) => {
   try {
     const refreshToken = req.cookies.jwt;
     if (!refreshToken) {
-      return res.status(401).json({ message: "Not authorized, no refresh token" });
+      throw new UnauthorizedError("Not authorized, no refresh token");
     }
 
     const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET);
-
-    // Find user by ID to get their stored refresh token
     const user = await findUserById(decoded.id);
     if (!user || user.refreshToken !== refreshToken) {
-      return res.status(401).json({ message: "Not authorized, invalid refresh token" });
+      throw new UnauthorizedError("Not authorized, invalid refresh token");
     }
 
-    // Generate new tokens
     const { accessToken, refreshToken: newRefreshToken } = generateTokens(user.id, user.role, res);
-
-    // Save new refresh token in DB (Refresh Token Rotation)
     await updateRefreshToken(user.id, newRefreshToken);
 
     res.status(200).json({
@@ -232,15 +211,13 @@ const refresh = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error("Error refreshing token:", error);
-    return res.status(401).json({ message: "Not authorized, refresh token failed" });
+    next(error);
   }
 };
 
-const forgotPassword = async (req, res) => {
-  const { email } = req.body;
-
+const forgotPassword = async (req, res, next) => {
   try {
+    const { email } = req.body;
     const user = await findUserByEmail(email);
 
     if (user) {
@@ -249,7 +226,6 @@ const forgotPassword = async (req, res) => {
         || `${process.env.FRONTEND_URL || "http://localhost:3000"}/reset-password`;
       const tokenSeparator = resetBaseUrl.includes("?") ? "&" : "?";
       const resetUrl = `${resetBaseUrl}${tokenSeparator}token=${encodeURIComponent(resetToken)}`;
-
       await sendPasswordResetEmail(user, resetUrl);
     }
 
@@ -258,20 +234,18 @@ const forgotPassword = async (req, res) => {
       message: "If an account exists for that email, a password reset link has been sent.",
     });
   } catch (error) {
-    console.error("Error requesting password reset:", error);
-    return res.status(500).json({ message: "Server error" });
+    next(error);
   }
 };
 
-const resetPasswordController = async (req, res) => {
-  const { token, password } = req.body;
-
+const resetPasswordController = async (req, res, next) => {
   try {
+    const { token, password } = req.body;
     const decryptedPassword = decryptParam(password);
     const didReset = await resetPassword(token, decryptedPassword);
 
     if (!didReset) {
-      return res.status(400).json({ message: "Password reset link is invalid or expired" });
+      throw new BadRequestError("Password reset link is invalid or expired");
     }
 
     return res.status(200).json({
@@ -279,20 +253,16 @@ const resetPasswordController = async (req, res) => {
       message: "Password reset successfully",
     });
   } catch (error) {
-    console.error("Error resetting password:", error);
-    if (error.message === "Invalid encrypted parameter" || error.message.includes("RSA private key not configured")) {
-      return res.status(400).json({ message: "Invalid encrypted password" });
-    }
-    return res.status(500).json({ message: "Server error" });
+    next(error);
   }
 };
 
-const verifyEmail = async (req, res) => {
-  const { token } = req.body;
+const verifyEmail = async (req, res, next) => {
   try {
+    const { token } = req.body;
     const verified = await verifyEmailToken(token);
     if (!verified) {
-      return res.status(400).json({ message: "Verification token is invalid or has expired." });
+      throw new BadRequestError("Verification token is invalid or has expired.");
     }
 
     return res.status(200).json({
@@ -300,8 +270,7 @@ const verifyEmail = async (req, res) => {
       message: "Email verified successfully.",
     });
   } catch (error) {
-    console.error("Error verifying email:", error);
-    return res.status(500).json({ message: "Server error" });
+    next(error);
   }
 };
 

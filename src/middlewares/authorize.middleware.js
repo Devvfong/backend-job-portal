@@ -1,13 +1,13 @@
-const authorize = (...roles) => { // this for check role of user
+import { UnauthorizedError, ForbiddenError } from '../lib/errors.js';
+
+const authorize = (...roles) => {
   return (req, res, next) => {
     if (!req.user) {
-      return res.status(401).json({ message: "Not authenticated" });
+      return next(new UnauthorizedError("Not authenticated"));
     }
 
     if (req.user.role !== "super_admin" && !roles.includes(req.user.role)) {
-      return res
-        .status(403)
-        .json({ message: "Forbidden: insufficient permissions" });
+      return next(new ForbiddenError("Forbidden: insufficient permissions"));
     }
 
     next();

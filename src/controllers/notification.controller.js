@@ -1,6 +1,6 @@
 import { getNotificationsForUser } from "../services/notification.service.js";
 
-const getNotificationsController = async (req, res) => {
+const getNotificationsController = async (req, res, next) => {
   try {
     const notifications = await getNotificationsForUser(req.user);
 
@@ -9,9 +9,8 @@ const getNotificationsController = async (req, res) => {
       data: notifications,
       unread: notifications.filter((notification) => !notification.read).length,
     });
-  } catch (err) {
-    console.error("Notification error:", err);
-    return res.status(500).json({ message: "Failed to load notifications" });
+  } catch (error) {
+    next(error);
   }
 };
 

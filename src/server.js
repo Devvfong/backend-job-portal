@@ -154,16 +154,10 @@ app.get(
   }),
 );
 
+import errorHandler from "./middlewares/error.middleware.js";
+
 // Global Error Handler
-app.use((err, req, res, next) => {
-  console.error(`💥 [REQ:${req.id || "N/A"}] Global Error Handler:`, err);
-  res.status(err.status || 500).json({
-    status: "error",
-    message: err.message || "Internal Server Error",
-    stack: process.env.NODE_ENV === "development" ? err.stack : undefined,
-    correlationId: req.id,
-  });
-});
+app.use(errorHandler);
 
 // Landing page is served statically from public/index.html
 const server = app.listen(PORT, "0.0.0.0", () => {

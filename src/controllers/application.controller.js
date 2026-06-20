@@ -1,4 +1,9 @@
 import {
+  BadRequestError,
+  ForbiddenError,
+  NotFoundError,
+} from '../lib/errors.js';
+import {
   applyToJobService,
   getMyApplicationsService,
   getApplicantsForJobService,
@@ -27,7 +32,6 @@ import {
 
 const withSignedApplicantResume = async (app) => {
   if (!app.user?.resume) return app;
-
   return {
     ...app,
     user: {
@@ -37,7 +41,7 @@ const withSignedApplicantResume = async (app) => {
   };
 };
 
-const applyToJobController = async (req, res) => {
+const applyToJobController = async (req, res, next) => {
   try {
     const jobId = Number(req.params.id);
     const userId = req.user.id;
@@ -45,51 +49,33 @@ const applyToJobController = async (req, res) => {
     const application = await applyToJobService(jobId, userId, req.body);
     await sendApplicationSubmittedEmail(application);
 
-    emitNotificationToUser(
-      userId,
-      buildSeekerApplicationNotification(application),
-    );
-    emitNotificationToCompany(
-      application.job?.companyId,
-      buildNewApplicantNotification(application),
-    );
-    emitNotificationToRole(
-      "super_admin",
-      buildSuperAdminApplicationNotification(application),
-    );
+    emitNotificationToUser(userId, buildSeekerApplicationNotification(application));
+    emitNotificationToCompany(application.job?.companyId, buildNewApplicantNotification(application));
+    emitNotificationToRole("super_admin", buildSuperAdminApplicationNotification(application));
 
     return res.status(201).json({
       status: "success",
       message: "Application submitted successfully",
       data: application,
     });
-  } catch (err) {
-    if (err.message.includes("Unique constraint failed")) {
-      return res.status(400).json({ message: "You have already applied to this job" });
-    }
-    if (err.message === "Job not found") {
-      return res.status(404).json({ message: err.message });
-    }
-    if (err.message === "Job is no longer accepting applications") {
-      return res.status(400).json({ message: err.message });
-    }
-    return res.status(500).json({ error: err.message });
+  } catch (error) {
+    next(error);
   }
 };
 
-const getMyApplicationsController = async (req, res) => {
+const getMyApplicationsController = async (req, res, next) => {
   try {
     const applications = await getMyApplicationsService(req.user.id);
     return res.status(200).json({
       status: "success",
       data: applications,
     });
-  } catch (err) {
-    return res.status(500).json({ error: err.message });
+  } catch (error) {
+    next(error);
   }
 };
 
-const getApplicantsController = async (req, res) => {
+const getApplicantsController = async (req, res, next) => {
   try {
     const jobId = Number(req.params.id);
     const applicants = await getApplicantsForJobService(jobId, req.user);
@@ -102,21 +88,18 @@ const getApplicantsController = async (req, res) => {
       status: "success",
       data: sanitized,
     });
-  } catch (err) {
-    if (err.message.includes("Forbidden")) {
-      return res.status(403).json({ message: err.message });
-    }
-    return res.status(500).json({ error: err.message });
+  } catch (error) {
+    next(error);
   }
 };
 
-const updateApplicationStatusController = async (req, res) => {
+const updateApplicationStatusController = async (req, res, next) => {
   try {
     const applicationId = Number(req.params.id);
     const { status } = req.body;
 
     if (!status) {
-      return res.status(400).json({ message: "Status is required" });
+      throw new BadRequestError("Status is required");
     }
 
     const application = await updateApplicationStatusService(applicationId, status, req.user);
@@ -131,18 +114,12 @@ const updateApplicationStatusController = async (req, res) => {
       message: "Application status updated",
       data: application,
     });
-  } catch (err) {
-    if (err.message.includes("Forbidden")) {
-      return res.status(403).json({ message: err.message });
-    }
-    if (err.message === "Application not found") {
-      return res.status(404).json({ message: err.message });
-    }
-    return res.status(500).json({ error: err.message });
+  } catch (error) {
+    next(error);
   }
 };
 
-const withdrawApplicationController = async (req, res) => {
+const withdrawApplicationController = async (req, res, next) => {
   try {
     const applicationId = Number(req.params.id);
     const application = await withdrawApplicationService(applicationId, req.user);
@@ -156,18 +133,12 @@ const withdrawApplicationController = async (req, res) => {
       status: "success",
       message: "Application withdrawn successfully",
     });
-  } catch (err) {
-    if (err.message === "Application not found") {
-      return res.status(404).json({ message: err.message });
-    }
-    if (err.message.includes("Forbidden")) {
-      return res.status(403).json({ message: err.message });
-    }
-    return res.status(500).json({ error: err.message });
+  } catch (error) {
+    next(error);
   }
 };
 
-const getCompanyApplicantsController = async (req, res) => {
+const getCompanyApplicantsController = async (req, res, next) => {
   try {
     const applicants = await getCompanyApplicantsService(req.user);
     const signedApplicants = await Promise.all(applicants.map(withSignedApplicantResume));
@@ -179,11 +150,8 @@ const getCompanyApplicantsController = async (req, res) => {
       status: "success",
       data: sanitized,
     });
-  } catch (err) {
-    if (err.message.includes("Forbidden")) {
-      return res.status(403).json({ message: err.message });
-    }
-    return res.status(500).json({ error: err.message });
+  } catch (error) {
+    next(error);
   }
 };
 

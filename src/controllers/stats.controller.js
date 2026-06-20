@@ -1,6 +1,6 @@
 import { getGlobalStatsService } from "../services/stats.service.js";
 
-const getGlobalStatsController = async (req, res) => {
+const getGlobalStatsController = async (req, res, next) => {
   try {
     const stats = await getGlobalStatsService();
     return res.status(200).json({
@@ -8,8 +8,7 @@ const getGlobalStatsController = async (req, res) => {
       data: stats,
     });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 

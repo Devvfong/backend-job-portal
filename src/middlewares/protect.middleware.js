@@ -1,3 +1,4 @@
+import { UnauthorizedError, ForbiddenError } from '../lib/errors.js';
 import jwt from "jsonwebtoken";
 import { prisma } from "../config/db.js";
 
@@ -15,8 +16,9 @@ const protect = async (req, res, next) => {
   }
 
   if (!token) {
-    return res.status(401).json({ message: "Not authorized, no token" });
+    return next(new UnauthorizedError("Not authorized, no token"));
   }
+
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = await prisma.user.findUnique({
@@ -25,7 +27,7 @@ const protect = async (req, res, next) => {
         id: true,
         name: true,
         email: true,
-        role: true, //to check if the user is company admin or not in the authorize middleware
+        role: true,
         isSuspended: true,
         companyId: true,
         company: {
@@ -45,18 +47,14 @@ const protect = async (req, res, next) => {
       },
     });
     if (!req.user) {
-      return res
-        .status(401)
-        .json({ message: "Not authorized, user not found" });
+      return next(new UnauthorizedError("Not authorized, user not found"));
     }
     if (req.user.isSuspended) {
-      return res
-        .status(403)
-        .json({ message: "Your account has been suspended" });
+      return next(new ForbiddenError("Your account has been suspended"));
     }
     next();
   } catch {
-    return res.status(401).json({ message: "Not authorized, invalid token" });
+    return next(new UnauthorizedError("Not authorized, invalid token"));
   }
 };
 

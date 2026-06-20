@@ -1,4 +1,9 @@
 import {
+  BadRequestError,
+  ForbiddenError,
+  NotFoundError,
+} from '../lib/errors.js';
+import {
   createJobService,
   getJobService,
   getJobByIdService,
@@ -10,10 +15,9 @@ import {
 } from "../services/job.service.js";
 import { buildNewJobNotification } from "../services/notification.service.js";
 import { emitNotificationToRole } from "../realtime/websocket.js";
-import { prisma } from "../config/db.js";
 import { encryptId, decryptId } from "../utils/crypto.js";
 
-const createJobController = async (req, res) => {
+const createJobController = async (req, res, next) => {
   try {
     const job = await createJobService(req.body, req.user);
 
@@ -25,42 +29,20 @@ const createJobController = async (req, res) => {
       status: "success",
       data: job,
     });
-  } catch (e) {
-    console.error(e);
-
-    if (e.message === "Forbidden") {
-      return res.status(403).json({ message: "Forbidden" });
-    }
-
-    if (e.message === "Admin account is not linked to a company") {
-      return res
-        .status(400)
-        .json({ message: "Admin account is not linked to a company" });
-    }
-
-    if (e.message === "Company not found") {
-      return res.status(404).json({ message: "Company not found" });
-    }
-
-    if (e.message === "A job with identical details already exists for this company") {
-      return res.status(400).json({ message: e.message });
-    }
-
-    return res.status(500).json({ error: e.message });
+  } catch (error) {
+    next(error);
   }
 };
 
-const getJobsController = async (req, res) => {
+const getJobsController = async (req, res, next) => {
   try {
     const query = { ...req.query };
-    
-    // Decrypt companyId if provided and not a raw number
+
     if (query.companyId && isNaN(Number(query.companyId))) {
       try {
         query.companyId = decryptId(query.companyId);
       } catch (err) {
-        console.error("[Search] CompanyID decryption failed:", err);
-        return res.status(400).json({ message: "Invalid company id" });
+        throw new BadRequestError("Invalid company id");
       }
     }
 
@@ -84,13 +66,12 @@ const getJobsController = async (req, res) => {
       data: jobs,
       meta: result.meta,
     });
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({ error: e.message });
+  } catch (error) {
+    next(error);
   }
 };
 
-const getJobByIdController = async (req, res) => {
+const getJobByIdController = async (req, res, next) => {
   try {
     let idParam = req.params.id;
     let id = Number(idParam);
@@ -99,13 +80,13 @@ const getJobByIdController = async (req, res) => {
         const decrypted = decryptId(idParam);
         id = Number(decrypted);
       } catch (err) {
-        return res.status(400).json({ message: "Invalid job id" });
+        throw new BadRequestError("Invalid job id");
       }
     }
     const job = await getJobByIdService(id);
 
     if (!job) {
-      return res.status(404).json({ message: "Job not found" });
+      throw new NotFoundError("Job not found");
     }
 
     const { company, ...jobRest } = job;
@@ -115,80 +96,52 @@ const getJobByIdController = async (req, res) => {
       status: "success",
       data: { ...jobRest, encryptedId: encryptId(jobRest.id), company: companySanitized },
     });
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({ error: e.message });
+  } catch (error) {
+    next(error);
   }
 };
 
-const updateJobController = async (req, res) => {
+const updateJobController = async (req, res, next) => {
   try {
     const id = Number(req.params.id);
     const job = await updateJobService(id, req.body, req.user);
-
     return res.status(200).json({
       status: "success",
       data: job,
     });
-  } catch (e) {
-    console.error(e);
-
-    if (e.message === "Forbidden") {
-      return res.status(403).json({ message: "Forbidden" });
-    }
-
-    if (e.message === "Job not found") {
-      return res.status(404).json({ message: "Job not found" });
-    }
-
-    return res.status(500).json({ error: e.message });
+  } catch (error) {
+    next(error);
   }
 };
 
-const deleteJobController = async (req, res) => {
+const deleteJobController = async (req, res, next) => {
   try {
     const id = Number(req.params.id);
     await deleteJobService(id, req.user);
-
     return res.status(200).json({
       status: "success",
       message: "Job deleted successfully",
     });
   } catch (error) {
-    console.error(error);
-
-    if (error.message === "Forbidden") {
-      return res.status(403).json({ message: "Forbidden" });
-    }
-
-    if (error.message === "Job not found") {
-      return res.status(404).json({ message: "Job not found" });
-    }
-
-    return res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
-const toggleSaveJobController = async (req, res) => {
+const toggleSaveJobController = async (req, res, next) => {
   try {
     const { id } = req.params;
     const result = await toggleSaveJobService(id, req.user);
-
     return res.status(200).json({
       status: "success",
       message: result.message,
       data: result.data || null,
     });
-  } catch (e) {
-    console.error(e);
-    if (e.message === "Job not found") {
-      return res.status(404).json({ message: e.message });
-    }
-    return res.status(500).json({ error: e.message });
+  } catch (error) {
+    next(error);
   }
 };
 
-const getSavedJobsController = async (req, res) => {
+const getSavedJobsController = async (req, res, next) => {
   try {
     const jobs = await getSavedJobsService(req.user.id);
     const mapped = jobs.map((s) => ({
@@ -200,13 +153,12 @@ const getSavedJobsController = async (req, res) => {
       status: "success",
       data: mapped,
     });
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({ error: e.message });
+  } catch (error) {
+    next(error);
   }
 };
 
-const getMyCompanyJobsController = async (req, res) => {
+const getMyCompanyJobsController = async (req, res, next) => {
   try {
     const jobs = await getMyCompanyJobsService(req.user);
     const mapped = jobs.map((j) => ({ ...j, encryptedId: encryptId(j.id) }));
@@ -214,9 +166,8 @@ const getMyCompanyJobsController = async (req, res) => {
       status: "success",
       data: mapped,
     });
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({ error: e.message });
+  } catch (error) {
+    next(error);
   }
 };
 

@@ -1,3 +1,5 @@
+import { BadRequestError } from '../lib/errors.js';
+
 const validate = (schema) => (req, res, next) => {
   const result = schema.safeParse(req.body);
   if (!result.success) {
@@ -5,7 +7,9 @@ const validate = (schema) => (req, res, next) => {
       field: e.path.join("."),
       message: e.message,
     }));
-    return res.status(400).json({ status: "error", errors });
+    const err = new BadRequestError("Validation failed");
+    err.errors = errors;
+    return next(err);
   }
   req.body = result.data;
   next();
