@@ -124,9 +124,14 @@ const getJobService = async (query) => {
   }
 
   if (minSalary || maxSalary) {
-    where.salaryMin = {};
-    if (minSalary) where.salaryMin.gte = Number(minSalary);
-    if (maxSalary) where.salaryMin.lte = Number(maxSalary);
+    // minSalary: jobs whose salary range starts at or above this value
+    if (minSalary) {
+      where.salaryMin = { ...where.salaryMin, gte: Number(minSalary) };
+    }
+    // maxSalary: jobs whose salary range ends at or below this value
+    if (maxSalary) {
+      where.salaryMax = { ...where.salaryMax, lte: Number(maxSalary) };
+    }
   }
 
   const allowedSortFields = ["createdAt", "salaryMin", "salaryMax"];

@@ -111,7 +111,7 @@ app.use(
       conString: process.env.DATABASE_URL,
       tableName: "session",
     }),
-    secret: process.env.SESSION_SECRET || "supersecret",
+    secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     cookie: {

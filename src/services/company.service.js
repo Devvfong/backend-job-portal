@@ -267,34 +267,6 @@ const getMyCompanyService = async (companyId) => {
   return getCompanyServiceById(Number(companyId), true);
 };
 
-const getMyCompanyJobsService = async (companyId) => {
-  if (!companyId) {
-    throw new Error("Company not found");
-  }
-
-  return prisma.job.findMany({
-    where: { companyId: Number(companyId) },
-    include: {
-      company: {
-        select: {
-          id: true,
-          companyName: true,
-          logo: true,
-          isVerified: true,
-        },
-      },
-      _count: {
-        select: {
-          applications: true,
-        },
-      },
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
-};
-
 const updateCompanyService = async (id, data, user) => {
   // Verify permissions: super_admin bypass or company ownership
   const isSuperAdmin = user?.role === "super_admin";
@@ -563,7 +535,6 @@ export {
   getCompanyService,
   getCompanyServiceById,
   getMyCompanyService,
-  getMyCompanyJobsService,
   updateCompanyService,
   deleteCompanyService,
   updateCompanyLogo,

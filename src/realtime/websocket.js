@@ -5,6 +5,8 @@ import { prisma } from "../config/db.js";
 const WS_PATH = "/ws";
 const HEARTBEAT_MS = 30000;
 const AUTH_TIMEOUT_MS = 10000;
+const RATE_LIMIT_MAX = 30; // max events per window
+const RATE_LIMIT_WINDOW_MS = 10000; // 10 second sliding window
 const REALTIME_EVENTS = {
   AUTH: "auth",
   CONNECTION_READY: "connection:ready",
@@ -136,6 +138,21 @@ const initRealtime = (server) => {
 
     ws.on("message", async (rawMessage) => {
       if (ws.authenticated) return;
+
+      // Rate limit: track messages per connection
+      const now = Date.now();
+      if (!ws._rateLimit) {
+        ws._rateLimit = { count: 0, windowStart: now };
+      }
+      if (now - ws._rateLimit.windowStart > RATE_LIMIT_WINDOW_MS) {
+        ws._rateLimit = { count: 0, windowStart: now };
+      }
+      ws._rateLimit.count++;
+      if (ws._rateLimit.count > RATE_LIMIT_MAX) {
+        send(ws, "error", { message: "Rate limit exceeded" });
+        ws.close(1008, "Rate limit exceeded");
+        return;
+      }
 
       try {
         const message = JSON.parse(String(rawMessage));

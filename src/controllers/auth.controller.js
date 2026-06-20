@@ -88,6 +88,9 @@ const register = async (req, res) => {
     const verifyUrl = `${frontendUrl}/verify-email?token=${encodeURIComponent(verificationToken)}`;
     await sendVerificationEmail(user, verifyUrl);
 
+    // Send welcome email (non-blocking)
+    sendWelcomeEmail(user).catch(() => {});
+
     return res.status(201).json({
       status: "success",
       message: "User registered successfully. Please check your email to verify your account.",

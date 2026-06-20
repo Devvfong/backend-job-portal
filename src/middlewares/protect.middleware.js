@@ -2,8 +2,6 @@ import jwt from "jsonwebtoken";
 import { prisma } from "../config/db.js";
 
 const protect = async (req, res, next) => {
-  console.log("Reached to Middleware");
-
   let token;
   if (
     req.headers.authorization &&
@@ -56,7 +54,6 @@ const protect = async (req, res, next) => {
         .status(403)
         .json({ message: "Your account has been suspended" });
     }
-    console.log("Protect Middleware - User:", req.user.id, "Company:", req.user.company ? req.user.company.companyName : "No Company");
     next();
   } catch {
     return res.status(401).json({ message: "Not authorized, invalid token" });
