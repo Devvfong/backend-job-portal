@@ -58,6 +58,9 @@ const createJobService = async (data, user) => {
         skills,
         tags,
       },
+      include: {
+        company: { select: { companyName: true, logo: true } },
+      },
     });
   }
 }
@@ -87,16 +90,18 @@ const getJobService = async (query) => {
   };
 
   if (search) {
-    const searchStr = String(search);
-    where.OR = [
-      { title: { contains: searchStr, mode: "insensitive" } },
-      { description: { contains: searchStr, mode: "insensitive" } },
-      { 
-        company: { 
-          companyName: { contains: searchStr, mode: "insensitive" } 
-        } 
-      }
-    ];
+    const searchStr = String(search).trim().split(/\\s+/).filter(Boolean).join(" | ");
+    if (searchStr) {
+      where.OR = [
+        { title: { search: searchStr } },
+        { description: { search: searchStr } },
+        { 
+          company: { 
+            companyName: { search: searchStr } 
+          } 
+        }
+      ];
+    }
   }
 
   if (location) {

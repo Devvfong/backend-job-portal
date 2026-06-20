@@ -309,7 +309,18 @@ const getUserStatsService = async (userId) => {
   const [totalApplications, totalSavedJobs, user] = await Promise.all([
     prisma.application.count({ where: { userId } }), // this for count total applications of user
     prisma.savedJob.count({ where: { userId } }), // this for count total saved jobs of user
-    prisma.user.findUnique({ where: { id: userId } }), // this for get user data
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        headline: true,
+        bio: true,
+        location: true,
+        phone: true,
+        avatar: true,
+        resume: true,
+        skills: true,
+      },
+    }), // this for get user data
   ]);
 
   // Calculate profile strength (completeness)

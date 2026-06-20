@@ -16,15 +16,9 @@ import { encryptId, decryptId } from "../utils/crypto.js";
 const createJobController = async (req, res) => {
   try {
     const job = await createJobService(req.body, req.user);
-    const jobWithCompany = await prisma.job.findUnique({
-      where: { id: job.id },
-      include: {
-        company: { select: { companyName: true, logo: true } },
-      },
-    });
 
-    if (jobWithCompany?.status === "open") {
-      emitNotificationToRole("job_seeker", buildNewJobNotification(jobWithCompany));
+    if (job?.status === "open") {
+      emitNotificationToRole("job_seeker", buildNewJobNotification(job));
     }
 
     return res.status(201).json({

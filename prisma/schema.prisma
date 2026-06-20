@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearchPostgres"]
 }
 
 datasource db {
@@ -137,6 +138,7 @@ model Session {
 model DeletedAsset {
   id        String   @id @default(uuid())
   filePath  String   @map("file_path")
+  bucket    String   @default("logos")
   deletedAt DateTime @default(now()) @map("deleted_at")
 
   @@map("deleted_assets")

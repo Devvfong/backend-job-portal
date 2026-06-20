@@ -1,4 +1,5 @@
 import express from "express";
+import crypto from "crypto";
 import helmet from "helmet";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -55,6 +56,17 @@ app.use(helmet({
   contentSecurityPolicy: false,
   referrerPolicy: { policy: "strict-origin-when-cross-origin" },
 }));
+
+app.use((req, res, next) => {
+  req.id = crypto.randomUUID();
+  const start = process.hrtime();
+  res.on("finish", () => {
+    const diff = process.hrtime(start);
+    const time = (diff[0] * 1e3 + diff[1] * 1e-6).toFixed(2);
+    console.log(`[REQ:${req.id}] ${req.method} ${req.originalUrl} ${res.statusCode} - ${time}ms`);
+  });
+  next();
+});
 
 const allowedOrigins = [
   "https://nexthire.devqii.me",
@@ -144,11 +156,12 @@ app.get(
 
 // Global Error Handler
 app.use((err, req, res, next) => {
-  console.error("💥 Global Error Handler:", err);
+  console.error(`💥 [REQ:${req.id || "N/A"}] Global Error Handler:`, err);
   res.status(err.status || 500).json({
     status: "error",
     message: err.message || "Internal Server Error",
     stack: process.env.NODE_ENV === "development" ? err.stack : undefined,
+    correlationId: req.id,
   });
 });
 
@@ -173,7 +186,7 @@ setInterval(() => { }, 1000 * 60 * 60); // Keep alive every hour
 // ================================================================================================================
 // This for unhandle promise rejection, for example when database connection fails
 process.on("unhandledRejection", (err) => {
-  console.error("Unhandled Rejection:", err);
+  console.error("💥 [CRITICAL] Unhandled Rejection:", err);
   // server.close(async () => {
   //   await disconnectDB();
   //   process.exit(1);
@@ -182,7 +195,7 @@ process.on("unhandledRejection", (err) => {
 
 // This for uncaught exception, for example when there is an error in the code that is not handled
 process.on("uncaughtException", async (err) => {
-  console.error("Uncaught Exception:", err);
+  console.error("💥 [CRITICAL] Uncaught Exception:", err);
   await disconnectDB();
   process.exit(1);
 });

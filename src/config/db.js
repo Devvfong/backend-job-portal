@@ -49,6 +49,7 @@ const IDLE_TIMEOUT_MS = process.env.DB_IDLE_TIMEOUT_MS
 
 let _idleTimer = null;
 let _isConnected = false;
+let _connectPromise = null;
 
 function _clearIdleTimer() {
   if (_idleTimer) {
@@ -58,6 +59,9 @@ function _clearIdleTimer() {
 }
 
 function _scheduleIdleDisconnect() {
+  if (process.env.NODE_ENV === "production" && process.env.ENABLE_IDLE_DISCONNECT !== "true") {
+    return;
+  }
   _clearIdleTimer();
   _idleTimer = setTimeout(async () => {
     try {
@@ -71,12 +75,28 @@ function _scheduleIdleDisconnect() {
 
 // 4. Wrapper Functions for Clean API
 const connectDB = async () => {
-  if (!_isConnected) {
-    await prisma.$connect();
-    _isConnected = true;
-    console.log("✅ Database connected successfully");
+  if (_isConnected) {
+    _scheduleIdleDisconnect();
+    return;
   }
-  // (re)schedule idle disconnect after each explicit connect
+
+  if (_connectPromise) {
+    await _connectPromise;
+    _scheduleIdleDisconnect();
+    return;
+  }
+
+  _connectPromise = (async () => {
+    try {
+      await prisma.$connect();
+      _isConnected = true;
+      console.log("✅ Database connected successfully");
+    } finally {
+      _connectPromise = null;
+    }
+  })();
+
+  await _connectPromise;
   _scheduleIdleDisconnect();
 };
 

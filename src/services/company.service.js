@@ -61,37 +61,36 @@ const createCompanyService = async (data, user) => {
     throw new Error("email is required");
   }
 
-  const existingCompany = await prisma.company.findUnique({
-    where: { email },
-  });
-
-  if (existingCompany) {
-    throw new Error("Company already exists");
-  }
-
-  return prisma.$transaction(async (tx) => {
-    const company = await tx.company.create({
-      data: {
-        companyName,
-        email,
-        description: data.description ?? null,
-        website: data.website ?? null,
-        location: data.location ?? null,
-        logo: getCompanyLogoUrl({ ...data, email }),
-        industry: data.industry ?? null,
-        size: data.size ?? null,
-      },
-    });
-
-    if (user.role === "company_admin") {
-      await tx.user.update({
-        where: { id: user.id },
-        data: { companyId: company.id },
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const company = await tx.company.create({
+        data: {
+          companyName,
+          email,
+          description: data.description ?? null,
+          website: data.website ?? null,
+          location: data.location ?? null,
+          logo: getCompanyLogoUrl({ ...data, email }),
+          industry: data.industry ?? null,
+          size: data.size ?? null,
+        },
       });
-    }
 
-    return company;
-  });
+      if (user.role === "company_admin") {
+        await tx.user.update({
+          where: { id: user.id },
+          data: { companyId: company.id },
+        });
+      }
+
+      return company;
+    });
+  } catch (error) {
+    if (error.code === 'P2002' && (error.meta?.target?.includes('email') || error.meta?.target === 'email')) {
+      throw new Error("Company already exists");
+    }
+    throw error;
+  }
 };
 
 const getCompanyService = async (query = {}) => {
@@ -387,7 +386,7 @@ const updateCompanyLogo = async (companyId, logoUrl) => {
       if (urlParts.length >= 2) {
         const filePath = urlParts[1];
         await prisma.deletedAsset.create({
-          data: { filePath },
+          data: { filePath, bucket: "logos" },
         });
       }
     }
@@ -426,7 +425,7 @@ const deleteCompanyLogo = async (user, companyId) => {
     if (urlParts.length >= 2) {
       const filePath = urlParts[1];
       await prisma.deletedAsset.create({
-        data: { filePath },
+        data: { filePath, bucket: "logos" },
       });
     }
   }
@@ -448,7 +447,7 @@ const updateCompanyCover = async (companyId, coverUrl) => {
       if (urlParts.length >= 2) {
         const filePath = urlParts[1];
         await prisma.deletedAsset.create({
-          data: { filePath },
+          data: { filePath, bucket: "logos" },
         });
       }
     }
@@ -485,7 +484,7 @@ const deleteCompanyCover = async (user, companyId) => {
     if (urlParts.length >= 2) {
       const filePath = urlParts[1];
       await prisma.deletedAsset.create({
-        data: { filePath },
+        data: { filePath, bucket: "logos" },
       });
     }
   }

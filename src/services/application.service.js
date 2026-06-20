@@ -16,12 +16,6 @@ const applyToJobService = async (jobId, userId, data) => {
     throw new Error("Job is no longer accepting applications");
   }
 
-  const existingApplication = await prisma.application.findUnique({
-    where: {
-      userId_jobId: { userId: Number(userId), jobId: Number(jobId) },
-    },
-  });
-
   const includeConfig = {
     user: {
       select: {
@@ -48,34 +42,35 @@ const applyToJobService = async (jobId, userId, data) => {
     },
   };
 
-  if (existingApplication) {
-    const nextCount = existingApplication.applyCount + 1;
-    const nextStatus = nextCount > 3 ? "spam" : "pending";
-
-    return prisma.application.update({
+  return await prisma.$transaction(async (tx) => {
+    let application = await tx.application.upsert({
       where: {
-        id: existingApplication.id,
+        userId_jobId: { userId: Number(userId), jobId: Number(jobId) },
       },
-      data: {
+      update: {
         coverLetter: data.coverLetter || null,
-        applyCount: nextCount,
-        status: nextStatus,
+        applyCount: { increment: 1 },
         appliedDate: new Date(),
+      },
+      create: {
+        jobId,
+        userId,
+        coverLetter: data.coverLetter || null,
+        applyCount: 1,
+        status: "pending",
       },
       include: includeConfig,
     });
-  }
 
-  // Create application
-  return prisma.application.create({
-    data: {
-      jobId,
-      userId,
-      coverLetter: data.coverLetter || null,
-      applyCount: 1,
-      status: "pending",
-    },
-    include: includeConfig,
+    if (application.applyCount > 3 && application.status !== "spam") {
+      application = await tx.application.update({
+        where: { id: application.id },
+        data: { status: "spam" },
+        include: includeConfig,
+      });
+    }
+
+    return application;
   });
 };
 

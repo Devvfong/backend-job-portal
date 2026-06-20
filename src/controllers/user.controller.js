@@ -18,6 +18,7 @@ import {
   createSignedUrlFromSupabaseUrl,
 } from "../services/upload.service.js";
 import { encryptId } from "../utils/crypto.js";
+import { prisma } from "../config/db.js";
 
 const withSignedResume = async (user) => {
   if (!user?.resume) return user;
@@ -170,7 +171,10 @@ const uploadAvatarController = async (req, res) => {
     }
 
     // 1. Get current profile to check for old avatar
-    const currentProfile = await getProfile(req.user.id);
+    const currentProfile = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { avatar: true },
+    });
     const oldAvatarUrl = currentProfile?.avatar;
 
     // 2. Upload new avatar
@@ -207,7 +211,10 @@ const uploadResumeController = async (req, res) => {
     }
 
     // 1. Get current profile to check for old resume
-    const currentProfile = await getProfile(req.user.id);
+    const currentProfile = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { resume: true },
+    });
     const oldResumeUrl = currentProfile?.resume;
 
     // 2. Upload new resume
