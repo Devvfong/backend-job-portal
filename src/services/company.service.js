@@ -200,6 +200,7 @@ const getCompanyService = async (query = {}) => {
         latitude: true,
         longitude: true,
         createdAt: true,
+        updatedAt: true,
         isVerified: true,
         isSuspended: true,
         warningCount: true,
@@ -242,6 +243,7 @@ const getCompanyServiceById = async (id, includeSensitive = false) => {
     latitude: true,
     longitude: true,
     createdAt: true,
+    updatedAt: true,
     isVerified: true,
     isSuspended: true,
     warningCount: true,
@@ -437,6 +439,7 @@ const updateCompanyCover = async (companyId, coverUrl) => {
   });
 
   if (previousCover && previousCover !== coverUrl) {
+    await deleteFileFromSupabase(previousCover, "logos");
     await queueCompanyAssetDeletion(previousCover);
   }
 
@@ -467,6 +470,7 @@ const deleteCompanyCover = async (user, companyId) => {
   });
 
   if (previousCover) {
+    await deleteFileFromSupabase(previousCover, "logos");
     await queueCompanyAssetDeletion(previousCover);
   }
 

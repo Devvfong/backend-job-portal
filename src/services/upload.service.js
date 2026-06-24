@@ -65,9 +65,12 @@ const uploadResume = async (fileBuffer, mimetype, originalname, userId) => {
  * @returns {promise<string>} Public URL of the uploaded file
  */
 const uploadCompanyAsset = async (fileBuffer, mimetype, originalname, companyId, assetType = "logo") => {
-  const ext = path.extname(originalname).toLowerCase();
-  // Using path strategy: ${companyId}/${assetType}${ext}
-  const fileName = `${companyId}/${assetType}${ext}`;
+  const ext = path.extname(originalname).toLowerCase() || ".jpg";
+  // Covers use a unique path so browsers/CDN do not serve a cached old image.
+  const fileName =
+    assetType === "cover"
+      ? `${companyId}/cover-${Date.now()}${ext}`
+      : `${companyId}/${assetType}${ext}`;
 
   const { error } = await supabase.storage.from("logos").upload(fileName, fileBuffer, {
     contentType: mimetype,
