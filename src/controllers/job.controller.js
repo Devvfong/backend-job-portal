@@ -12,6 +12,7 @@ import {
   toggleSaveJobService,
   getSavedJobsService,
   getMyCompanyJobsService,
+  getAdminJobsService,
 } from "../services/job.service.js";
 import { buildNewJobNotification } from "../services/notification.service.js";
 import { emitNotificationToRole } from "../realtime/websocket.js";
@@ -171,6 +172,39 @@ const getMyCompanyJobsController = async (req, res, next) => {
   }
 };
 
+const getAdminJobsController = async (req, res, next) => {
+  try {
+    const result = await getAdminJobsService(req.query);
+    const jobs = result.jobs.map((job) => {
+      const { company, ...rest } = job;
+      const companySanitized = company
+        ? (({ id: companyId, ...companyRest }) => ({
+            ...companyRest,
+            encryptedId: encryptId(companyId),
+          }))(company)
+        : company;
+
+      return {
+        ...rest,
+        encryptedId: encryptId(rest.id),
+        company: companySanitized,
+      };
+    });
+
+    return res.status(200).json({
+      status: "success",
+      data: {
+        jobs,
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export {
   createJobController,
   getJobsController,
@@ -180,4 +214,5 @@ export {
   toggleSaveJobController,
   getSavedJobsController,
   getMyCompanyJobsController,
+  getAdminJobsController,
 };

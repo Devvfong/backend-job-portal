@@ -353,6 +353,54 @@ const getMyCompanyJobsService = async (user) => {
   });
 };
 
+const getAdminJobsService = async (query = {}) => {
+  const { search, status = "all", page = 1, limit = 50 } = query;
+  const pageNumber = Math.max(1, Number(page) || 1);
+  const limitNumber = Math.min(100, Math.max(1, Number(limit) || 50));
+  const skip = (pageNumber - 1) * limitNumber;
+
+  const where = {};
+  if (status && status !== "all") {
+    where.status = String(status);
+  }
+
+  if (search) {
+    const tokens = String(search).trim().split(/\s+/).filter(Boolean);
+    if (tokens.length) {
+      where.AND = tokens.map((token) => ({
+        OR: [
+          { title: { contains: token, mode: "insensitive" } },
+          { company: { companyName: { contains: token, mode: "insensitive" } } },
+        ],
+      }));
+    }
+  }
+
+  const [jobs, total] = await Promise.all([
+    prisma.job.findMany({
+      where,
+      skip,
+      take: limitNumber,
+      include: {
+        company: {
+          select: {
+            id: true,
+            companyName: true,
+            logo: true,
+          },
+        },
+        _count: {
+          select: { applications: true },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.job.count({ where }),
+  ]);
+
+  return { jobs, total, page: pageNumber, limit: limitNumber };
+};
+
 export {
   createJobService,
   getJobService,
@@ -362,4 +410,5 @@ export {
   toggleSaveJobService,
   getSavedJobsService,
   getMyCompanyJobsService,
+  getAdminJobsService,
 };

@@ -12,6 +12,7 @@ import {
   deleteJobController,
   toggleSaveJobController,
   getSavedJobsController,
+  getAdminJobsController,
 } from "../controllers/job.controller.js";
 
 const router = express.Router();
@@ -60,6 +61,7 @@ router.put(
 router.delete("/:id", decryptMiddleware, protect, authorize("company_admin"), deleteJobController);
 
 router.get("/", getJobsController);
+router.get("/admin/all", protect, authorize("super_admin"), getAdminJobsController);
 router.get("/saved", protect, getSavedJobsController);
 router.get("/:id", decryptMiddleware, getJobByIdController);
 router.post("/:id/save", decryptMiddleware, protect, authorize("job_seeker"), toggleSaveJobController);
