@@ -3,6 +3,14 @@ import { deleteFileFromSupabase } from "./upload.service.js";
 
 const logoDevToken = process.env.LOGO_DEV_TOKEN;
 
+const isSupabaseLogosUrl = (url) =>
+  typeof url === "string" && url.includes("supabase.co") && url.includes("/logos/");
+
+const removeCompanyAssetFile = async (url) => {
+  if (!isSupabaseLogosUrl(url)) return;
+  await deleteFileFromSupabase(url, "logos");
+};
+
 const getCompanyDomain = (data) => {
   if (data.website) {
     try {
@@ -351,17 +359,8 @@ const updateCompanyLogo = async (companyId, logoUrl) => {
     where: { id: companyId },
   });
 
-  if (company && company.logo) {
-    if (company.logo.includes("supabase.co") && company.logo.includes("logos")) {
-      // Extract the path from the URL
-      const urlParts = company.logo.split("logos/");
-      if (urlParts.length >= 2) {
-        const filePath = urlParts[1];
-        await prisma.deletedAsset.create({
-          data: { filePath, bucket: "logos" },
-        });
-      }
-    }
+  if (company?.logo) {
+    await removeCompanyAssetFile(company.logo);
   }
 
   return prisma.company.update({
@@ -387,19 +386,8 @@ const deleteCompanyLogo = async (user, companyId) => {
     throw new Error("Company not found");
   }
 
-  if (!company.logo) {
-    throw new Error("No logo found");
-  }
-
-  // Shadow Deletion logic: insert path into deleted_assets instead of immediately deleting
-  if (company.logo.includes("supabase.co") && company.logo.includes("logos")) {
-    const urlParts = company.logo.split("logos/");
-    if (urlParts.length >= 2) {
-      const filePath = urlParts[1];
-      await prisma.deletedAsset.create({
-        data: { filePath, bucket: "logos" },
-      });
-    }
+  if (company.logo) {
+    await removeCompanyAssetFile(company.logo);
   }
 
   return prisma.company.update({
@@ -413,16 +401,8 @@ const updateCompanyCover = async (companyId, coverUrl) => {
     where: { id: companyId },
   });
 
-  if (company && company.coverImage) {
-    if (company.coverImage.includes("supabase.co") && company.coverImage.includes("logos")) {
-      const urlParts = company.coverImage.split("logos/");
-      if (urlParts.length >= 2) {
-        const filePath = urlParts[1];
-        await prisma.deletedAsset.create({
-          data: { filePath, bucket: "logos" },
-        });
-      }
-    }
+  if (company?.coverImage) {
+    await removeCompanyAssetFile(company.coverImage);
   }
 
   return prisma.company.update({
@@ -447,18 +427,8 @@ const deleteCompanyCover = async (user, companyId) => {
     throw new Error("Company not found");
   }
 
-  if (!company.coverImage) {
-    throw new Error("No cover image found");
-  }
-
-  if (company.coverImage.includes("supabase.co") && company.coverImage.includes("logos")) {
-    const urlParts = company.coverImage.split("logos/");
-    if (urlParts.length >= 2) {
-      const filePath = urlParts[1];
-      await prisma.deletedAsset.create({
-        data: { filePath, bucket: "logos" },
-      });
-    }
+  if (company.coverImage) {
+    await removeCompanyAssetFile(company.coverImage);
   }
 
   return prisma.company.update({
