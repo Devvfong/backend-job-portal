@@ -314,6 +314,21 @@ const deleteCoverController = async (req, res, next) => {
   }
 };
 
+const deleteCoverByIdController = async (req, res, next) => {
+  try {
+    const company = await deleteCompanyCover(req.user, Number(req.params.id));
+    const { id: deletedId, ...deletedRest } = company;
+
+    return res.status(200).json({
+      status: "success",
+      message: "Cover deleted successfully",
+      data: { ...deletedRest, encryptedId: encryptId(deletedId) },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const getCompanyStatsController = async (req, res, next) => {
   try {
     if (!req.user.companyId) {
@@ -366,6 +381,7 @@ export {
   deleteLogoController,
   uploadCoverController,
   deleteCoverController,
+  deleteCoverByIdController,
   uploadGalleryController,
   getCompanyStatsController,
   suspendCompanyController,

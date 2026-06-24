@@ -12,6 +12,7 @@ import {
   deleteLogoController,
   uploadCoverController,
   deleteCoverController,
+  deleteCoverByIdController,
   uploadGalleryController,
   getCompanyStatsController,
   suspendCompanyController,
@@ -41,6 +42,8 @@ const createCompanySchema = z.object({
 });
 const updateCompanySchema = createCompanySchema.partial().extend({
   isVerified: z.boolean().optional(),
+  coverImage: z.string().url().nullable().optional(),
+  logo: z.union([z.string().url(), z.literal("logo.dev"), z.null()]).optional(),
 }); // All fields are optional for update
 
 const handleUploadError = (multerMiddleware) => (req, res, next) => {
@@ -130,6 +133,14 @@ router.post(
   authorize("company_admin"),
   validate(createCompanySchema),
   createCompanyController,
+);
+
+router.delete(
+  "/:id/cover",
+  decryptMiddleware,
+  protect,
+  authorize("super_admin"),
+  deleteCoverByIdController,
 );
 
 router.get("/:id", decryptMiddleware, getCompanyControllerById);

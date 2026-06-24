@@ -333,6 +333,14 @@ const updateCompanyService = async (id, data, user) => {
     });
   }
 
+  if (data.coverImage === null && company.coverImage) {
+    await queueCompanyAssetDeletion(company.coverImage);
+  }
+
+  if (data.logo === null && company.logo && isSupabaseLogosUrl(company.logo)) {
+    await queueCompanyAssetDeletion(company.logo);
+  }
+
   return prisma.company.update({
     where: { id },
     data: {
@@ -436,15 +444,16 @@ const updateCompanyCover = async (companyId, coverUrl) => {
 };
 
 const deleteCompanyCover = async (user, companyId) => {
+  const targetCompanyId = Number(companyId);
   const isSuperAdmin = user?.role === "super_admin";
-  const isOwnCompanyAdmin = user?.role === "company_admin" && user.companyId === companyId;
+  const isOwnCompanyAdmin = user?.role === "company_admin" && user.companyId === targetCompanyId;
 
   if (!isSuperAdmin && !isOwnCompanyAdmin) {
     throw new Error("Unauthorized");
   }
 
   const company = await prisma.company.findUnique({
-    where: { id: companyId },
+    where: { id: targetCompanyId },
   });
 
   if (!company) {
@@ -453,7 +462,7 @@ const deleteCompanyCover = async (user, companyId) => {
 
   const previousCover = company.coverImage ?? null;
   const updated = await prisma.company.update({
-    where: { id: companyId },
+    where: { id: targetCompanyId },
     data: { coverImage: null },
   });
 
