@@ -1,4 +1,5 @@
 import express from "express";
+import multer from "multer";
 import {
   createCompanyController,
   getCompanyController,
@@ -42,13 +43,25 @@ const updateCompanySchema = createCompanySchema.partial().extend({
   isVerified: z.boolean().optional(),
 }); // All fields are optional for update
 
+const handleUploadError = (multerMiddleware) => (req, res, next) => {
+  multerMiddleware(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      return res.status(400).json({ status: "error", code: "BAD_REQUEST", message: err.message });
+    }
+    if (err) {
+      return res.status(400).json({ status: "error", code: "BAD_REQUEST", message: err.message });
+    }
+    next();
+  });
+};
+
 router.get("/", getCompanyController);
 
 router.post(
   "/logo",
   protect,
   authorize("company_admin"),
-  uploadCompanyAsset.single("logo"),
+  handleUploadError(uploadCompanyAsset.single("logo")),
   uploadLogoController,
 );
 
@@ -63,7 +76,7 @@ router.post(
   "/cover",
   protect,
   authorize("company_admin"),
-  uploadCompanyAsset.single("cover"),
+  handleUploadError(uploadCompanyAsset.single("cover")),
   uploadCoverController,
 );
 
@@ -107,7 +120,7 @@ router.post(
   "/upload",
   protect,
   authorize("company_admin"),
-  uploadCompanyAsset.single("file"),
+  handleUploadError(uploadCompanyAsset.single("file")),
   uploadGalleryController,
 );
 

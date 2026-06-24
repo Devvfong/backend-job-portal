@@ -1,14 +1,29 @@
 import { prisma } from "./../config/db.js";
 import { deleteFileFromSupabase } from "./upload.service.js";
+import { ConflictError } from "../lib/errors.js";
 
 const logoDevToken = process.env.LOGO_DEV_TOKEN;
 
 const isSupabaseLogosUrl = (url) =>
   typeof url === "string" && url.includes("supabase.co") && url.includes("/logos/");
 
-const removeCompanyAssetFile = async (url) => {
+const extractLogosBucketPath = (url) => {
+  const marker = "/logos/";
+  const idx = url.indexOf(marker);
+  if (idx === -1) return null;
+  return url.slice(idx + marker.length).split("?")[0];
+};
+
+const queueCompanyAssetDeletion = async (url) => {
   if (!isSupabaseLogosUrl(url)) return;
-  await deleteFileFromSupabase(url, "logos");
+  const filePath = extractLogosBucketPath(url);
+  if (!filePath) return;
+  await prisma.deletedAsset.create({
+    data: {
+      filePath,
+      bucket: "logos",
+    },
+  });
 };
 
 const getCompanyDomain = (data) => {
@@ -95,7 +110,7 @@ const createCompanyService = async (data, user) => {
     });
   } catch (error) {
     if (error.code === 'P2002' && (error.meta?.target?.includes('email') || error.meta?.target === 'email')) {
-      throw new Error("Company already exists");
+      throw new ConflictError("Company already exists", { cause: error });
     }
     throw error;
   }
@@ -359,14 +374,17 @@ const updateCompanyLogo = async (companyId, logoUrl) => {
     where: { id: companyId },
   });
 
-  if (company?.logo) {
-    await removeCompanyAssetFile(company.logo);
-  }
-
-  return prisma.company.update({
+  const previousLogo = company?.logo ?? null;
+  const updated = await prisma.company.update({
     where: { id: companyId },
     data: { logo: logoUrl },
   });
+
+  if (previousLogo && previousLogo !== logoUrl) {
+    await queueCompanyAssetDeletion(previousLogo);
+  }
+
+  return updated;
 };
 
 const deleteCompanyLogo = async (user, companyId) => {
@@ -386,14 +404,17 @@ const deleteCompanyLogo = async (user, companyId) => {
     throw new Error("Company not found");
   }
 
-  if (company.logo) {
-    await removeCompanyAssetFile(company.logo);
-  }
-
-  return prisma.company.update({
+  const previousLogo = company.logo ?? null;
+  const updated = await prisma.company.update({
     where: { id: companyId },
     data: { logo: null },
   });
+
+  if (previousLogo) {
+    await queueCompanyAssetDeletion(previousLogo);
+  }
+
+  return updated;
 };
 
 const updateCompanyCover = async (companyId, coverUrl) => {
@@ -401,14 +422,17 @@ const updateCompanyCover = async (companyId, coverUrl) => {
     where: { id: companyId },
   });
 
-  if (company?.coverImage) {
-    await removeCompanyAssetFile(company.coverImage);
-  }
-
-  return prisma.company.update({
+  const previousCover = company?.coverImage ?? null;
+  const updated = await prisma.company.update({
     where: { id: companyId },
     data: { coverImage: coverUrl },
   });
+
+  if (previousCover && previousCover !== coverUrl) {
+    await queueCompanyAssetDeletion(previousCover);
+  }
+
+  return updated;
 };
 
 const deleteCompanyCover = async (user, companyId) => {
@@ -427,14 +451,17 @@ const deleteCompanyCover = async (user, companyId) => {
     throw new Error("Company not found");
   }
 
-  if (company.coverImage) {
-    await removeCompanyAssetFile(company.coverImage);
-  }
-
-  return prisma.company.update({
+  const previousCover = company.coverImage ?? null;
+  const updated = await prisma.company.update({
     where: { id: companyId },
     data: { coverImage: null },
   });
+
+  if (previousCover) {
+    await queueCompanyAssetDeletion(previousCover);
+  }
+
+  return updated;
 };
 
 const getCompanyStatsService = async (companyId) => {

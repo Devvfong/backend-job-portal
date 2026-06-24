@@ -38,4 +38,45 @@ class ConflictError extends AppError {
   }
 }
 
-export { AppError, BadRequestError, UnauthorizedError, ForbiddenError, NotFoundError, ConflictError };
+const resolveOperationalError = (err) => {
+  if (err instanceof AppError) return err
+
+  if (err?.name === 'JsonWebTokenError' || err?.name === 'TokenExpiredError') {
+    return new UnauthorizedError('Not authorized, invalid token')
+  }
+
+  if (err?.name === 'MulterError') {
+    return new BadRequestError(err.message || 'Upload failed')
+  }
+
+  const message = typeof err?.message === 'string' ? err.message : ''
+  if (!message) return null
+
+  if (/^Forbidden/i.test(message) || message === 'Forbidden') {
+    return new ForbiddenError(message)
+  }
+  if (/^Unauthorized/i.test(message) || /^Not authorized/i.test(message)) {
+    return new UnauthorizedError(message)
+  }
+  if (/not found/i.test(message)) {
+    return new NotFoundError(message)
+  }
+  if (/already exists/i.test(message)) {
+    return new ConflictError(message)
+  }
+  if (/required/i.test(message) || /no longer accepting/i.test(message) || /upload failed/i.test(message)) {
+    return new BadRequestError(message)
+  }
+
+  return null
+}
+
+export {
+  AppError,
+  BadRequestError,
+  UnauthorizedError,
+  ForbiddenError,
+  NotFoundError,
+  ConflictError,
+  resolveOperationalError,
+}

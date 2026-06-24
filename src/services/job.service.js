@@ -90,17 +90,15 @@ const getJobService = async (query) => {
   };
 
   if (search) {
-    const searchStr = String(search).trim().split(/\\s+/).filter(Boolean).join(" | ");
-    if (searchStr) {
-      where.OR = [
-        { title: { search: searchStr } },
-        { description: { search: searchStr } },
-        { 
-          company: { 
-            companyName: { search: searchStr } 
-          } 
-        }
-      ];
+    const tokens = String(search).trim().split(/\s+/).filter(Boolean);
+    if (tokens.length) {
+      where.AND = tokens.map((token) => ({
+        OR: [
+          { title: { contains: token, mode: "insensitive" } },
+          { description: { contains: token, mode: "insensitive" } },
+          { company: { companyName: { contains: token, mode: "insensitive" } } },
+        ],
+      }));
     }
   }
 
