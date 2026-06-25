@@ -800,8 +800,21 @@ async function seed() {
   const hashedPassword = await bcrypt.hash(targetPassword, salt);
   console.log(`Password hashed successfully: "${targetPassword}" -> "${hashedPassword}"`);
 
+  const logoDevToken = process.env.LOGO_DEV_TOKEN || 'pk_K3e0y6U5RieT1eBwGclSjw';
+  const getCompanyLogoUrl = (website, email) => {
+    let domain = null;
+    if (website) {
+      try { domain = new URL(website).hostname.replace(/^www\./, ""); } catch {}
+    }
+    if (!domain && email?.includes("@")) {
+      domain = email.split("@")[1].toLowerCase();
+    }
+    return domain ? `https://img.logo.dev/${domain}?token=${logoDevToken}` : null;
+  };
+
   for (const cData of companiesToSeed) {
     const { jobs, ...companyDetails } = cData;
+    const logoUrl = getCompanyLogoUrl(companyDetails.website, companyDetails.email);
 
     console.log(`Processing company: "${companyDetails.companyName}"...`);
 
@@ -818,6 +831,7 @@ async function seed() {
         foundedYear: companyDetails.foundedYear,
         officeCount: companyDetails.officeCount,
         specialties: companyDetails.specialties,
+        logo: logoUrl,
       },
       create: {
         companyName: companyDetails.companyName,
@@ -830,6 +844,7 @@ async function seed() {
         foundedYear: companyDetails.foundedYear,
         officeCount: companyDetails.officeCount,
         specialties: companyDetails.specialties,
+        logo: logoUrl,
         gallery: [],
       }
     });
