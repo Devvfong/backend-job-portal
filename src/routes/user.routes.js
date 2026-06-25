@@ -40,7 +40,10 @@ const adminUpdateProfileSchema = updateProfileSchema.extend({
   companyId: z.union([z.coerce.number().int().positive(), z.string().min(1)]).nullable().optional(),
 });
 const warnSchema = z.object({
-  reason: z.string().min(1, "Reason is required and cannot be empty"),
+  reason: z.union([
+    z.string().min(1, "Reason is required and cannot be empty"),
+    z.array(z.string().min(1)).min(1, "At least one reason is required")
+  ]),
 });
 
 // Wraps a multer .single() call and returns a clean JSON error on failure

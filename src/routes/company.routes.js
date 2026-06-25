@@ -46,7 +46,10 @@ const updateCompanySchema = createCompanySchema.partial().extend({
   logo: z.union([z.string().url(), z.literal("logo.dev"), z.null()]).optional(),
 }); // All fields are optional for update
 const warnSchema = z.object({
-  reason: z.string().min(1, "Reason is required and cannot be empty"),
+  reason: z.union([
+    z.string().min(1, "Reason is required and cannot be empty"),
+    z.array(z.string().min(1)).min(1, "At least one reason is required")
+  ]),
 });
 
 const handleUploadError = (multerMiddleware) => (req, res, next) => {
