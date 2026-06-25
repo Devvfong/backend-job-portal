@@ -1,6 +1,7 @@
 import express from "express";
 import crypto from "crypto";
 import helmet from "helmet";
+import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
 import cookieParser from "cookie-parser";
@@ -67,8 +68,24 @@ app.use((req, res, next) => {
   next();
 });
 
-// CORS handled by nginx reverse proxy — do NOT enable cors() middleware here
-// as nginx add_header clears upstream headers, causing duplicates.
+// CORS — nginx add_header clears upstream headers, so we must handle CORS in Express
+const allowedOrigins = [
+  "https://nexthire.devqii.me",
+  "https://next-hire.devqii.me",
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+  ...(process.env.CORS_ORIGINS || "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean),
+];
+
+app.use(
+  cors({
+    origin: allowedOrigins,
+    credentials: true,
+  }),
+);
 
 app.use((req, res, next) => {
   if (req.path.startsWith("/api/") || req.path === "/docs" || req.path === "/openapi.json") {
