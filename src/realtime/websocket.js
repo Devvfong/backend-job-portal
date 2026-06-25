@@ -49,21 +49,25 @@ const broadcast = (clients, event, payload) => {
 const verifyAccessToken = async (token) => {
   if (!token) return null;
 
-  const decoded = jwt.verify(token, process.env.JWT_SECRET);
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-  if (!decoded?.id || !decoded?.role) {
+    if (!decoded?.id || !decoded?.role) {
+      return null;
+    }
+
+    return prisma.user.findUnique({
+      where: { id: decoded.id },
+      select: {
+        id: true,
+        role: true,
+        companyId: true,
+        name: true,
+      },
+    });
+  } catch {
     return null;
   }
-
-  return prisma.user.findUnique({
-    where: { id: decoded.id },
-    select: {
-      id: true,
-      role: true,
-      companyId: true,
-      name: true,
-    },
-  });
 };
 
 const registerClient = (ws, user) => {
