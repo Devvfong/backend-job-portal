@@ -1,3 +1,4 @@
+// Unified database seed script for NextHire
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
