@@ -235,7 +235,9 @@ const suspendUserController = async (req, res, next) => {
 const warnUserController = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const updated = await warnUser(id);
+    const { reason } = req.body;
+    const adminId = req.user.id;
+    const updated = await warnUser(id, reason, adminId);
     return res.status(200).json({
       status: "success",
       data: { ...updated, encryptedId: encryptId(updated.id) },

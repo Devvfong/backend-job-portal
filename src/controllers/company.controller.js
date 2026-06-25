@@ -359,7 +359,10 @@ const suspendCompanyController = async (req, res, next) => {
 
 const warnCompanyController = async (req, res, next) => {
   try {
-    const updated = await warnCompanyService(req.params.id);
+    const { id } = req.params;
+    const { reason } = req.body;
+    const adminId = req.user.id;
+    const updated = await warnCompanyService(id, reason, adminId);
     return res.status(200).json({
       status: "success",
       data: { ...updated, encryptedId: encryptId(updated.id) },

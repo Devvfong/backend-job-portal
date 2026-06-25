@@ -45,6 +45,9 @@ const updateCompanySchema = createCompanySchema.partial().extend({
   coverImage: z.string().url().nullable().optional(),
   logo: z.union([z.string().url(), z.literal("logo.dev"), z.null()]).optional(),
 }); // All fields are optional for update
+const warnSchema = z.object({
+  reason: z.string().min(1, "Reason is required and cannot be empty"),
+});
 
 const handleUploadError = (multerMiddleware) => (req, res, next) => {
   multerMiddleware(req, res, (err) => {
@@ -163,6 +166,7 @@ router.put(
   decryptMiddleware,
   protect,
   authorize("super_admin"),
+  validate(warnSchema),
   warnCompanyController,
 );
 router.delete("/:id", decryptMiddleware, protect, deleteCompanyController);

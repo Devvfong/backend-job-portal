@@ -365,17 +365,26 @@ const suspendUser = async (id) => {
   return updated;
 };
 
-const warnUser = async (id) => {
+const warnUser = async (id, reason, adminId) => {
   const user = await prisma.user.findUnique({
     where: { id: Number(id) },
   });
   if (!user) {
     throw new Error("User not found");
   }
-  // Atomic increment — no read-then-write race
-  return prisma.user.update({
-    where: { id: Number(id) },
-    data: { warningCount: { increment: 1 } },
+  return prisma.$transaction(async (tx) => {
+    const updated = await tx.user.update({
+      where: { id: Number(id) },
+      data: { warningCount: { increment: 1 } },
+    });
+    await tx.warningLog.create({
+      data: {
+        reason,
+        issuedById: Number(adminId),
+        targetUserId: Number(id),
+      },
+    });
+    return updated;
   });
 };
 

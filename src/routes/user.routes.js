@@ -39,6 +39,9 @@ const adminUpdateProfileSchema = updateProfileSchema.extend({
   role: z.enum(["job_seeker", "company_admin", "super_admin"]).optional(),
   companyId: z.union([z.coerce.number().int().positive(), z.string().min(1)]).nullable().optional(),
 });
+const warnSchema = z.object({
+  reason: z.string().min(1, "Reason is required and cannot be empty"),
+});
 
 // Wraps a multer .single() call and returns a clean JSON error on failure
 const handleUploadError = (multerMiddleware) => (req, res, next) => {
@@ -68,7 +71,7 @@ router.get("/", protect, authorize("super_admin"), getAllUsersController);
 router.put("/profile/:id", decryptMiddleware, protect, authorize("super_admin"), validate(adminUpdateProfileSchema), updateUserController);
 router.delete("/:id", decryptMiddleware, protect, authorize("super_admin"), deleteUserController);
 router.put("/:id/suspend", decryptMiddleware, protect, authorize("super_admin"), suspendUserController);
-router.put("/:id/warn", decryptMiddleware, protect, authorize("super_admin"), warnUserController);
+router.put("/:id/warn", decryptMiddleware, protect, authorize("super_admin"), validate(warnSchema), warnUserController);
 
 // ─── Uploads ───────────────────────────────────────────────────────────────
 router.post("/avatar", protect, handleUploadError(uploadAvatar.single("avatar")), uploadAvatarController);

@@ -531,17 +531,26 @@ const suspendCompanyService = async (id) => {
   return updated;
 };
 
-const warnCompanyService = async (id) => {
+const warnCompanyService = async (id, reason, adminId) => {
   const company = await prisma.company.findUnique({
     where: { id: Number(id) },
   });
   if (!company) {
     throw new Error("Company not found");
   }
-  // Atomic increment — no read-then-write race
-  return prisma.company.update({
-    where: { id: Number(id) },
-    data: { warningCount: { increment: 1 } },
+  return prisma.$transaction(async (tx) => {
+    const updated = await tx.company.update({
+      where: { id: Number(id) },
+      data: { warningCount: { increment: 1 } },
+    });
+    await tx.warningLog.create({
+      data: {
+        reason,
+        issuedById: Number(adminId),
+        targetCompanyId: Number(id),
+      },
+    });
+    return updated;
   });
 };
 

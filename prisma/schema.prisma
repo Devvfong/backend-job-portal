@@ -41,6 +41,8 @@ model User {
   applications Application[]
   savedJobs    SavedJob[]
   company      Company?      @relation(fields: [companyId], references: [id])
+  warningsIssued   WarningLog[] @relation("IssuedWarnings")
+  warningsReceived WarningLog[] @relation("UserWarnings")
 
   @@index([email])
   @@index([resetPasswordToken])
@@ -74,6 +76,7 @@ model Company {
   warningCount Int     @default(0)
   jobs        Job[]
   users       User[]
+  warnings    WarningLog[]
 }
 
 model Job {
@@ -182,4 +185,22 @@ enum ApplicationStatus {
   accepted
   rejected
   spam
+}
+
+model WarningLog {
+  id              Int      @id @default(autoincrement())
+  reason          String
+  createdAt       DateTime @default(now())
+  issuedById      Int
+  issuedBy        User     @relation("IssuedWarnings", fields: [issuedById], references: [id])
+  
+  targetUserId    Int?
+  targetUser      User?    @relation("UserWarnings", fields: [targetUserId], references: [id], onDelete: Cascade)
+  
+  targetCompanyId Int?
+  targetCompany   Company? @relation(fields: [targetCompanyId], references: [id], onDelete: Cascade)
+
+  @@index([targetUserId])
+  @@index([targetCompanyId])
+  @@index([issuedById])
 }
