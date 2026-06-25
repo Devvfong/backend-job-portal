@@ -709,6 +709,108 @@ const openApiDocument = {
       },
     },
 
+    // -------------------------------- ADMIN --------------------------------
+    "/api/v1/users/{id}/suspend": {
+      put: {
+        tags: ["Admin"],
+        summary: "Suspend or un-suspend a user account",
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        requestBody: {
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  reason: { type: "array", items: { type: "string" } },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: "User suspension updated" },
+          401: { description: "Not authorized" },
+          403: { description: "Forbidden - Requires super_admin role" },
+        },
+      },
+    },
+    "/api/v1/users/{id}/warn": {
+      put: {
+        tags: ["Admin"],
+        summary: "Warn a user account",
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        requestBody: {
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  reason: { type: "array", items: { type: "string" } },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: "User warned" },
+          401: { description: "Not authorized" },
+          403: { description: "Forbidden - Requires super_admin role" },
+        },
+      },
+    },
+    "/api/v1/companies/{id}/suspend": {
+      put: {
+        tags: ["Admin"],
+        summary: "Suspend or un-suspend a company account",
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        requestBody: {
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  reason: { type: "array", items: { type: "string" } },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: "Company suspension updated" },
+          401: { description: "Not authorized" },
+          403: { description: "Forbidden - Requires super_admin role" },
+        },
+      },
+    },
+    "/api/v1/companies/{id}/warn": {
+      put: {
+        tags: ["Admin"],
+        summary: "Warn a company account",
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        requestBody: {
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  reason: { type: "array", items: { type: "string" } },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: "Company warned" },
+          401: { description: "Not authorized" },
+          403: { description: "Forbidden - Requires super_admin role" },
+        },
+      },
+    },
+
     // -------------------------------- APPLICATIONS --------------------------------
     "/api/v1/applications/job/{id}/apply": {
       post: {

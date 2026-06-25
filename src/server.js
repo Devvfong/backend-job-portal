@@ -134,13 +134,13 @@ const docsArePublic =
   docsPublicEnv === "true" ||
   docsPublicEnv === "1" ||
   docsPublicEnv === "yes";
-app.get("/openapi.json", ...(docsArePublic ? [] : [protect, authorize("company_admin", "super_admin")]), (req, res) => {
+app.get("/openapi.json", ...(docsArePublic ? [] : [protect, authorize("super_admin")]), (req, res) => {
   res.status(200).json(openApiDocument);
 });
 
 app.get(
   "/docs",
-  ...(docsArePublic ? [] : [protect, authorize("company_admin", "super_admin")]),
+  ...(docsArePublic ? [] : [protect, authorize("super_admin")]),
   apiReference({
     theme: "kepler",
     customFetch: (input, init) => fetch(input, { ...init, credentials: "include" }),
