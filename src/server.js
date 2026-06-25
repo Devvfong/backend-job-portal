@@ -1,7 +1,6 @@
 import express from "express";
 import crypto from "crypto";
 import helmet from "helmet";
-import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
 import cookieParser from "cookie-parser";
@@ -68,24 +67,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// CORS — nginx add_header clears upstream headers, so we must handle CORS in Express
-const allowedOrigins = [
-  "https://nexthire.devqii.me",
-  "https://next-hire.devqii.me",
-  "http://localhost:3000",
-  "http://127.0.0.1:3000",
-  ...(process.env.CORS_ORIGINS || "")
-    .split(",")
-    .map((origin) => origin.trim())
-    .filter(Boolean),
-];
-
-app.use(
-  cors({
-    origin: allowedOrigins,
-    credentials: true,
-  }),
-);
+// CORS handled entirely by nginx — Express cors() removed to avoid duplicate headers
 
 app.use((req, res, next) => {
   if (req.path.startsWith("/api/") || req.path === "/docs" || req.path === "/openapi.json") {
