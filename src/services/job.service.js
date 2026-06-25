@@ -1,11 +1,12 @@
 import { prisma } from "../config/db.js";
+import { NotFoundError, ForbiddenError, BadRequestError } from "../lib/errors.js";
 
 const createJobService = async (data, user) => {
   const isSuperAdmin = user?.role === "super_admin";
   const companyId = isSuperAdmin && data.companyId ? data.companyId : user?.companyId;
 
   if (!companyId) {
-    throw new Error("Admin account is not linked to a company");
+    throw new BadRequestError("Admin account is not linked to a company");
   }
   const skills = Array.isArray(data.skills) ? data.skills : [];
   const tags = Array.isArray(data.tags) ? data.tags : [];
@@ -18,7 +19,7 @@ const createJobService = async (data, user) => {
     select: { id: true },
   });
   if (!company) {
-    throw new Error("Company not found");
+    throw new NotFoundError("Company not found");
   }
 
   const duplicated = await prisma.job.findFirst({
@@ -39,10 +40,10 @@ const createJobService = async (data, user) => {
     },
   })
   if (duplicated) {
-    throw new Error("A job with identical details already exists for this company");
+    throw new BadRequestError("A job with identical details already exists for this company");
   }
-  else if (!duplicated) {
-    return prisma.job.create({
+
+  return prisma.job.create({
       data: {
         companyId: Number(companyId),
         title: data.title,
@@ -62,7 +63,6 @@ const createJobService = async (data, user) => {
         company: { select: { companyName: true, logo: true } },
       },
     });
-  }
 }
 
 // Get all jobs with filters and pagination
@@ -201,7 +201,7 @@ const updateJobService = async (id, data, user) => {
   });
 
   if (!job) {
-    throw new Error("Job not found");
+    throw new NotFoundError("Job not found");
   }
 
   // Verify permissions: super_admin bypass or company ownership
@@ -209,7 +209,7 @@ const updateJobService = async (id, data, user) => {
   const isCompanyAdmin = user?.role === "company_admin" && job.companyId === user.companyId;
 
   if (!isSuperAdmin && !isCompanyAdmin) {
-    throw new Error("Forbidden");
+    throw new ForbiddenError("You do not have permission to update this job");
   }
 
   // Only allow updating companyId if super_admin
@@ -235,15 +235,17 @@ const updateJobService = async (id, data, user) => {
     }
   }
 
-  if (!data.salaryNegotiable) {
-    if (has("salaryMin")) updateData.salaryMin = data.salaryMin == null ? null : Number(data.salaryMin);
-    if (has("salaryMax")) updateData.salaryMax = data.salaryMax == null ? null : Number(data.salaryMax);
+  if (!data.salaryNegotiable && has("salaryMin")) {
+    updateData.salaryMin = data.salaryMin == null ? null : Number(data.salaryMin);
+  }
+  if (!data.salaryNegotiable && has("salaryMax")) {
+    updateData.salaryMax = data.salaryMax == null ? null : Number(data.salaryMax);
   }
 
   if (isSuperAdmin && data.companyId) {
     const company = await prisma.company.findUnique({ where: { id: Number(data.companyId) } });
     if (!company) {
-      throw new Error("Company not found");
+      throw new NotFoundError("Company not found");
     }
     updateData.companyId = Number(data.companyId);
   }
@@ -259,7 +261,7 @@ const toggleSaveJobService = async (jobId, user) => {
   });
 
   if (!job) {
-    throw new Error("Job not found");
+    throw new NotFoundError("Job not found");
   }
 
   // Check if already saved using the compound unique key we made in schema
@@ -321,7 +323,7 @@ const deleteJobService = async (id, user) => {
   });
 
   if (!job) {
-    throw new Error("Job not found");
+    throw new NotFoundError("Job not found");
   }
 
   // Verify permissions: super_admin bypass or company ownership
@@ -329,7 +331,7 @@ const deleteJobService = async (id, user) => {
   const isCompanyAdmin = user?.role === 'company_admin' && job.companyId === user.companyId;
 
   if (!isSuperAdmin && !isCompanyAdmin) {
-    throw new Error("Forbidden");
+    throw new ForbiddenError("You do not have permission to delete this job");
   }
 
   return prisma.job.delete({
@@ -339,7 +341,7 @@ const deleteJobService = async (id, user) => {
 
 const getMyCompanyJobsService = async (user) => {
   if (!user || !user.companyId) {
-    throw new Error("Admin account is not linked to a company");
+    throw new BadRequestError("Admin account is not linked to a company");
   }
 
   return prisma.job.findMany({

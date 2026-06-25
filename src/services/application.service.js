@@ -1,4 +1,5 @@
 import { prisma } from "../config/db.js";
+import { NotFoundError, ForbiddenError, BadRequestError } from "../lib/errors.js";
 
 const SUPER_ADMIN_ROLE = "super_admin";
 
@@ -9,11 +10,11 @@ const applyToJobService = async (jobId, userId, data) => {
   });
 
   if (!job) {
-    throw new Error("Job not found");
+    throw new NotFoundError("Job not found");
   }
 
   if (job.status !== "open") {
-    throw new Error("Job is no longer accepting applications");
+    throw new BadRequestError("Job is no longer accepting applications");
   }
 
   const includeConfig = {
@@ -101,11 +102,11 @@ const getApplicantsForJobService = async (jobId, user) => {
   });
 
   if (!job) {
-    throw new Error("Job not found");
+    throw new NotFoundError("Job not found");
   }
 
   if (!user || (user.role !== SUPER_ADMIN_ROLE && user.companyId !== job.companyId)) {
-    throw new Error("Forbidden: You can only view applicants for your own company jobs");
+    throw new ForbiddenError("You can only view applicants for your own company jobs");
   }
 
   return prisma.application.findMany({
@@ -136,12 +137,12 @@ const updateApplicationStatusService = async (applicationId, status, user) => {
   });
 
   if (!application) {
-    throw new Error("Application not found");
+    throw new NotFoundError("Application not found");
   }
 
   // Check if user is the admin of the company that posted the job
   if (!user || (user.role !== SUPER_ADMIN_ROLE && user.companyId !== application.job.companyId)) {
-    throw new Error("Forbidden: You cannot manage applications for other companies");
+    throw new ForbiddenError("You cannot manage applications for other companies");
   }
 
   return prisma.application.update({
@@ -181,12 +182,12 @@ const withdrawApplicationService = async (applicationId, user) => {
   });
 
   if (!application) {
-    throw new Error("Application not found");
+    throw new NotFoundError("Application not found");
   }
 
   // Only the user who applied can withdraw
   if (application.userId !== user.id) {
-    throw new Error("Forbidden: You can only withdraw your own applications");
+    throw new ForbiddenError("You can only withdraw your own applications");
   }
 
   return prisma.application.delete({
@@ -205,13 +206,13 @@ const withdrawApplicationService = async (applicationId, user) => {
 
 const getCompanyApplicantsService = async (user) => {
   if (!user) {
-    throw new Error("Forbidden: You must be associated with a company");
+    throw new ForbiddenError("You must be associated with a company");
   }
 
   const isSuperAdmin = user.role === SUPER_ADMIN_ROLE;
 
   if (!isSuperAdmin && !user.companyId) {
-    throw new Error("Forbidden: You must be associated with a company");
+    throw new ForbiddenError("You must be associated with a company");
   }
 
   return prisma.application.findMany({

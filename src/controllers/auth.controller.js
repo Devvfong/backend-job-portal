@@ -195,7 +195,10 @@ const refresh = async (req, res, next) => {
       throw new UnauthorizedError("Not authorized, no refresh token");
     }
 
-    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET);
+    if (!process.env.JWT_REFRESH_SECRET) {
+      throw new UnauthorizedError("Server configuration error");
+    }
+    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
     const user = await findUserById(decoded.id);
     if (!user || user.refreshToken !== refreshToken) {
       throw new UnauthorizedError("Not authorized, invalid refresh token");
