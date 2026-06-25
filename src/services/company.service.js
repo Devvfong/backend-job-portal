@@ -124,13 +124,13 @@ const getCompanyService = async (query = {}) => {
     industry,
     size,
     page = 1,
-    limit = 10,
+    limit = 1000,
     sort = "createdAt",
     order = "desc",
   } = query;
 
   const pageNumber = Math.max(1, Number(page) || 1);
-  const limitNumber = Math.min(100, Math.max(1, Number(limit) || 10));
+  const limitNumber = Math.min(1000, Math.max(1, Number(limit) || 1000));
   const skip = (pageNumber - 1) * limitNumber;
 
   const where = {};
