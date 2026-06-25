@@ -264,30 +264,33 @@ const toggleSaveJobService = async (jobId, user) => {
     throw new NotFoundError("Job not found");
   }
 
-  // Check if already saved using the compound unique key we made in schema
-  const existingSave = await prisma.savedJob.findUnique({
-    where: {
-      userId_jobId: {
-        userId: user.id, // this is the compound unique key
-        jobId: job.id, // this is the compound unique key
+  // Atomic toggle using a transaction to prevent read-then-write race conditions.
+  // The compound unique key (userId, jobId) prevents duplicates at the DB level.
+  return prisma.$transaction(async (tx) => {
+    const existingSave = await tx.savedJob.findUnique({
+      where: {
+        userId_jobId: {
+          userId: user.id,
+          jobId: job.id,
+        },
       },
-    },
-  });
-
-  if (existingSave) {
-    await prisma.savedJob.delete({
-      where: { id: existingSave.id },
     });
-    return { status: "unsaved", message: "Job removed from saved list" };
-  } else {
-    const savedJob = await prisma.savedJob.create({
+
+    if (existingSave) {
+      await tx.savedJob.delete({
+        where: { id: existingSave.id },
+      });
+      return { status: "unsaved", message: "Job removed from saved list" };
+    }
+
+    const savedJob = await tx.savedJob.create({
       data: {
         userId: user.id,
         jobId: job.id,
       },
     });
     return { status: "saved", data: savedJob };
-  }
+  });
 };
 
 const getSavedJobsService = async (userId) => {

@@ -52,7 +52,21 @@ if (process.env.NODE_ENV === 'production') {
 const app = express(); // Create an Express application
 app.set("trust proxy", 1);
 app.use(helmet({
-  contentSecurityPolicy: false,
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://unpkg.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://fonts.googleapis.com"],
+      imgSrc: ["'self'", "data:", "https:", "blob:"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdn.jsdelivr.net"],
+      connectSrc: ["'self'", "https://api.nexthire.devqii.me", "https://devqii.me"],
+      frameSrc: ["'none'"],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+      upgradeInsecureRequests: [],
+    },
+  },
   referrerPolicy: { policy: "strict-origin-when-cross-origin" },
 }));
 
@@ -163,10 +177,10 @@ setInterval(() => { }, 1000 * 60 * 60); // Keep alive every hour
 // This for unhandle promise rejection, for example when database connection fails
 process.on("unhandledRejection", (err) => {
   console.error("💥 [CRITICAL] Unhandled Rejection:", err);
-  // server.close(async () => {
-  //   await disconnectDB();
-  //   process.exit(1);
-  // });
+  server.close(async () => {
+    await disconnectDB();
+    process.exit(1);
+  });
 });
 
 // This for uncaught exception, for example when there is an error in the code that is not handled

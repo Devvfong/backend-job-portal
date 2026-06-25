@@ -521,10 +521,14 @@ const suspendCompanyService = async (id) => {
   if (!company) {
     throw new Error("Company not found");
   }
-  return prisma.company.update({
-    where: { id: Number(id) },
-    data: { isSuspended: !company.isSuspended },
-  });
+  // Atomic toggle using raw SQL to avoid read-then-write race condition
+  const [updated] = await prisma.$queryRaw`
+    UPDATE "Company"
+    SET "isSuspended" = NOT "isSuspended", "updatedAt" = NOW()
+    WHERE id = ${Number(id)}
+    RETURNING *
+  `;
+  return updated;
 };
 
 const warnCompanyService = async (id) => {
@@ -534,9 +538,10 @@ const warnCompanyService = async (id) => {
   if (!company) {
     throw new Error("Company not found");
   }
+  // Atomic increment — no read-then-write race
   return prisma.company.update({
     where: { id: Number(id) },
-    data: { warningCount: company.warningCount + 1 },
+    data: { warningCount: { increment: 1 } },
   });
 };
 

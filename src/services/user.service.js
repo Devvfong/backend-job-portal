@@ -355,10 +355,14 @@ const suspendUser = async (id) => {
   if (!user) {
     throw new Error("User not found");
   }
-  return prisma.user.update({
-    where: { id: Number(id) },
-    data: { isSuspended: !user.isSuspended },
-  });
+  // Atomic toggle using raw SQL to avoid read-then-write race condition
+  const [updated] = await prisma.$queryRaw`
+    UPDATE "User"
+    SET "isSuspended" = NOT "isSuspended", "updatedAt" = NOW()
+    WHERE id = ${Number(id)}
+    RETURNING *
+  `;
+  return updated;
 };
 
 const warnUser = async (id) => {
@@ -368,9 +372,10 @@ const warnUser = async (id) => {
   if (!user) {
     throw new Error("User not found");
   }
+  // Atomic increment — no read-then-write race
   return prisma.user.update({
     where: { id: Number(id) },
-    data: { warningCount: user.warningCount + 1 },
+    data: { warningCount: { increment: 1 } },
   });
 };
 

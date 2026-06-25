@@ -5,9 +5,9 @@ import { updateRefreshToken } from "../services/auth.service.js";
 
 const router = Router();
 
-function frontendOAuthCallbackUrl(token) {
+function frontendCallbackUrl() {
     const frontendUrl = (process.env.FRONTEND_URL || "https://nexthire.devqii.me").replace(/\/$/, "");
-    return `${frontendUrl}/auth/callback?token=${encodeURIComponent(token)}`;
+    return `${frontendUrl}/auth/callback`;
 }
 
 // Initiate LinkedIn OAuth
@@ -21,12 +21,20 @@ router.get(
     "/linkedin/callback",
     passport.authenticate("linkedin", { failureRedirect: "/login" }),
     (req, res) => {
-        // Successful authentication
-        // Generate JWT and set it as a cookie
         const { accessToken, refreshToken } = generateTokens(req.user.id, req.user.role, res);
         updateRefreshToken(req.user.id, refreshToken).catch(console.error);
 
-        res.redirect(frontendOAuthCallbackUrl(accessToken));
+        // Set access token as a non-httpOnly cookie so the frontend can read it
+        // without leaking it in the URL (browser history, server logs, Referer header).
+        res.cookie("access_token", accessToken, {
+            httpOnly: false,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "strict",
+            maxAge: 5 * 60 * 1000, // 5 minutes — matches JWT expiry
+            path: "/",
+        });
+
+        res.redirect(frontendCallbackUrl());
     },
 );
 
