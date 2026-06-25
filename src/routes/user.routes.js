@@ -45,6 +45,12 @@ const warnSchema = z.object({
     z.array(z.string().min(1)).min(1, "At least one reason is required")
   ]),
 });
+const suspendSchema = z.object({
+  reason: z.union([
+    z.string().min(1, "Reason is required and cannot be empty"),
+    z.array(z.string().min(1)).min(1, "At least one reason is required")
+  ]).optional(),
+});
 
 // Wraps a multer .single() call and returns a clean JSON error on failure
 const handleUploadError = (multerMiddleware) => (req, res, next) => {
@@ -73,7 +79,7 @@ router.put("/profile", protect, validate(updateProfileSchema), updateProfileCont
 router.get("/", protect, authorize("super_admin"), getAllUsersController);
 router.put("/profile/:id", decryptMiddleware, protect, authorize("super_admin"), validate(adminUpdateProfileSchema), updateUserController);
 router.delete("/:id", decryptMiddleware, protect, authorize("super_admin"), deleteUserController);
-router.put("/:id/suspend", decryptMiddleware, protect, authorize("super_admin"), suspendUserController);
+router.put("/:id/suspend", decryptMiddleware, protect, authorize("super_admin"), validate(suspendSchema), suspendUserController);
 router.put("/:id/warn", decryptMiddleware, protect, authorize("super_admin"), validate(warnSchema), warnUserController);
 
 // ─── Uploads ───────────────────────────────────────────────────────────────

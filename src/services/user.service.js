@@ -4,6 +4,8 @@ import { decryptId } from "../utils/crypto.js";
 import dotenv from "dotenv";
 dotenv.config();
 
+import { sendSuspensionEmail } from "./email.service.js";
+
 const SUPER_ADMIN_ROLE = "super_admin";
 
 const normalizeCompanyId = (companyId) => {
@@ -348,20 +350,37 @@ const getUserStatsService = async (userId) => {
   };
 };
 
-const suspendUser = async (id) => {
+const suspendUser = async (id, reasons = [], adminId) => {
   const user = await prisma.user.findUnique({
     where: { id: Number(id) },
   });
   if (!user) {
     throw new Error("User not found");
   }
-  // Atomic toggle using raw SQL to avoid read-then-write race condition
-  const [updated] = await prisma.$queryRaw`
-    UPDATE "User"
-    SET "isSuspended" = NOT "isSuspended", "updatedAt" = NOW()
-    WHERE id = ${Number(id)}
-    RETURNING *
-  `;
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const toggledUser = await tx.user.update({
+      where: { id: Number(id) },
+      data: { isSuspended: !user.isSuspended },
+    });
+
+    if (toggledUser.isSuspended && reasons.length > 0 && adminId) {
+      await tx.warningLog.create({
+        data: {
+          reason: reasons.map((r) => `[SUSPENSION] ${r}`),
+          issuedById: Number(adminId),
+          targetUserId: Number(id),
+        },
+      });
+    }
+
+    return toggledUser;
+  });
+
+  if (updated.isSuspended) {
+    sendSuspensionEmail(updated, reasons).catch(console.error);
+  }
+
   return updated;
 };
 

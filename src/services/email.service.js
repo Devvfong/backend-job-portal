@@ -138,7 +138,28 @@ const sendVerificationEmail = async (user, verifyUrl) => {
       <p><a href="${safeVerifyUrl}">Verify Email</a></p>
       <p>If you did not create this account, you can ignore this email.</p>
     `,
-    text: `Hi ${user.name || "there"}, verify your NextHire account here: ${verifyUrl}. This link expires in 24 hours. If you did not create this account, you can ignore this email.`,
+    text: `Hi ${user.name || "there"}, thank you for registering with NextHire. Verify your email here: ${verifyUrl}. This link expires in 24 hours.`,
+  });
+};
+
+const sendSuspensionEmail = async (userOrCompany, reasons) => {
+  const name = escapeHtml(userOrCompany.name || userOrCompany.companyName || "there");
+  const email = userOrCompany.email;
+  const reasonText = reasons && reasons.length > 0
+    ? `<ul>${reasons.map(r => `<li>${escapeHtml(r)}</li>`).join("")}</ul>`
+    : "<p>No specific reason provided.</p>";
+
+  return sendEmail({
+    to: email,
+    subject: "Your NextHire Account has been Suspended",
+    html: `
+      <h1>Account Suspended</h1>
+      <p>Hi ${name},</p>
+      <p>Your NextHire account has been suspended for the following reason(s):</p>
+      ${reasonText}
+      <p>If you believe this was a mistake, please reply to this email to contact our support team.</p>
+    `,
+    text: `Hi ${name}, your NextHire account has been suspended for the following reason(s): ${reasons?.join(", ") || "No specific reason provided."}. If you believe this was a mistake, contact support.`,
   });
 };
 
@@ -148,4 +169,5 @@ export {
   sendApplicationStatusEmail,
   sendPasswordResetEmail,
   sendVerificationEmail,
+  sendSuspensionEmail,
 };

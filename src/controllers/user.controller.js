@@ -222,7 +222,10 @@ const getProfileByIdController = async (req, res, next) => {
 const suspendUserController = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const updated = await suspendUser(id);
+    const { reason } = req.body;
+    const reasonArray = Array.isArray(reason) ? reason : [reason].filter(Boolean);
+    const adminId = req.user.id;
+    const updated = await suspendUser(id, reasonArray, adminId);
     return res.status(200).json({
       status: "success",
       data: { ...updated, encryptedId: encryptId(updated.id) },

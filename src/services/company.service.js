@@ -1,6 +1,7 @@
 import { prisma } from "./../config/db.js";
 import { deleteFileFromSupabase } from "./upload.service.js";
 import { ConflictError } from "../lib/errors.js";
+import { sendSuspensionEmail } from "./email.service.js";
 
 const logoDevToken = process.env.LOGO_DEV_TOKEN;
 
@@ -514,20 +515,37 @@ const getCompanyStatsService = async (companyId) => {
   };
 };
 
-const suspendCompanyService = async (id) => {
+const suspendCompanyService = async (id, reasons = [], adminId) => {
   const company = await prisma.company.findUnique({
     where: { id: Number(id) },
   });
   if (!company) {
     throw new Error("Company not found");
   }
-  // Atomic toggle using raw SQL to avoid read-then-write race condition
-  const [updated] = await prisma.$queryRaw`
-    UPDATE "Company"
-    SET "isSuspended" = NOT "isSuspended", "updatedAt" = NOW()
-    WHERE id = ${Number(id)}
-    RETURNING *
-  `;
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const toggledCompany = await tx.company.update({
+      where: { id: Number(id) },
+      data: { isSuspended: !company.isSuspended },
+    });
+
+    if (toggledCompany.isSuspended && reasons.length > 0 && adminId) {
+      await tx.warningLog.create({
+        data: {
+          reason: reasons.map((r) => `[SUSPENSION] ${r}`),
+          issuedById: Number(adminId),
+          targetCompanyId: Number(id),
+        },
+      });
+    }
+
+    return toggledCompany;
+  });
+
+  if (updated.isSuspended) {
+    sendSuspensionEmail(updated, reasons).catch(console.error);
+  }
+
   return updated;
 };
 

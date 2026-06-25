@@ -51,6 +51,12 @@ const warnSchema = z.object({
     z.array(z.string().min(1)).min(1, "At least one reason is required")
   ]),
 });
+const suspendSchema = z.object({
+  reason: z.union([
+    z.string().min(1, "Reason is required and cannot be empty"),
+    z.array(z.string().min(1)).min(1, "At least one reason is required")
+  ]).optional(),
+});
 
 const handleUploadError = (multerMiddleware) => (req, res, next) => {
   multerMiddleware(req, res, (err) => {
@@ -162,6 +168,7 @@ router.put(
   decryptMiddleware,
   protect,
   authorize("super_admin"),
+  validate(suspendSchema),
   suspendCompanyController,
 );
 router.put(
