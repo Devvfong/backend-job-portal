@@ -531,7 +531,7 @@ const suspendCompanyService = async (id) => {
   return updated;
 };
 
-const warnCompanyService = async (id, reason, adminId) => {
+const warnCompanyService = async (id, reasons, adminId) => {
   const company = await prisma.company.findUnique({
     where: { id: Number(id) },
   });
@@ -545,7 +545,7 @@ const warnCompanyService = async (id, reason, adminId) => {
     });
     await tx.warningLog.create({
       data: {
-        reason,
+        reason: reasons,
         issuedById: Number(adminId),
         targetCompanyId: Number(id),
       },

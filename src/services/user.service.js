@@ -365,7 +365,7 @@ const suspendUser = async (id) => {
   return updated;
 };
 
-const warnUser = async (id, reason, adminId) => {
+const warnUser = async (id, reasons, adminId) => {
   const user = await prisma.user.findUnique({
     where: { id: Number(id) },
   });
@@ -379,7 +379,7 @@ const warnUser = async (id, reason, adminId) => {
     });
     await tx.warningLog.create({
       data: {
-        reason,
+        reason: reasons,
         issuedById: Number(adminId),
         targetUserId: Number(id),
       },
