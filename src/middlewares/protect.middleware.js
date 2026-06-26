@@ -48,6 +48,7 @@ const protect = async (req, res, next) => {
         phone: true,
         skills: true,
         resume: true,
+        twoFactorEnabled: true,
       },
     });
     if (!req.user) {

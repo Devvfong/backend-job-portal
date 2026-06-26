@@ -9,10 +9,13 @@ import {
   forgotPassword,
   resetPasswordController,
   verifyEmail,
+  login2FA,
+  generate2FA,
+  verify2FA,
+  disable2FA,
 } from "../controllers/auth.controller.js";
-import validate from "../middlewares/validate.middleware.js";
 import protect from "../middlewares/protect.middleware.js";
-import authorize from "../middlewares/authorize.middleware.js";
+import validate from "../middlewares/validate.middleware.js";
 import { rateLimit } from "express-rate-limit";
 
 const authRateLimiter = rateLimit({
@@ -38,35 +41,45 @@ const passwordResetRateLimiter = rateLimit({
 });
 
 const router = express.Router();
+
 // Validation schemas for registration and login
 const registerSchema = z.object({
   name: z.string().min(1),
   email: z.string().email(),
   password: z.string().min(6),
 });
+
 // Validation schema for login
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
 });
+
 const forgotPasswordSchema = z.object({
   email: z.string().email(),
 });
+
 const resetPasswordSchema = z.object({
   token: z.string().min(32),
   password: z.string().min(6),
 });
+
 const verifyEmailSchema = z.object({
   token: z.string().min(1),
 });
 
-router.post("/register", authRateLimiter, validate(registerSchema), register); // validate middleware will validate the request body against the registerSchema before calling the register controller
-router.post("/login", authRateLimiter, validate(loginSchema), login); // validate middleware will validate the request body against the loginSchema before calling the login controller
+router.post("/register", authRateLimiter, validate(registerSchema), register);
+router.post("/login", authRateLimiter, validate(loginSchema), login);
+router.post("/login/2fa", authRateLimiter, login2FA);
 router.post("/forgot-password", passwordResetRateLimiter, validate(forgotPasswordSchema), forgotPassword);
 router.post("/reset-password", authRateLimiter, validate(resetPasswordSchema), resetPasswordController);
 router.post("/verify-email", validate(verifyEmailSchema), verifyEmail);
 router.get("/me", protect, getMe);
 router.post("/refresh", refresh);
 router.post("/logout", protect, logout);
-// router.get("/me", protect, getMe);
+
+router.post("/2fa/generate", protect, generate2FA);
+router.post("/2fa/verify", protect, verify2FA);
+router.post("/2fa/disable", protect, disable2FA);
+
 export default router;

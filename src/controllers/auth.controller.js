@@ -5,6 +5,8 @@ import {
   NotFoundError,
 } from '../lib/errors.js';
 import generateTokens from "../utils/generateToken.js";
+import { authenticator } from 'otplib';
+import qrcode from 'qrcode';
 import crypto from "crypto";
 import fs from "fs";
 import path from "path";
@@ -127,6 +129,24 @@ const login = async (req, res, next) => {
       throw new ForbiddenError("Your account has been suspended by an administrator. Please contact support for more information.");
     }
 
+    if (user.twoFactorEnabled) {
+      // Withhold full auth, generate temporary token
+      const temp2faToken = jwt.sign(
+        { id: user.id },
+        process.env.JWT_SECRET,
+        { expiresIn: "5m" }
+      );
+      
+      return res.status(200).json({
+        status: "success",
+        message: "2FA required",
+        data: {
+          requires2FA: true,
+          temp2faToken,
+        },
+      });
+    }
+
     const { accessToken, refreshToken } = generateTokens(user.id, user.role, res);
     await updateRefreshToken(user.id, refreshToken);
 
@@ -143,6 +163,129 @@ const login = async (req, res, next) => {
         },
         token: accessToken,
       },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const login2FA = async (req, res, next) => {
+  try {
+    const { token, code } = req.body;
+    if (!token || !code) {
+      throw new BadRequestError("Temporary token and 2FA code are required");
+    }
+
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch {
+      throw new UnauthorizedError("Invalid or expired temporary 2FA token");
+    }
+
+    const user = await findUserById(decoded.id);
+    if (!user || !user.twoFactorEnabled || !user.twoFactorSecret) {
+      throw new BadRequestError("2FA is not enabled for this user");
+    }
+
+    const isValid = authenticator.verify({ token: code, secret: user.twoFactorSecret });
+    if (!isValid) {
+      throw new UnauthorizedError("Invalid 2FA code");
+    }
+
+    const { accessToken, refreshToken } = generateTokens(user.id, user.role, res);
+    await updateRefreshToken(user.id, refreshToken);
+
+    return res.status(200).json({
+      status: "success",
+      message: "User logged in successfully with 2FA",
+      data: {
+        user: {
+          id: user.id,
+          encryptedId: encryptId(user.id),
+          name: user.name,
+          email: user.email,
+          role: user.role,
+        },
+        token: accessToken,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const generate2FA = async (req, res, next) => {
+  try {
+    const user = await findUserById(req.user.id);
+    
+    // Generate new secret
+    const secret = authenticator.generateSecret();
+    
+    // Save to DB
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { twoFactorSecret: secret },
+    });
+
+    const otpauthUrl = authenticator.keyuri(user.email, 'NextHire', secret);
+    
+    // Generate QR Code data URL
+    const qrCodeDataUrl = await qrcode.toDataURL(otpauthUrl);
+
+    res.status(200).json({
+      status: "success",
+      data: {
+        secret,
+        qrCodeUrl: qrCodeDataUrl,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const verify2FA = async (req, res, next) => {
+  try {
+    const { code } = req.body;
+    const user = await findUserById(req.user.id);
+
+    if (!user.twoFactorSecret) {
+      throw new BadRequestError("2FA secret not generated yet");
+    }
+
+    const isValid = authenticator.verify({ token: code, secret: user.twoFactorSecret });
+    if (!isValid) {
+      throw new BadRequestError("Invalid 2FA code");
+    }
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { twoFactorEnabled: true },
+    });
+
+    res.status(200).json({
+      status: "success",
+      message: "2FA successfully enabled",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const disable2FA = async (req, res, next) => {
+  try {
+    await prisma.user.update({
+      where: { id: req.user.id },
+      data: { 
+        twoFactorEnabled: false,
+        twoFactorSecret: null 
+      },
+    });
+
+    res.status(200).json({
+      status: "success",
+      message: "2FA successfully disabled",
     });
   } catch (error) {
     next(error);
@@ -286,4 +429,8 @@ export {
   forgotPassword,
   resetPasswordController,
   verifyEmail,
+  login2FA,
+  generate2FA,
+  verify2FA,
+  disable2FA,
 };

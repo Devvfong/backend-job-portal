@@ -35,6 +35,8 @@ model User {
   resetPasswordExpires DateTime?
   isVerified   Boolean       @default(false)
   isSuspended  Boolean       @default(false)
+  twoFactorSecret String?
+  twoFactorEnabled Boolean     @default(false)
   warningCount Int           @default(0)
   verificationToken String?   @unique
   verificationExpires DateTime?
