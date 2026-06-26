@@ -51,7 +51,14 @@ const createJobSchema = salaryRangeSchema.refine((data) => data.salaryNegotiable
   message: "Provide salaryMin and salaryMax unless salaryNegotiable is true",
   path: ["salaryMin"],
 });
-const updateJobSchema = salaryRangeSchema.partial(); // All fields are optional for update
+const updateJobSchema = baseJobSchema.partial().refine((data) => {
+  if (data.salaryNegotiable) return true;
+  if (data.salaryMin == null || data.salaryMax == null) return true;
+  return data.salaryMin < data.salaryMax;
+}, {
+  message: "salaryMin must be less than salaryMax",
+  path: ["salaryMin"],
+});
 router.post(
   "/create",
   protect,
