@@ -1,6 +1,8 @@
 import multer from 'multer';
 import path from 'path';
 
+import { getSetting } from '../config/settings.cache.js';
+
 const storage = multer.memoryStorage();
 
 const allowedImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic'];
@@ -13,11 +15,17 @@ const avatarFileFilter = (req, file, cb) => {
   }
 };
 
-const uploadAvatar = multer({
-  storage,
-  fileFilter: avatarFileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+const getUploadLimit = () => {
+  const sizeMB = parseInt(getSetting("max_upload_size_mb")) || 5;
+  return sizeMB * 1024 * 1024;
+};
+
+const createDynamicMulter = (fileFilter) => ({
+  single: (name) => (req, res, next) => multer({ storage, fileFilter, limits: { fileSize: getUploadLimit() } }).single(name)(req, res, next),
+  fields: (arr) => (req, res, next) => multer({ storage, fileFilter, limits: { fileSize: getUploadLimit() } }).fields(arr)(req, res, next)
 });
+
+const uploadAvatar = createDynamicMulter(avatarFileFilter);
 
 // ─── Resume ────────────────────────────────────────────────────────────────
 const allowedResumeExtensions = ['.pdf', '.doc', '.docx'];
@@ -39,17 +47,9 @@ const resumeFileFilter = (req, file, cb) => {
   }
 };
 
-const uploadResume = multer({
-  storage,
-  fileFilter: resumeFileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
-});
+const uploadResume = createDynamicMulter(resumeFileFilter);
 
 // ─── Company Logo & Cover Asset ────────────────────────────────────────────────────────
-const uploadCompanyAsset = multer({
-  storage,
-  fileFilter: avatarFileFilter, // Same image types as avatar
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
-});
+const uploadCompanyAsset = createDynamicMulter(avatarFileFilter);
 
 export { uploadAvatar, uploadResume, uploadCompanyAsset };

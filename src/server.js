@@ -10,6 +10,7 @@ import { fileURLToPath } from "url";
 import passport from "./config/passport.js";
 import { apiReference } from "@scalar/express-api-reference";
 import { connectDB, disconnectDB } from "./config/db.js";
+import { initSettingsCache } from "./config/settings.cache.js";
 import authRoutes from "./routes/auth.routes.js";
 import jobroutes from "./routes/job.routes.js";
 import userroutes from "./routes/user.routes.js";
@@ -26,6 +27,7 @@ import adminRoutes from "./routes/admin.routes.js";
 import settingsRoutes from "./routes/settings.routes.js";
 import protect from "./middlewares/protect.middleware.js";
 import authorize from "./middlewares/authorize.middleware.js";
+import maintenanceMiddleware from "./middlewares/maintenance.middleware.js";
 import "./utils/cron.js"; // Initialize the cron jobs
 import { initRealtime } from "./realtime/websocket.js";
 
@@ -120,6 +122,9 @@ app.use(
 );
 app.use(passport.initialize()); // Middleware to initialize passport
 app.use(passport.session()); // Middleware to manage user sessions
+
+app.use(maintenanceMiddleware);
+
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/jobs", jobroutes);
 app.use("/api/v1/users", userroutes);
@@ -167,7 +172,9 @@ const server = app.listen(PORT, "0.0.0.0", () => {
 initRealtime(server);
 
 // Connect after server boot so docs can still load without DB
-connectDB().catch((err) => {
+connectDB().then(async () => {
+  await initSettingsCache();
+}).catch((err) => {
   console.warn("⚠️  Database unavailable. API endpoints may fail until DB is up.");
   console.warn(err?.message || err);
 });
