@@ -191,7 +191,7 @@ const initRealtime = (server) => {
   // Periodic sweep of stale mapped clients (abnormal disconnects)
   const staleSweep = setInterval(() => {
     const now = Date.now();
-    for (const [, map] of [[clientsByUser, "user"], [clientsByCompany, "company"], [clientsByRole, "role"]]) {
+    for (const [map, ] of [[clientsByUser, "user"], [clientsByCompany, "company"], [clientsByRole, "role"]]) {
       for (const [, clients] of map) {
         for (const ws of clients) {
           if (ws.readyState !== WebSocket.OPEN && now - (ws._lastSeen || 0) > HEARTBEAT_MS * 2) {
