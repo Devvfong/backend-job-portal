@@ -11,6 +11,10 @@ const protect = async (req, res, next) => {
     token = req.headers.authorization.split(" ")[1];
   }
 
+  if (!token && req.query && req.query.token) {
+    token = req.query.token;
+  }
+  
   if (!token && req.cookies && req.cookies.token) {
     token = req.cookies.token;
   }
@@ -53,7 +57,10 @@ const protect = async (req, res, next) => {
       return next(new ForbiddenError("Your account has been suspended"));
     }
     next();
-  } catch {
+  } catch (error) {
+    if (error.name === 'TokenExpiredError') {
+      return next(new UnauthorizedError("Not authorized, token expired"));
+    }
     return next(new UnauthorizedError("Not authorized, invalid token"));
   }
 };

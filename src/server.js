@@ -22,6 +22,8 @@ import statsRoutes from "./routes/stats.routes.js";
 import locationRoutes from "./routes/location.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
 import openApiDocument from "./utils/openapi.js";
+import adminRoutes from "./routes/admin.routes.js";
+import settingsRoutes from "./routes/settings.routes.js";
 import protect from "./middlewares/protect.middleware.js";
 import authorize from "./middlewares/authorize.middleware.js";
 import "./utils/cron.js"; // Initialize the cron jobs
@@ -127,6 +129,8 @@ app.use("/api/v1/applications", applicationRoute);
 app.use("/api/v1/stats", statsRoutes);
 app.use("/api/v1/locations", locationRoutes);
 app.use("/api/v1/notifications", notificationRoutes);
+app.use("/api/v1/admin", adminRoutes);
+app.use("/api/v1/settings", settingsRoutes);
 app.use("/auth", githubAuthRoutes);
 app.use("/auth", linkedinAuthRoutes);
 const docsPublicEnv = String(process.env.DOCS_PUBLIC || "").trim().toLowerCase();
