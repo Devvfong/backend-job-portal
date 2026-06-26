@@ -16,6 +16,10 @@ const protect = async (req, res, next) => {
     token = req.cookies.token;
   }
 
+  if (!token && req.query && req.query.token) {
+    token = req.query.token;
+  }
+
   if (!token) {
     return next(new UnauthorizedError("Not authorized, no token"));
   }
