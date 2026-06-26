@@ -12,6 +12,7 @@ const REALTIME_EVENTS = {
   CONNECTION_READY: "connection:ready",
   NOTIFICATION_NEW: "notification:new",
   NOTIFICATION_REMOVE: "notification:remove",
+  MAINTENANCE_MODE: "maintenance:mode",
 };
 
 const clientsByUser = new Map();
@@ -248,6 +249,15 @@ const removeNotificationFromUser = (userId, payload) => {
   sendToUser(userId, REALTIME_EVENTS.NOTIFICATION_REMOVE, payload);
 };
 
+const broadcastToAll = (event, payload) => {
+  if (!wss) return;
+  for (const ws of wss.clients) {
+    if (ws.readyState === WebSocket.OPEN && ws.authenticated) {
+      send(ws, event, payload);
+    }
+  }
+};
+
 export {
   initRealtime,
   sendToUser,
@@ -257,6 +267,7 @@ export {
   emitNotificationToCompany,
   emitNotificationToRole,
   removeNotificationFromUser,
+  broadcastToAll,
   REALTIME_EVENTS,
 };
 

@@ -19,6 +19,7 @@ import {
   verifyEmailToken
 } from "../services/auth.service.js";
 import { sendPasswordResetEmail, sendWelcomeEmail, sendVerificationEmail } from "../services/email.service.js";
+import { getSetting } from "../config/settings.cache.js";
 
 let privateKey;
 if (process.env.RSA_PRIVATE_KEY) {
@@ -58,6 +59,10 @@ const decryptParam = (encrypted) => {
 
 const register = async (req, res, next) => {
   try {
+    if (getSetting("maintenance_mode") === "true") {
+      throw new ForbiddenError(getSetting("maintenance_reason") || "Registration is currently disabled due to system maintenance.");
+    }
+
     const { name, email, password } = req.body;
     const decryptedPassword = decryptParam(password);
 
@@ -104,6 +109,10 @@ const login = async (req, res, next) => {
     const user = await findUserByEmail(email);
     if (!user) {
       throw new BadRequestError("Invalid email or password");
+    }
+
+    if (user.role !== "super_admin" && getSetting("maintenance_mode") === "true") {
+      throw new ForbiddenError(getSetting("maintenance_reason") || "System is currently undergoing maintenance. Please try again later.");
     }
 
     const isPasswordValid = await verifyPassword(decryptedPassword, user.password);

@@ -163,6 +163,42 @@ const sendSuspensionEmail = async (userOrCompany, reasons) => {
   });
 };
 
+export const sendMaintenanceEmail = async (user, reason) => {
+  const subject = "System Maintenance Notification";
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: sans-serif; padding: 20px; line-height: 1.5; color: #333; background-color: #fff; }
+          .logo { max-width: 150px; margin-bottom: 20px; }
+          .logo-light { display: block; }
+          .logo-dark { display: none; }
+          @media (prefers-color-scheme: dark) {
+            body { background-color: #1a1a1a; color: #f5f5f5; }
+            .logo-light { display: none !important; }
+            .logo-dark { display: block !important; }
+          }
+        </style>
+      </head>
+      <body>
+        <img src="${process.env.FRONTEND_URL || "https://nexthire.devqii.me"}/logo-light.svg" class="logo logo-light" alt="NextHire" />
+        <img src="${process.env.FRONTEND_URL || "https://nexthire.devqii.me"}/logo-dark.svg" class="logo logo-dark" alt="NextHire" />
+        <h2>Scheduled Maintenance Notice</h2>
+        <p>Hello ${escapeHtml(user.name)},</p>
+        <p>This is a notification that our system is entering maintenance mode.</p>
+        <p><strong>Reason:</strong> ${escapeHtml(reason || "Routine system updates")}</p>
+        <p>During this time, you will not be able to log in or use the platform. We apologize for any inconvenience.</p>
+        <p>Thank you,<br>The NextHire Team</p>
+      </body>
+    </html>
+  `;
+  const text = `Scheduled Maintenance Notice\n\nHello ${user.name},\n\nOur system is entering maintenance mode.\nReason: ${reason || "Routine system updates"}\n\nDuring this time, you will not be able to log in or use the platform.\n\nThank you,\nThe NextHire Team`;
+
+  return sendEmail({ to: user.email, subject, html, text });
+};
+
 export {
   sendWelcomeEmail,
   sendApplicationSubmittedEmail,
