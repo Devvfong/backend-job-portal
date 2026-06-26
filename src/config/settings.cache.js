@@ -21,3 +21,23 @@ const initSettingsCache = async () => {
 const getSetting = (key) => appSettings[key];
 
 export { appSettings, initSettingsCache, getSetting };
+
+
+let _refreshTimer = null;
+const SETTINGS_REFRESH_MS = 5 * 60 * 1000; // 5 minutes
+
+const refreshSettingsCache = async () => {
+  try {
+    const settings = await prisma.setting.findMany();
+    settings.forEach((s) => {
+      appSettings[s.key] = s.value;
+    });
+  } catch (error) {
+    console.error('Failed to refresh settings cache:', error);
+  }
+};
+
+if (typeof window === 'undefined') {
+  _refreshTimer = setInterval(refreshSettingsCache, SETTINGS_REFRESH_MS);
+}
+

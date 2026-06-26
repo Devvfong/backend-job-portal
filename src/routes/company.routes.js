@@ -52,6 +52,7 @@ const warnSchema = z.object({
   ]),
 });
 const suspendSchema = z.object({
+  suspend: z.boolean(),
   reason: z.union([
     z.string().min(1, "Reason is required and cannot be empty"),
     z.array(z.string().min(1)).min(1, "At least one reason is required")

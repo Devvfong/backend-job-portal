@@ -348,10 +348,10 @@ const getCompanyStatsController = async (req, res, next) => {
 const suspendCompanyController = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { reason } = req.body;
+    const { suspend, reason } = req.body;
     const reasonArray = Array.isArray(reason) ? reason : [reason].filter(Boolean);
     const adminId = req.user.id;
-    const updated = await suspendCompanyService(id, reasonArray, adminId);
+    const updated = await suspendCompanyService(id, suspend, reasonArray, adminId);
     return res.status(200).json({
       status: "success",
       data: { ...updated, encryptedId: encryptId(updated.id) },
@@ -395,3 +395,4 @@ export {
   suspendCompanyController,
   warnCompanyController,
 };
+

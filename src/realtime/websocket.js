@@ -102,7 +102,7 @@ const authenticateFromRequest = async (request) => {
 };
 
 const initRealtime = (server) => {
-  wss = new WebSocketServer({ server, path: WS_PATH });
+  wss = new WebSocketServer({ server, path: WS_PATH, maxPayload: 1024 * 1024 });
 
   wss.on("connection", async (ws, request) => {
     let authTimer = null;
@@ -186,6 +186,21 @@ const initRealtime = (server) => {
     }
   });
 
+
+  // Periodic sweep of stale mapped clients (abnormal disconnects)
+  const staleSweep = setInterval(() => {
+    const now = Date.now();
+    for (const [mapKey, map] of [[clientsByUser, "user"], [clientsByCompany, "company"], [clientsByRole, "role"]]) {
+      for (const [key, clients] of map) {
+        for (const ws of clients) {
+          if (ws.readyState !== WebSocket.OPEN && now - (ws._lastSeen || 0) > HEARTBEAT_MS * 2) {
+            unregisterClient(ws);
+          }
+        }
+      }
+    }
+  }, HEARTBEAT_MS * 2);
+
   const heartbeat = setInterval(() => {
     for (const ws of wss.clients) {
       if (!ws.isAlive) {
@@ -198,7 +213,10 @@ const initRealtime = (server) => {
     }
   }, HEARTBEAT_MS);
 
-  wss.on("close", () => clearInterval(heartbeat));
+  wss.on("close", () => {
+      clearInterval(heartbeat);
+      clearInterval(staleSweep);
+    });
 };
 
 const sendToUser = (userId, event, payload) => {
@@ -240,3 +258,4 @@ export {
   removeNotificationFromUser,
   REALTIME_EVENTS,
 };
+

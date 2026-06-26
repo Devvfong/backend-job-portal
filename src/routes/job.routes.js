@@ -38,11 +38,20 @@ const baseJobSchema = z.object({
   companyId: z.number().optional(),
   status: z.enum(["open", "closed"]).optional(),
 });
-const createJobSchema = baseJobSchema.refine((data) => data.salaryNegotiable || (data.salaryMin != null && data.salaryMax != null), {
+const salaryRangeSchema = baseJobSchema.refine((data) => {
+  if (data.salaryNegotiable) return true;
+  if (data.salaryMin == null || data.salaryMax == null) return true;
+  return data.salaryMin < data.salaryMax;
+}, {
+  message: "salaryMin must be less than salaryMax",
+  path: ["salaryMin"],
+});
+
+const createJobSchema = salaryRangeSchema.refine((data) => data.salaryNegotiable || (data.salaryMin != null && data.salaryMax != null), {
   message: "Provide salaryMin and salaryMax unless salaryNegotiable is true",
   path: ["salaryMin"],
 });
-const updateJobSchema = baseJobSchema.partial(); // All fields are optional for update
+const updateJobSchema = salaryRangeSchema.partial(); // All fields are optional for update
 router.post(
   "/create",
   protect,

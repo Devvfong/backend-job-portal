@@ -3,6 +3,8 @@ import { NotFoundError, ForbiddenError, BadRequestError } from "../lib/errors.js
 
 const SUPER_ADMIN_ROLE = "super_admin";
 
+const SPAM_APPLY_THRESHOLD = 3;
+
 const applyToJobService = async (jobId, userId, data) => {
   // Check if job exists and is open
   const job = await prisma.job.findUnique({
@@ -63,7 +65,7 @@ const applyToJobService = async (jobId, userId, data) => {
       include: includeConfig,
     });
 
-    if (application.applyCount > 3 && application.status !== "spam") {
+    if (application.applyCount >= SPAM_APPLY_THRESHOLD && application.status !== "spam") {
       application = await tx.application.update({
         where: { id: application.id },
         data: { status: "spam" },
@@ -255,5 +257,6 @@ export {
   updateApplicationStatusService,
   withdrawApplicationService,
 };
+
 
 

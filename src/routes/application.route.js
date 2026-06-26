@@ -19,8 +19,12 @@ const updateApplicationStatusSchema = z.object({
   status: z.enum(["pending", "reviewed", "accepted", "rejected"]),
 });
 
+const applySchema = z.object({
+  coverLetter: z.string().max(10000).optional(),
+});
+
 // 💼 USER (Job Seeker) ENDPOINTS
-router.post("/job/:id/apply", decryptMiddleware, protect, authorize("job_seeker"), applyToJobController);
+router.post("/job/:id/apply", decryptMiddleware, protect, authorize("job_seeker"), validate(applySchema), applyToJobController);
 router.get("/me", protect, getMyApplicationsController);
 router.delete("/:id", decryptMiddleware, protect, withdrawApplicationController);
 

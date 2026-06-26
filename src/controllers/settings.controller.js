@@ -1,6 +1,12 @@
 import { prisma } from "../config/db.js";
 import { appSettings } from "../config/settings.cache.js";
 
+const ALLOWED_SETTING_KEYS = new Set([
+  "maintenance_mode",
+  "contact_email",
+  "max_upload_size_mb",
+]);
+
 // @desc    Get all settings
 // @route   GET /api/v1/settings
 // @access  Public or Protected depending on use cases
@@ -37,7 +43,17 @@ export const getPublicSettingsController = async (req, res, next) => {
 export const updateSettingsController = async (req, res, next) => {
   try {
     const updates = req.body; // e.g. { maintenance_mode: 'true', contact_email: '...' }
-    
+
+    // Reject any keys that are not in the whitelist
+    const rejectedKeys = Object.keys(updates).filter((key) => !ALLOWED_SETTING_KEYS.has(key));
+    if (rejectedKeys.length > 0) {
+      return res.status(400).json({
+        status: "error",
+        code: "BAD_REQUEST",
+        message: `Unauthorized setting keys: ${rejectedKeys.join(", ")}`,
+      });
+    }
+
     // Process all updates in a transaction
     const updatePromises = Object.entries(updates).map(([key, value]) => {
       // Update cache instantly

@@ -1,8 +1,6 @@
 import { prisma } from "../config/db.js";
 import { deleteFileFromSupabase } from "./upload.service.js";
 import { decryptId } from "../utils/crypto.js";
-import dotenv from "dotenv";
-dotenv.config();
 
 import { sendSuspensionEmail } from "./email.service.js";
 
@@ -36,13 +34,13 @@ const createProfile = async (data, id) => {
     },
     // Update the user's profile information, but keep existing values if not provided in the update data
     data: {
-      headline: data.headline || user.headline,
-      bio: data.bio || user.bio,
-      location: data.location || user.location,
-      phone: data.phone || user.phone,
-      avatar: data.avatar || user.avatar,
-      skills: data.skills || user.skills,
-      resume: data.resume || user.resume,
+headline: data.headline !== undefined ? data.headline : user.headline,
+bio: data.bio !== undefined ? data.bio : user.bio,
+location: data.location !== undefined ? data.location : user.location,
+phone: data.phone !== undefined ? data.phone : user.phone,
+avatar: data.avatar !== undefined ? data.avatar : user.avatar,
+skills: data.skills !== undefined ? data.skills : user.skills,
+resume: data.resume !== undefined ? data.resume : user.resume,
     },
     select: {
       id: true,
@@ -202,16 +200,23 @@ const updateProfile = async (data, id, currentUser) => {
   }
 
   const updateData = {
-    name: data.name || user.name,
-    email: data.email || user.email,
-    headline: data.headline || user.headline,
-    bio: data.bio || user.bio,
-    location: data.location || user.location,
-    phone: data.phone || user.phone,
-    avatar: data.avatar || user.avatar,
-    skills: data.skills || user.skills,
-    resume: data.resume || user.resume,
-  };
+    name: data.name !== undefined ? data.name : user.name,
+    headline: data.headline !== undefined ? data.headline : user.headline,
+    bio: data.bio !== undefined ? data.bio : user.bio,
+    location: data.location !== undefined ? data.location : user.location,
+    phone: data.phone !== undefined ? data.phone : user.phone,
+    avatar: data.avatar !== undefined ? data.avatar : user.avatar,
+    skills: data.skills !== undefined ? data.skills : user.skills,
+    resume: data.resume !== undefined ? data.resume : user.resume,
+};
+
+  // Only super_admin can change email (requires re-verification)
+  if (currentUser.role === SUPER_ADMIN_ROLE && data.email && data.email !== user.email) {
+    updateData.email = data.email;
+    updateData.isVerified = false;
+    updateData.verificationToken = crypto.randomBytes(32).toString("hex");
+    updateData.verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  }
 
   // Only super_admin can change role or companyId
   if (currentUser.role === SUPER_ADMIN_ROLE) {
@@ -350,7 +355,7 @@ const getUserStatsService = async (userId) => {
   };
 };
 
-const suspendUser = async (id, reasons = [], adminId) => {
+const suspendUser = async (id, suspend, reasons = [], adminId) => {
   const user = await prisma.user.findUnique({
     where: { id: Number(id) },
   });
@@ -361,7 +366,7 @@ const suspendUser = async (id, reasons = [], adminId) => {
   const updated = await prisma.$transaction(async (tx) => {
     const toggledUser = await tx.user.update({
       where: { id: Number(id) },
-      data: { isSuspended: !user.isSuspended },
+      data: { isSuspended: suspend },
     });
 
     if (toggledUser.isSuspended && reasons.length > 0 && adminId) {
@@ -420,3 +425,4 @@ export {
   suspendUser,
   warnUser,
 };
+

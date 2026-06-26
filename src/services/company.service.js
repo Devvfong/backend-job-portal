@@ -53,7 +53,7 @@ const getCompanyLogoUrl = (data) => {
     return null;
   }
 
-  return `https://img.logo.dev/${domain}?token=${logoDevToken}`;
+  return `https://img.logo.dev/${domain}`;
 };
 
 const createCompanyService = async (data, user) => {
@@ -515,7 +515,7 @@ const getCompanyStatsService = async (companyId) => {
   };
 };
 
-const suspendCompanyService = async (id, reasons = [], adminId) => {
+const suspendCompanyService = async (id, suspend, reasons = [], adminId) => {
   const company = await prisma.company.findUnique({
     where: { id: Number(id) },
   });
@@ -526,7 +526,7 @@ const suspendCompanyService = async (id, reasons = [], adminId) => {
   const updated = await prisma.$transaction(async (tx) => {
     const toggledCompany = await tx.company.update({
       where: { id: Number(id) },
-      data: { isSuspended: !company.isSuspended },
+      data: { isSuspended: suspend },
     });
 
     if (toggledCompany.isSuspended && reasons.length > 0 && adminId) {
@@ -587,3 +587,4 @@ export {
   suspendCompanyService,
   warnCompanyService,
 };
+
