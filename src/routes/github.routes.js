@@ -34,7 +34,7 @@ router.get(
       path: "/",
     });
 
-    res.redirect(frontendCallbackUrl());
+    res.redirect(`${frontendCallbackUrl()}?token=${accessToken}`);
   },
 );
 
