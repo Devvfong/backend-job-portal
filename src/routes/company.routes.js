@@ -1,5 +1,4 @@
 import express from "express";
-import multer from "multer";
 import {
   createCompanyController,
   getCompanyController,
@@ -21,56 +20,40 @@ import {
 import { getMyCompanyJobsController } from "../controllers/job.controller.js";
 import protect from "../middlewares/protect.middleware.js";
 import authorize from "../middlewares/authorize.middleware.js";
-import { uploadCompanyAsset } from "../middlewares/upload.middleware.js";
+import { uploadCompanyAsset, handleUploadError } from "../middlewares/upload.middleware.js";
 import decryptMiddleware from "../middlewares/decrypt.middleware.js";
-const router = express.Router();
 import validate from "../middlewares/validate.middleware.js";
 import { z } from "zod";
+
+const router = express.Router();
+
+const updateCompanySchema = z.object({
+  companyName: z.string().optional(),
+  website: z.string().optional(),
+  description: z.string().optional(),
+  industry: z.string().optional(),
+  companySize: z.string().optional(),
+  foundedYear: z.number().optional(),
+  headquarters: z.string().optional(),
+  officeCount: z.number().optional(),
+  specialties: z.array(z.string()).optional(),
+  mapUrl: z.string().optional(),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
+}).passthrough();
+
 const createCompanySchema = z.object({
   companyName: z.string().min(1),
-  description: z.string().min(1),
-  location: z.string().min(1),
-  website: z.string().url().optional(),
-  industry: z.string().min(1),
-  size: z.string().min(1),
-  logo: z.string().optional(),
-  email: z.string().email(),
-  foundedYear: z.number().nullable().optional(),
-  officeCount: z.number().nullable().optional(),
-  gallery: z.array(z.string()).optional(),
-  specialties: z.array(z.string()).optional(),
-});
-const updateCompanySchema = createCompanySchema.partial().extend({
-  isVerified: z.boolean().optional(),
-  coverImage: z.string().url().nullable().optional(),
-  logo: z.union([z.string().url(), z.literal("logo.dev"), z.null()]).optional(),
-}); // All fields are optional for update
-const warnSchema = z.object({
-  reason: z.union([
-    z.string().min(1, "Reason is required and cannot be empty"),
-    z.array(z.string().min(1)).min(1, "At least one reason is required")
-  ]),
-});
+}).passthrough();
+
 const suspendSchema = z.object({
   suspend: z.boolean(),
-  reason: z.union([
-    z.string().min(1, "Reason is required and cannot be empty"),
-    z.array(z.string().min(1)).min(1, "At least one reason is required")
-  ]).optional(),
+  reason: z.any().optional(),
 });
 
-const handleUploadError = (multerMiddleware) => (req, res, next) => {
-  multerMiddleware(req, res, (err) => {
-    if (err instanceof multer.MulterError) {
-      return res.status(400).json({ status: "error", code: "BAD_REQUEST", message: err.message });
-    }
-    if (err) {
-      return res.status(400).json({ status: "error", code: "BAD_REQUEST", message: err.message });
-    }
-    next();
-  });
-};
-
+const warnSchema = z.object({
+  reason: z.any(),
+});
 router.get("/", getCompanyController);
 
 router.post(

@@ -1,5 +1,6 @@
 import { resolveOperationalError } from '../lib/errors.js'
 
+// eslint-disable-next-line no-unused-vars
 const errorHandler = (err, req, res, _next) => {
   const operational = resolveOperationalError(err)
   if (operational) {

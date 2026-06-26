@@ -52,4 +52,17 @@ const uploadResume = createDynamicMulter(resumeFileFilter);
 // ─── Company Logo & Cover Asset ────────────────────────────────────────────────────────
 const uploadCompanyAsset = createDynamicMulter(avatarFileFilter);
 
-export { uploadAvatar, uploadResume, uploadCompanyAsset };
+// ─── Shared Multer Error Handler ─────────────────────────────────────────
+const handleUploadError = (multerMiddleware) => (req, res, next) => {
+  multerMiddleware(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      return res.status(400).json({ status: "error", code: "BAD_REQUEST", message: err.message });
+    }
+    if (err) {
+      return res.status(400).json({ status: "error", code: "BAD_REQUEST", message: err.message });
+    }
+    next();
+  });
+};
+
+export { uploadAvatar, uploadResume, uploadCompanyAsset, handleUploadError };

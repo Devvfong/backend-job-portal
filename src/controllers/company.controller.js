@@ -57,7 +57,7 @@ const getCompanyControllerById = async (req, res, next) => {
       try {
         const decrypted = decryptId(idParam);
         id = Number(decrypted);
-      } catch (err) {
+      } catch {
         throw new BadRequestError("Invalid company id");
       }
     }
@@ -129,12 +129,6 @@ const updateMyCompanyController = async (req, res, next) => {
     }
 
     const {
-      id,
-      encryptedId,
-      companyId,
-      userId,
-      createdAt,
-      updatedAt,
       foundedYear,
       officeCount,
       gallery,
@@ -144,6 +138,13 @@ const updateMyCompanyController = async (req, res, next) => {
       longitude,
       ...restBody
     } = req.body;
+
+    delete restBody.id;
+    delete restBody.encryptedId;
+    delete restBody.companyId;
+    delete restBody.userId;
+    delete restBody.createdAt;
+    delete restBody.updatedAt;
 
     const company = await updateCompanyService(
       req.user.companyId,

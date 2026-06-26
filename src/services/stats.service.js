@@ -73,16 +73,6 @@ const getAdminDashboardService = async () => {
     newJobsThisWeek,
     newApplicationsThisWeek,
     applicationGroups,
-    usersForGrowth,
-    companiesForGrowth,
-    jobsForGrowth,
-    applicationsForGrowth,
-    topJobsRaw,
-    recentUsers,
-    recentJobs,
-    recentApplications,
-    roleGroups,
-    industryGroups,
   ] = await Promise.all([
     getGlobalStatsService(),
     prisma.job.count({ where: { status: "open" } }),
@@ -100,6 +90,20 @@ const getAdminDashboardService = async () => {
       by: ["status"],
       _count: { _all: true },
     }),
+  ]);
+
+  const [
+    usersForGrowth,
+    companiesForGrowth,
+    jobsForGrowth,
+    applicationsForGrowth,
+    topJobsRaw,
+    recentUsers,
+    recentJobs,
+    recentApplications,
+    roleGroups,
+    industryGroups,
+  ] = await Promise.all([
     prisma.user.findMany({
       where: { createdAt: { gte: sixMonthsAgo }, role: { not: SUPER_ADMIN_ROLE } },
       select: { createdAt: true },

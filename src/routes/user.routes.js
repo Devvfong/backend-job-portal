@@ -1,9 +1,8 @@
 import express from "express";
 import { z } from "zod";
-import multer from "multer";
 import protect from "../middlewares/protect.middleware.js";
 import validate from "../middlewares/validate.middleware.js";
-import { uploadAvatar, uploadResume } from "../middlewares/upload.middleware.js";
+import { uploadAvatar, uploadResume, handleUploadError } from "../middlewares/upload.middleware.js";
 import decryptMiddleware from "../middlewares/decrypt.middleware.js";
 import {
   createProfileController,
@@ -52,21 +51,6 @@ const suspendSchema = z.object({
     z.array(z.string().min(1)).min(1, "At least one reason is required")
   ]).optional(),
 });
-
-// Wraps a multer .single() call and returns a clean JSON error on failure
-const handleUploadError = (multerMiddleware) => (req, res, next) => {
-  multerMiddleware(req, res, (err) => {
-    if (err instanceof multer.MulterError) {
-      // e.g. file too large
-      return res.status(400).json({ status: "error", message: err.message });
-    }
-    if (err) {
-      // fileFilter rejection (wrong file type)
-      return res.status(400).json({ status: "error", message: err.message });
-    }
-    next();
-  });
-};
 
 // ─── Profile ───────────────────────────────────────────────────────────────
 router.get("/profile", protect, getProfileController);

@@ -117,12 +117,14 @@ const deleteFileFromSupabase = async (publicUrl, bucket) => {
   if (!publicUrl) return;
 
   try {
-    // Extract the path from the public URL
+    // Extract the path from the public URL using proper URL parsing
     // URL format: https://[PROJECT_ID].supabase.co/storage/v1/object/public/[BUCKET]/[PATH]
-    const urlParts = publicUrl.split(`${bucket}/`);
-    if (urlParts.length < 2) return;
-
-    const filePath = urlParts[1];
+    const url = new URL(publicUrl);
+    const pathParts = url.pathname.split('/').filter(Boolean);
+    const bucketIdx = pathParts.indexOf('object') + 2;
+    if (bucketIdx < 2 || bucketIdx >= pathParts.length) return;
+    const filePath = pathParts.slice(bucketIdx + 1).join('/');
+    if (!filePath) return;
 
     const { error } = await supabase.storage.from(bucket).remove([filePath]);
 
@@ -137,18 +139,25 @@ const deleteFileFromSupabase = async (publicUrl, bucket) => {
 const createSignedUrlFromSupabaseUrl = async (publicUrl, bucket, expiresIn = 86400) => {
   if (!publicUrl) return publicUrl;
 
-  const urlParts = publicUrl.split(`${bucket}/`);
-  if (urlParts.length < 2) return publicUrl;
+  try {
+    const url = new URL(publicUrl);
+    const pathParts = url.pathname.split('/').filter(Boolean);
+    const bucketIdx = pathParts.indexOf('object') + 2;
+    if (bucketIdx < 2 || bucketIdx >= pathParts.length) return publicUrl;
+    const filePath = pathParts.slice(bucketIdx + 1).join('/');
+    if (!filePath) return publicUrl;
 
-  const filePath = urlParts[1];
-  const { data, error } = await supabase.storage.from(bucket).createSignedUrl(filePath, expiresIn);
+    const { data, error } = await supabase.storage.from(bucket).createSignedUrl(filePath, expiresIn);
 
-  if (error) {
-    console.error(`Failed to create signed URL for ${bucket}: ${error.message}`);
+    if (error) {
+      console.error(`Failed to create signed URL for ${bucket}: ${error.message}`);
+      return publicUrl;
+    }
+
+    return data.signedUrl;
+  } catch {
     return publicUrl;
   }
-
-  return data.signedUrl;
 };
 
 export {

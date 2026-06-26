@@ -14,7 +14,7 @@ const decryptMiddleware = (req, res, next) => {
         }
         req.params.id = String(Number(decrypted));
         return next();
-    } catch (err) {
+    } catch {
         return next(new BadRequestError("Invalid ID parameter"));
     }
 };

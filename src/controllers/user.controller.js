@@ -1,7 +1,6 @@
 import {
   BadRequestError,
   NotFoundError,
-  ForbiddenError,
 } from '../lib/errors.js';
 import {
   createProfile,

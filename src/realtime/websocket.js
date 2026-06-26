@@ -127,7 +127,8 @@ const initRealtime = (server) => {
       }
     };
 
-    ws.on("error", () => {
+    ws.on("error", (error) => {
+      console.error("WebSocket error:", error);
       unregisterClient(ws);
     });
 
@@ -141,9 +142,7 @@ const initRealtime = (server) => {
     });
 
     ws.on("message", async (rawMessage) => {
-      if (ws.authenticated) return;
-
-      // Rate limit: track messages per connection
+      // Rate limit: track messages per connection (applies to both pre and post auth)
       const now = Date.now();
       if (!ws._rateLimit) {
         ws._rateLimit = { count: 0, windowStart: now };
@@ -152,11 +151,13 @@ const initRealtime = (server) => {
         ws._rateLimit = { count: 0, windowStart: now };
       }
       ws._rateLimit.count++;
-      if (ws._rateLimit.count > RATE_LIMIT_MAX) {
+      if (ws._rateLimit.count > RATE_LIMIT_MAX * 2) {
         send(ws, "error", { message: "Rate limit exceeded" });
         ws.close(1008, "Rate limit exceeded");
         return;
       }
+
+      if (ws.authenticated) return;
 
       try {
         const message = JSON.parse(String(rawMessage));
@@ -190,8 +191,8 @@ const initRealtime = (server) => {
   // Periodic sweep of stale mapped clients (abnormal disconnects)
   const staleSweep = setInterval(() => {
     const now = Date.now();
-    for (const [mapKey, map] of [[clientsByUser, "user"], [clientsByCompany, "company"], [clientsByRole, "role"]]) {
-      for (const [key, clients] of map) {
+    for (const [, map] of [[clientsByUser, "user"], [clientsByCompany, "company"], [clientsByRole, "role"]]) {
+      for (const [, clients] of map) {
         for (const ws of clients) {
           if (ws.readyState !== WebSocket.OPEN && now - (ws._lastSeen || 0) > HEARTBEAT_MS * 2) {
             unregisterClient(ws);

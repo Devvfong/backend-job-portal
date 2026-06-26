@@ -2,6 +2,8 @@ import { prisma } from "../config/db.js";
 import { NotFoundError, ForbiddenError, BadRequestError } from "../lib/errors.js";
 
 const createJobService = async (data, user) => {
+  // super_admin can optionally pass companyId in the body to create jobs for any company;
+  // otherwise the job is created for the user's linked company
   const isSuperAdmin = user?.role === "super_admin";
   const companyId = isSuperAdmin && data.companyId ? data.companyId : user?.companyId;
 

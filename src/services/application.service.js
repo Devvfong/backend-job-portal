@@ -1,9 +1,14 @@
 import { prisma } from "../config/db.js";
 import { NotFoundError, ForbiddenError, BadRequestError } from "../lib/errors.js";
+import { appSettings } from "../config/settings.cache.js";
 
 const SUPER_ADMIN_ROLE = "super_admin";
 
-const SPAM_APPLY_THRESHOLD = 3;
+const getSpamThreshold = () => {
+  const value = appSettings["spam_apply_threshold"];
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 3;
+};
 
 const applyToJobService = async (jobId, userId, data) => {
   // Check if job exists and is open
@@ -65,7 +70,7 @@ const applyToJobService = async (jobId, userId, data) => {
       include: includeConfig,
     });
 
-    if (application.applyCount >= SPAM_APPLY_THRESHOLD && application.status !== "spam") {
+    if (application.applyCount >= getSpamThreshold() && application.status !== "spam") {
       application = await tx.application.update({
         where: { id: application.id },
         data: { status: "spam" },

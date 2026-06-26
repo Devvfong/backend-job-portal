@@ -3,7 +3,6 @@ import { deleteFileFromSupabase } from "./upload.service.js";
 import { ConflictError } from "../lib/errors.js";
 import { sendSuspensionEmail } from "./email.service.js";
 
-const logoDevToken = process.env.LOGO_DEV_TOKEN;
 
 const isSupabaseLogosUrl = (url) =>
   typeof url === "string" && url.includes("supabase.co") && url.includes("/logos/");

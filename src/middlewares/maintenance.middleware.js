@@ -28,7 +28,7 @@ const maintenanceMiddleware = (req, res, next) => {
       if (decoded && decoded.role === "super_admin") {
         return next();
       }
-    } catch (error) {
+    } catch {
       // Ignore token verification errors here, they will be blocked below
     }
   }

@@ -1,6 +1,5 @@
 import {
   BadRequestError,
-  ForbiddenError,
   NotFoundError,
 } from '../lib/errors.js';
 import {
@@ -42,7 +41,7 @@ const getJobsController = async (req, res, next) => {
     if (query.companyId && isNaN(Number(query.companyId))) {
       try {
         query.companyId = decryptId(query.companyId);
-      } catch (err) {
+      } catch {
         throw new BadRequestError("Invalid company id");
       }
     }
@@ -80,7 +79,7 @@ const getJobByIdController = async (req, res, next) => {
       try {
         const decrypted = decryptId(idParam);
         id = Number(decrypted);
-      } catch (err) {
+      } catch {
         throw new BadRequestError("Invalid job id");
       }
     }

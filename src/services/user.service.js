@@ -5,6 +5,8 @@ import { decryptId } from "../utils/crypto.js";
 
 import { sendSuspensionEmail } from "./email.service.js";
 
+const SUPER_ADMIN_ROLE = "super_admin";
+
 
 const normalizeCompanyId = (companyId) => {
   if (companyId === null) return null;

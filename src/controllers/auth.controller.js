@@ -2,12 +2,9 @@ import {
   BadRequestError,
   UnauthorizedError,
   ForbiddenError,
-  NotFoundError,
 } from '../lib/errors.js';
 import generateTokens from "../utils/generateToken.js";
 import crypto from "crypto";
-import fs from "fs";
-import path from "path";
 import jwt from "jsonwebtoken";
 import { encryptId } from "../utils/crypto.js";
 import { createSignedUrlFromSupabaseUrl } from "../services/upload.service.js";
@@ -24,15 +21,10 @@ import {
 import { sendPasswordResetEmail, sendWelcomeEmail, sendVerificationEmail } from "../services/email.service.js";
 
 let privateKey;
-try {
-  if (process.env.RSA_PRIVATE_KEY) {
-    privateKey = process.env.RSA_PRIVATE_KEY.replace(/\\n/g, '\n');
-  } else {
-    const privateKeyPath = path.join(process.cwd(), "private_key.pem");
-    privateKey = fs.readFileSync(privateKeyPath, "utf8");
-  }
-} catch (error) {
-  console.warn("Warning: Could not load RSA Private Key. RSA decryption will fail.", error.message);
+if (process.env.RSA_PRIVATE_KEY) {
+  privateKey = process.env.RSA_PRIVATE_KEY.replace(/\\n/g, '\n');
+} else {
+  throw new Error('RSA_PRIVATE_KEY environment variable is required for auth encryption');
 }
 
 const decryptParam = (encrypted) => {
@@ -56,7 +48,7 @@ const decryptParam = (encrypted) => {
       Buffer.from(value, 'base64')
     );
     return decrypted.toString('utf8');
-  } catch (e) {
+  } catch {
     if (!looksEncrypted) {
       return value;
     }

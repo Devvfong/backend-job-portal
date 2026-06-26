@@ -12,7 +12,6 @@ import {
 } from "../controllers/auth.controller.js";
 import validate from "../middlewares/validate.middleware.js";
 import protect from "../middlewares/protect.middleware.js";
-import authorize from "../middlewares/authorize.middleware.js";
 import { rateLimit } from "express-rate-limit";
 
 const authRateLimiter = rateLimit({

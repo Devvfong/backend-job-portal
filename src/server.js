@@ -28,6 +28,7 @@ import settingsRoutes from "./routes/settings.routes.js";
 import protect from "./middlewares/protect.middleware.js";
 import authorize from "./middlewares/authorize.middleware.js";
 import maintenanceMiddleware from "./middlewares/maintenance.middleware.js";
+import errorHandler from "./middlewares/error.middleware.js";
 import "./utils/cron.js"; // Initialize the cron jobs
 import { initRealtime } from "./realtime/websocket.js";
 
@@ -158,8 +159,6 @@ app.get(
     },
   }),
 );
-
-import errorHandler from "./middlewares/error.middleware.js";
 
 // Global Error Handler
 app.use(errorHandler);

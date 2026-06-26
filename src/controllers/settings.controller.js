@@ -5,6 +5,7 @@ const ALLOWED_SETTING_KEYS = new Set([
   "maintenance_mode",
   "contact_email",
   "max_upload_size_mb",
+  "spam_apply_threshold",
 ]);
 
 // @desc    Get all settings

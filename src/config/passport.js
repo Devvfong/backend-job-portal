@@ -43,7 +43,7 @@ const resolveGitHubEmail = async (profile, accessToken) => {
         if (candidate?.email) return candidate.email.toLowerCase();
       }
     }
-  } catch (error) {
+  } catch {
     // Ignore network errors and continue to deterministic fallback.
   }
 

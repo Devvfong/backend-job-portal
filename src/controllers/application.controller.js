@@ -1,7 +1,5 @@
 import {
   BadRequestError,
-  ForbiddenError,
-  NotFoundError,
 } from '../lib/errors.js';
 import {
   applyToJobService,

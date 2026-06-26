@@ -23,7 +23,6 @@ const getSetting = (key) => appSettings[key];
 export { appSettings, initSettingsCache, getSetting };
 
 
-let _refreshTimer = null;
 const SETTINGS_REFRESH_MS = 5 * 60 * 1000; // 5 minutes
 
 const refreshSettingsCache = async () => {
@@ -38,6 +37,6 @@ const refreshSettingsCache = async () => {
 };
 
 if (typeof window === 'undefined') {
-  _refreshTimer = setInterval(refreshSettingsCache, SETTINGS_REFRESH_MS);
+  setInterval(refreshSettingsCache, SETTINGS_REFRESH_MS);
 }
 
