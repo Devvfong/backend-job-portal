@@ -1,10 +1,10 @@
 import { prisma } from "../config/db.js";
+import crypto from "crypto";
 import { deleteFileFromSupabase } from "./upload.service.js";
 import { decryptId } from "../utils/crypto.js";
 
 import { sendSuspensionEmail } from "./email.service.js";
 
-const SUPER_ADMIN_ROLE = "super_admin";
 
 const normalizeCompanyId = (companyId) => {
   if (companyId === null) return null;
