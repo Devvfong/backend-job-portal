@@ -1,6 +1,7 @@
 import express from "express";
 import crypto from "crypto";
 import helmet from "helmet";
+import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
 import cookieParser from "cookie-parser";
@@ -86,7 +87,23 @@ app.use((req, res, next) => {
   next();
 });
 
-// CORS handled entirely by nginx — Express cors() removed to avoid duplicate headers
+// CORS handled by Nginx in production, but Express handles it in development
+if (process.env.NODE_ENV !== "production") {
+  const allowedOrigins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    ...(process.env.CORS_ORIGINS || "")
+      .split(",")
+      .map((origin) => origin.trim())
+      .filter(Boolean),
+  ];
+  app.use(
+    cors({
+      origin: allowedOrigins,
+      credentials: true,
+    }),
+  );
+}
 
 app.use((req, res, next) => {
   if (req.path.startsWith("/api/") || req.path === "/docs" || req.path === "/openapi.json") {
