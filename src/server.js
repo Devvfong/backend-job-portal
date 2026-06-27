@@ -87,23 +87,38 @@ app.use((req, res, next) => {
   next();
 });
 
-// CORS handled by Nginx in production, but Express handles it in development
-if (process.env.NODE_ENV !== "production") {
-  const allowedOrigins = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    ...(process.env.CORS_ORIGINS || "")
-      .split(",")
-      .map((origin) => origin.trim())
-      .filter(Boolean),
-  ];
-  app.use(
-    cors({
-      origin: allowedOrigins,
-      credentials: true,
-    }),
-  );
-}
+// Configure CORS: Express handles it for local development (even when run in production mode under Docker Compose),
+// but leaves it to Nginx for production domains to avoid duplicate CORS header issues.
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+
+      // Let Nginx handle CORS for production domains to avoid duplicate headers in production
+      const isProductionDomain =
+        origin.includes("nexthire.devqii.me") || origin.includes("next-hire.devqii.me");
+      if (isProductionDomain && process.env.NODE_ENV === "production") {
+        return callback(null, false);
+      }
+
+      const allowedOrigins = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        ...(process.env.CORS_ORIGINS || "")
+          .split(",")
+          .map((origin) => origin.trim())
+          .filter(Boolean),
+      ];
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(null, false);
+    },
+    credentials: true,
+  }),
+);
 
 app.use((req, res, next) => {
   if (req.path.startsWith("/api/") || req.path === "/docs" || req.path === "/openapi.json") {
