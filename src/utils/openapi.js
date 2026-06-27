@@ -308,7 +308,52 @@ const openApiDocument = {
         },
       },
     },
+    "/api/v1/auth/forgot-password": {
+      post: {
+        tags: ["Auth"],
+        summary: "Request a password reset link",
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: { type: "object", properties: { email: { type: "string" } } } } },
+        },
+        responses: { 200: { description: "Password reset link sent" } },
+      },
+    },
+    "/api/v1/auth/reset-password": {
+      post: {
+        tags: ["Auth"],
+        summary: "Reset password using token",
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: { type: "object", properties: { token: { type: "string" }, newPassword: { type: "string" } } } } },
+        },
+        responses: { 200: { description: "Password reset successful" } },
+      },
+    },
+    "/api/v1/auth/verify-email": {
+      post: {
+        tags: ["Auth"],
+        summary: "Verify user email",
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: { type: "object", properties: { token: { type: "string" } } } } },
+        },
+        responses: { 200: { description: "Email verified successfully" } },
+      },
+    },
     // -------------------------------- JOBS --------------------------------
+    "/api/v1/jobs/admin/all": {
+      get: {
+        tags: ["Jobs", "Admin"],
+        summary: "Get all jobs for super admin",
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        responses: {
+          200: { description: "List of all jobs returned" },
+          401: { description: "Not authorized" },
+          403: { description: "Forbidden - Requires super_admin role" },
+        },
+      },
+    },
     "/api/v1/jobs": {
       get: {
         tags: ["Jobs"],
@@ -435,6 +480,51 @@ const openApiDocument = {
         },
       },
     },
+    // -------------------------------- SETTINGS --------------------------------
+    "/api/v1/settings/public": {
+      get: {
+        tags: ["Settings"],
+        summary: "Get public settings",
+        responses: { 200: { description: "Public settings returned" } },
+      },
+    },
+    "/api/v1/settings": {
+      get: {
+        tags: ["Settings", "Admin"],
+        summary: "Get all settings (Super Admin)",
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        responses: {
+          200: { description: "Settings returned" },
+          401: { description: "Not authorized" },
+          403: { description: "Forbidden - Requires super_admin role" },
+        },
+      },
+      put: {
+        tags: ["Settings", "Admin"],
+        summary: "Update settings (Super Admin)",
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        requestBody: { content: { "application/json": { schema: { type: "object" } } } },
+        responses: {
+          200: { description: "Settings updated" },
+          401: { description: "Not authorized" },
+          403: { description: "Forbidden - Requires super_admin role" },
+        },
+      },
+    },
+
+    // -------------------------------- DASHBOARD --------------------------------
+    "/api/v1/stats/admin": {
+      get: {
+        tags: ["Dashboard", "Admin"],
+        summary: "Get admin dashboard stats",
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        responses: {
+          200: { description: "Admin stats returned" },
+          401: { description: "Not authorized" },
+          403: { description: "Forbidden - Requires super_admin role" },
+        },
+      },
+    },
     "/api/v1/stats": {
       get: {
         tags: ["Dashboard"],
@@ -522,6 +612,17 @@ const openApiDocument = {
       },
     },
     "/api/v1/users/profile/{id}": {
+      get: {
+        tags: ["Admin"],
+        summary: "Get any user's profile (Super Admin)",
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        responses: {
+          200: { description: "User profile returned" },
+          401: { description: "Not authorized" },
+          403: { description: "Forbidden - Requires super_admin role" },
+        },
+      },
       put: {
         tags: ["Admin"],
         summary: "Update any user's profile (Super Admin)",
@@ -588,6 +689,18 @@ const openApiDocument = {
         security: [{ cookieAuth: [] }, { bearerAuth: [] }],
         requestBody: { required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/CreateCompanyRequest" } } } },
         responses: { 201: { description: "Company created" } },
+      },
+    },
+    "/api/v1/companies/{id}/cover": {
+      delete: {
+        tags: ["Companies", "Admin"],
+        summary: "Delete specific company cover image",
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        responses: {
+          200: { description: "Cover deleted" },
+          401: { description: "Not authorized" },
+        },
       },
     },
     "/api/v1/companies/{id}": {
@@ -710,6 +823,18 @@ const openApiDocument = {
     },
 
     // -------------------------------- ADMIN --------------------------------
+    "/api/v1/admin/logs": {
+      get: {
+        tags: ["Admin"],
+        summary: "Get moderation logs",
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        responses: {
+          200: { description: "Logs returned" },
+          401: { description: "Not authorized" },
+          403: { description: "Forbidden - Requires super_admin role" },
+        },
+      },
+    },
     "/api/v1/users/{id}/suspend": {
       put: {
         tags: ["Admin"],

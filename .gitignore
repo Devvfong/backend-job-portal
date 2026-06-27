@@ -93,3 +93,12 @@ tmp/
 # Debug logs
 debug.log
 .vscode-test/
+check-db-sync.js
+check-users.js
+diagnose_db.js
+fix-final.cjs
+fix-zod.cjs
+cline.md
+note.md
+architecture.dot
+architecture.svg
