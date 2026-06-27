@@ -5,7 +5,7 @@ import WebSocket from "ws";
 const API_BASE = process.env.E2E_API_BASE || "http://localhost:5000/api/v1";
 const WS_URL = process.env.E2E_WS_URL || "ws://localhost:5000/ws";
 
-const SEEKER = { id: 226, role: "job_seeker" };
+const SEEKER = { id: 230, role: "job_seeker" };
 const ADMIN = { id: 184, role: "company_admin", companyId: 63 };
 const SUPER_ADMIN = { id: 231, role: "super_admin" };
 const JOB_ID = 371;
@@ -282,6 +282,7 @@ async function run() {
       `${httpList.length} items`,
     );
   } catch (error) {
+    console.error(error);
     record(
       "Unhandled test error",
       false,
