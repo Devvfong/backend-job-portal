@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 
+
 const generateTokens = (userId, role, res) => {
   if (!process.env.JWT_REFRESH_SECRET) {
     throw new Error("JWT_REFRESH_SECRET must be set in environment");

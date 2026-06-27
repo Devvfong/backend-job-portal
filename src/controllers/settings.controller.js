@@ -49,8 +49,8 @@ export const updateSettingsController = async (req, res, next) => {
     let shouldNotifyByEmail = false;
     if (updates.notify_users_by_email === "true") {
       shouldNotifyByEmail = true;
-      delete updates.notify_users_by_email;
     }
+    delete updates.notify_users_by_email;
 
     // Reject any keys that are not in the whitelist
     const rejectedKeys = Object.keys(updates).filter((key) => !ALLOWED_SETTING_KEYS.has(key));
