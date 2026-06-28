@@ -1,46 +1,42 @@
 # Session Handoff — 2026-06-28
 
-Production + security session. **Full detail:** `security/SESSION.md`
+**Full security + production detail:** `security/SESSION.md`
 
 ---
 
-## Production URLs
+## Production
 
 | Service | URL |
 | --- | --- |
 | Frontend | https://nexthire.devqii.me |
 | API | https://devqii.me/api/v1 |
-| WebSocket | **wss://nexthire.devqii.me/ws** |
-| VPS | 143.198.86.248 |
+| WebSocket | wss://nexthire.devqii.me/ws |
+| VPS | 143.198.86.248 — backend `/home/backend/nexthire` |
 
 ---
 
-## Repos (websocket branch)
+## Commits (`websocket`)
 
-| Repo | Latest commit |
+| Repo | Latest |
 | --- | --- |
-| Backend `Devvfong/backend-job-portal` | `be39367` |
-| Frontend `Devvfong/job-portal-ui` | `536d516` |
-
-VPS backend path: `/home/backend/nexthire` (not `job-portal` alone).
+| Backend | `605be86` — Phase 2 injection testing |
+| Frontend | `536d516` |
 
 ---
 
-## Verify
+## Security testing progress
+
+| Phase | Status |
+| --- | --- |
+| 1 Recon | Done — `security/recon-report.json` |
+| 2 Injection | Done — 77 probes, 0 vulns |
+| 6 Headers | Done — `security/headers-audit.json` |
+| **3 XSS** | **Next** |
 
 ```bash
+node security/run-injection-phase2.js   # re-run Phase 2
 npm run verify:production
-npm run verify:production:vps   # on VPS → 18 checks
 ```
-
----
-
-## Security testing
-
-- Playbook: `security/Web Security Testing.md`
-- Phase 1 recon: `security/recon-report.json` (104 endpoints)
-- Phase 6 headers: `security/headers-audit.json`
-- Next: Phase 2 injection (needs test accounts for phases 4–5)
 
 ---
 

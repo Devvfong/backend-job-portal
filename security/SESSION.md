@@ -1,6 +1,6 @@
 # Session Handoff — 2026-06-28 (Security + Production)
 
-Saved state after production hardening, Cloudflare nginx, Phase 1 security recon.
+Saved state after production hardening, OWASP Phase 1–2 security testing.
 
 ---
 
@@ -19,7 +19,7 @@ Saved state after production hardening, Cloudflare nginx, Phase 1 security recon
 
 | Repo | Path | Remote | Branch | Latest commit |
 | --- | --- | --- | --- | --- |
-| Backend | `C:\job-portal\backend` | `Devvfong/backend-job-portal` | `websocket` | `be39367` |
+| Backend | `C:\job-portal\backend` | `Devvfong/backend-job-portal` | `websocket` | `605be86` |
 | Frontend | `C:\Users\devqii\Downloads\job-portal-ui` | `Devvfong/job-portal-ui` | `websocket` | `536d516` |
 
 **Production deploys from `websocket` only** (not `main`). Push → GitHub Actions → VPS.
@@ -38,48 +38,19 @@ Saved state after production hardening, Cloudflare nginx, Phase 1 security recon
 | CORS map | `/etc/nginx/conf.d/cors-map.conf` |
 | Cloudflare real-IP | `/etc/nginx/conf.d/cloudflare-real-ip.conf` |
 
-**Docker (localhost only):**
-
-- `nexthire-ui` → `127.0.0.1:3001`
-- `nexthire-backend` → `127.0.0.1:5000`
-- `nexthire-redis` → internal
+**Docker (localhost only):** `nexthire-ui` → `127.0.0.1:3001`, `nexthire-backend` → `127.0.0.1:5000`
 
 ---
 
-## Security work completed
-
-### nginx / headers
-- Frontend: HSTS, X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy
-- API: helmet CSP + headers; CORS whitelist via `$cors_origin` (blocked origins get no CORS headers)
-- Cloudflare real-IP trust (`CF-Connecting-IP`) for accurate rate limits
-- `X-Powered-By: Next.js` removed (nginx `proxy_hide_header` + `poweredByHeader: false`)
-- Dotfile deny (`/.env`, `/.git`, etc.)
-- API rate limit: nginx `10 req/s` + burst 20
-
-### Deploy / DB
-- `DIRECT_URL` GitHub secret set (Neon non-pooler for Prisma migrate)
-- `prisma/schema.prisma` → `directUrl = env("DIRECT_URL")`
-- `deploy.sh` → ensures `DIRECT_URL` in `.env`, runs `nginx/install-cloudflare-nginx.sh`
-- Workflow path fixed: `cd /home/backend/nexthire`
-- Frontend `deploy.sh` → `--force-recreate` for localhost port bind
-
-### Verification
-```bash
-npm run verify:production          # 11 checks (local)
-npm run verify:production:vps      # 18 checks (on VPS)
-```
-
-Last known: **18/18 passed** on VPS.
-
----
-
-## Security testing playbook (`security/`)
+## Security testing (`security/`)
 
 | File | Purpose |
 | --- | --- |
-| `Web Security Testing.md` | OWASP 7-phase agent guide |
-| `recon-report.json` | **Phase 1 complete** — 104 endpoints mapped |
-| `headers-audit.json` | Phase 6 headers audit |
+| `Web Security Testing.md` | OWASP 7-phase playbook |
+| `recon-report.json` | Phase 1 — 104 endpoints |
+| `injection-findings.json` | Phase 2 — 77 probes, **0 confirmed** |
+| `headers-audit.json` | Phase 6 headers |
+| `run-injection-phase2.js` | Re-run Phase 2 script |
 | `SESSION.md` | This handoff |
 
 ### Phase status
@@ -87,80 +58,56 @@ Last known: **18/18 passed** on VPS.
 | Phase | Status | Output |
 | --- | --- | --- |
 | 1 Reconnaissance | **Done** | `recon-report.json` |
-| 2 Injection | **Done** (77 probes, 0 confirmed) | `injection-findings.json` |
-| 3 XSS | Not started | `xss-findings.json` |
+| 2 Injection | **Done** | `injection-findings.json` |
+| 3 XSS | **Next** | `xss-findings.json` |
 | 4 Auth | Not started | `auth-findings.json` |
 | 5 Access control | Not started | `access-control-findings.json` |
 | 6 Headers | **Done** | `headers-audit.json` |
-| 7 Report | Waiting on 2–5 | final report |
+| 7 Report | Waiting on 3–5 | final report |
 
-### Phase 3 next
-- XSS on reflection points from Phase 2 (frontend `/jobs?q=`, API error messages)
-- Run: `node security/run-injection-phase2.js` to re-test injection
+### Phase 2 summary
+- SQLi, NoSQL, LDAP, path traversal on public API + frontend `/jobs?q=`
+- Code review: no raw SQL in `src/`, Prisma parameterized queries
+- **Gate passed** — proceed to Phase 3
+- Not tested without auth: job create, file uploads, application patch
 
-### Phase 4+ prerequisites
+### Phase 3 targets (XSS)
+- Reflected: `https://nexthire.devqii.me/jobs?q=`, `jobType=`
+- Stored: job title/description, company profile, user bio (needs tokens)
+- DOM: URL hash/fragment on frontend
+
+### Phase 4–5 prerequisites
 - Test accounts: `job_seeker`, `company_admin` (optional `super_admin`)
 - User approval before brute-force (Phase 4 gate)
-- Scope: production API + frontend only (no destructive scans)
 
 ---
 
-## Key backend files (security)
+## Production security (done)
 
-```
-nginx/cloudflare-real-ip.conf
-nginx/cors-map.conf
-nginx/install-cloudflare-nginx.sh
-nginx/ensure-direct-url.py
-features/realtime/verify-production.sh
-prisma/schema.prisma          # directUrl
-deploy.sh
-.github/workflows/deploy.yml  # /home/backend/nexthire
-```
-
-## Key frontend files (security)
-
-```
-deploy/nginx-nexthire-ui.conf   # security headers + proxy_hide_header
-next.config.mjs                 # poweredByHeader: false
-deploy.sh                       # --force-recreate
-```
+- CORS whitelist, Cloudflare real-IP, security headers, `X-Powered-By` stripped
+- `DIRECT_URL` + Prisma `directUrl` for Neon migrations
+- `npm run verify:production` (11 checks) / `--vps` (18 checks)
 
 ---
 
-## GitHub secrets (backend repo)
-
-Includes: `DATABASE_URL`, **`DIRECT_URL`**, `JWT_SECRET`, `JWT_REFRESH_SECRET`, `SESSION_SECRET`, `SSH_PRIVATE_KEY`, etc.
-
----
-
-## Optional / not done
-
-- Frontend CSP header
-- Postgres `Notification` table + DB read/unread
-- Multi-server WS (Redis pub/sub)
-- CI E2E security tests
-- Phases 2–5 pentest execution
-- Commit `security/` folder to git (currently local/untracked)
-
----
-
-## Quick health check
+## Commands
 
 ```bash
-# Local
-cd C:\job-portal\backend && npm run verify:production
+# Health check
+npm run verify:production
 
-# VPS
+# Re-run Phase 2 injection
+node security/run-injection-phase2.js
+
+# VPS verify
 ssh root@143.198.86.248
 cd /home/backend/nexthire && bash features/realtime/verify-production.sh --vps
-docker ps -a
 ```
 
 ---
 
 ## Resume next session
 
-1. Read `security/recon-report.json` for endpoint map
-2. Run **Phase 2 injection** on `injectionTestTargets.priorityParameters`
-3. Or commit/push `security/` folder if you want it in the repo
+1. Open `security/SESSION.md` (this file)
+2. Run **Phase 3 XSS** → output `xss-findings.json`
+3. Provide test accounts before Phase 4–5
