@@ -65,7 +65,7 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://fonts.googleapis.com"],
       imgSrc: ["'self'", "data:", "https:", "blob:"],
       fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdn.jsdelivr.net"],
-      connectSrc: ["'self'", "https://api.nexthire.devqii.me", "https://devqii.me"],
+      connectSrc: ["'self'", "https://api.nexthire.devqii.me", "https://devqii.me", "wss://devqii.me"],
       frameSrc: ["'none'"],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],

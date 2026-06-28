@@ -1,5 +1,13 @@
 import jwt from "jsonwebtoken";
 
+const isProduction = process.env.NODE_ENV === "production";
+
+export const refreshCookieOptions = {
+  httpOnly: true,
+  secure: isProduction,
+  sameSite: isProduction ? "none" : "strict",
+  maxAge: 1 * 24 * 60 * 60 * 1000,
+};
 
 const generateTokens = (userId, role, res) => {
   if (!process.env.JWT_REFRESH_SECRET) {
@@ -16,13 +24,8 @@ const generateTokens = (userId, role, res) => {
     expiresIn: "1d",
   });
 
-  // Set the Refresh Token inside the Secure HttpOnly Cookie
-  res.cookie("jwt", refreshToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    maxAge: 1 * 24 * 60 * 60 * 1000, // 1 day
-  });
+  // Cross-origin frontend (nexthire.devqii.me) needs SameSite=None in production.
+  res.cookie("jwt", refreshToken, refreshCookieOptions);
 
   // Only return the Access Token (and optionally the Refresh Token if you need it in controller)
   return { accessToken, refreshToken };

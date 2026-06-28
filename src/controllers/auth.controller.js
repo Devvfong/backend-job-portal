@@ -3,7 +3,7 @@ import {
   UnauthorizedError,
   ForbiddenError,
 } from '../lib/errors.js';
-import generateTokens from "../utils/generateToken.js";
+import generateTokens, { refreshCookieOptions } from "../utils/generateToken.js";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import { encryptId } from "../utils/crypto.js";
@@ -156,10 +156,9 @@ const logout = async (req, res, next) => {
       await updateRefreshToken(req.user.id, null);
     }
     res.cookie("jwt", "", {
+      ...refreshCookieOptions,
       expires: new Date(0),
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      maxAge: 0,
     });
     return res.status(200).json({
       status: "success",
