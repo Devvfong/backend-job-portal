@@ -1,0 +1,390 @@
+{
+  "phase": 1,
+  "phaseName": "Reconnaissance",
+  "completedAt": "2026-06-28T17:50:00Z",
+  "methodology": "Codebase route mapping + OpenAPI spec + live HTTP fingerprinting (non-invasive)",
+  "scope": {
+    "inScope": [
+      "https://nexthire.devqii.me",
+      "https://devqii.me/api/v1",
+      "wss://nexthire.devqii.me/ws"
+    ],
+    "outOfScope": [
+      "Third-party OAuth provider infrastructure (GitHub, LinkedIn)",
+      "Neon Postgres direct access",
+      "Cloudflare dashboard / DNS management",
+      "VPS SSH and host OS",
+      "Destructive scanning, brute-force, or SQLMap automation"
+    ],
+    "credentialsRequiredForLaterPhases": {
+      "job_seeker": "needed for Phase 4-5",
+      "company_admin": "needed for Phase 5",
+      "super_admin": "needed for Phase 5 admin/IDOR tests"
+    }
+  },
+  "targets": {
+    "frontend": {
+      "url": "https://nexthire.devqii.me",
+      "vpsBind": "127.0.0.1:3001",
+      "deployPath": "/opt/nexthire-ui"
+    },
+    "api": {
+      "url": "https://devqii.me/api/v1",
+      "vpsBind": "127.0.0.1:5000",
+      "deployPath": "/home/backend/nexthire"
+    },
+    "websocket": {
+      "url": "wss://nexthire.devqii.me/ws",
+      "auth": "first-message JSON { event: auth, payload: { token: <access_jwt> } }"
+    }
+  },
+  "subdomains": [
+    {
+      "host": "nexthire.devqii.me",
+      "role": "production frontend",
+      "httpsStatus": 200,
+      "inScope": true
+    },
+    {
+      "host": "devqii.me",
+      "role": "production API + landing",
+      "httpsStatus": 200,
+      "inScope": true
+    },
+    {
+      "host": "next-hire.devqii.me",
+      "role": "CORS whitelist alias (not resolving)",
+      "httpsStatus": "unreachable",
+      "inScope": false,
+      "note": "Listed in cors-map.conf only"
+    },
+    {
+      "host": "api.nexthire.devqii.me",
+      "role": "legacy CSP reference",
+      "httpsStatus": "unreachable",
+      "inScope": false
+    },
+    {
+      "host": "habit.devqii.me",
+      "role": "removed app (nginx disabled)",
+      "httpsStatus": 526,
+      "inScope": false
+    },
+    {
+      "host": "jobportal.devqii.me",
+      "role": "legacy cert name on VPS",
+      "httpsStatus": "unreachable",
+      "inScope": false
+    }
+  ],
+  "techStack": {
+    "cdn": {
+      "name": "Cloudflare",
+      "evidence": "Server: cloudflare, CF-RAY headers"
+    },
+    "reverseProxy": {
+      "name": "nginx 1.24.0 (Ubuntu)",
+      "paths": {
+        "frontend": "/etc/nginx/sites-available/nexthire-ui",
+        "api": "/etc/nginx/sites-available/devqii.me",
+        "corsMap": "/etc/nginx/conf.d/cors-map.conf",
+        "cloudflareRealIp": "/etc/nginx/conf.d/cloudflare-real-ip.conf"
+      }
+    },
+    "frontend": {
+      "framework": "Next.js 16.2.6 (App Router, standalone output)",
+      "runtime": "React 19",
+      "ui": ["Tailwind CSS 4", "Radix UI", "shadcn-style components"],
+      "state": ["Zustand", "React Hook Form", "Zod"],
+      "httpClient": "axios",
+      "authClient": "jose (JWT)",
+      "analytics": "@vercel/analytics",
+      "i18n": "next-intl",
+      "container": "Docker nexthire-ui:prod"
+    },
+    "backend": {
+      "framework": "Express 5.2.1 (Node 22 Alpine Docker)",
+      "orm": "Prisma 6.7.0",
+      "database": "PostgreSQL (Neon serverless)",
+      "cache": "Redis (nexthire-redis container)",
+      "session": "express-session + connect-pg-simple",
+      "auth": ["jsonwebtoken", "passport (GitHub, LinkedIn OAuth)"],
+      "security": ["helmet", "cors", "express-rate-limit"],
+      "realtime": "ws (WebSocket at /ws)",
+      "docs": "Scalar API reference @ /docs",
+      "uploads": "multer + Supabase storage",
+      "validation": "Zod"
+    },
+    "tls": "Let's Encrypt via certbot"
+  },
+  "authentication": {
+    "mechanisms": [
+      {
+        "name": "Email/password login",
+        "endpoints": ["POST /api/v1/auth/login", "POST /api/v1/auth/register"],
+        "rateLimit": "10 requests / 15 min per IP (express-rate-limit)"
+      },
+      {
+        "name": "JWT access token",
+        "lifetime": "5 minutes",
+        "transport": ["Authorization: Bearer", "cookie: token (non-httpOnly)", "cookie: access_token (OAuth)"],
+        "payload": ["id", "role"],
+        "usedBy": ["REST API", "WebSocket auth event"]
+      },
+      {
+        "name": "JWT refresh token",
+        "lifetime": "1 day",
+        "transport": "httpOnly cookie: jwt",
+        "endpoint": "POST /api/v1/auth/refresh",
+        "note": "WebSocket rejects refresh token (by design)"
+      },
+      {
+        "name": "GitHub OAuth",
+        "start": "GET https://devqii.me/auth/github",
+        "callback": "GET https://devqii.me/auth/github/callback",
+        "liveProbe": 302
+      },
+      {
+        "name": "LinkedIn OAuth",
+        "start": "GET https://devqii.me/auth/linkedin",
+        "callback": "GET https://devqii.me/auth/linkedin/callback",
+        "liveProbe": 302
+      },
+      {
+        "name": "Password reset",
+        "endpoints": ["POST /api/v1/auth/forgot-password", "POST /api/v1/auth/reset-password"],
+        "rateLimit": "3 forgot-password / hour per IP"
+      },
+      {
+        "name": "Email verification",
+        "endpoint": "POST /api/v1/auth/verify-email"
+      }
+    ],
+    "roles": ["job_seeker", "company_admin", "super_admin"],
+    "sessionMiddleware": "protect + authorize(role) on sensitive routes",
+    "idObfuscation": "decryptMiddleware on many :id routes (encrypted IDs in URLs)"
+  },
+  "endpointMap": {
+    "summary": {
+      "apiRestCount": 58,
+      "frontendPageCount": 39,
+      "frontendApiRoutes": 1,
+      "systemCount": 6,
+      "totalInScope": 104,
+      "gateStatus": "pass",
+      "note": "Under 200 endpoints — no batching required"
+    },
+    "system": [
+      { "method": "GET", "path": "/ws", "host": "nexthire.devqii.me", "type": "websocket", "auth": "access JWT via auth event" },
+      { "method": "GET", "path": "/docs", "host": "devqii.me", "auth": "super_admin (unless DOCS_PUBLIC)" },
+      { "method": "GET", "path": "/openapi.json", "host": "devqii.me", "auth": "super_admin (unless DOCS_PUBLIC)", "liveProbe": 401 },
+      { "method": "GET", "path": "/auth/github", "host": "devqii.me", "type": "oauth_redirect" },
+      { "method": "GET", "path": "/auth/github/callback", "host": "devqii.me", "type": "oauth_callback" },
+      { "method": "GET", "path": "/auth/linkedin", "host": "devqii.me", "type": "oauth_redirect" },
+      { "method": "GET", "path": "/auth/linkedin/callback", "host": "devqii.me", "type": "oauth_callback" }
+    ],
+    "api": {
+      "auth": [
+        { "method": "POST", "path": "/api/v1/auth/register", "auth": "public", "bodyParams": ["name", "email", "password"] },
+        { "method": "POST", "path": "/api/v1/auth/login", "auth": "public", "bodyParams": ["email", "password"] },
+        { "method": "POST", "path": "/api/v1/auth/logout", "auth": "protected" },
+        { "method": "POST", "path": "/api/v1/auth/refresh", "auth": "refresh cookie" },
+        { "method": "GET", "path": "/api/v1/auth/me", "auth": "protected" },
+        { "method": "POST", "path": "/api/v1/auth/forgot-password", "auth": "public", "bodyParams": ["email"] },
+        { "method": "POST", "path": "/api/v1/auth/reset-password", "auth": "public", "bodyParams": ["token", "password"] },
+        { "method": "POST", "path": "/api/v1/auth/verify-email", "auth": "public", "bodyParams": ["token"] }
+      ],
+      "jobs": [
+        { "method": "GET", "path": "/api/v1/jobs", "auth": "public", "queryParams": ["search", "location", "jobType", "page", "limit"] },
+        { "method": "GET", "path": "/api/v1/jobs/:id", "auth": "optional", "pathParams": ["id"] },
+        { "method": "POST", "path": "/api/v1/jobs/create", "auth": "company_admin", "bodyParams": ["title", "description", "location", "jobType", "salaryMin", "salaryMax", "skills", "tags", "startDate", "endDate"] },
+        { "method": "PUT", "path": "/api/v1/jobs/:id", "auth": "company_admin", "pathParams": ["id"] },
+        { "method": "DELETE", "path": "/api/v1/jobs/:id", "auth": "company_admin", "pathParams": ["id"] },
+        { "method": "GET", "path": "/api/v1/jobs/saved", "auth": "protected" },
+        { "method": "POST", "path": "/api/v1/jobs/:id/save", "auth": "job_seeker", "pathParams": ["id"] },
+        { "method": "GET", "path": "/api/v1/jobs/admin/all", "auth": "super_admin" }
+      ],
+      "applications": [
+        { "method": "POST", "path": "/api/v1/applications/job/:id/apply", "auth": "job_seeker", "pathParams": ["id"] },
+        { "method": "GET", "path": "/api/v1/applications/me", "auth": "protected" },
+        { "method": "DELETE", "path": "/api/v1/applications/:id", "auth": "job_seeker", "pathParams": ["id"] },
+        { "method": "GET", "path": "/api/v1/applications/company", "auth": "company_admin" },
+        { "method": "GET", "path": "/api/v1/applications/job/:id/applicants", "auth": "company_admin", "pathParams": ["id"] },
+        { "method": "PATCH", "path": "/api/v1/applications/:id/status", "auth": "company_admin", "pathParams": ["id"], "bodyParams": ["status"] }
+      ],
+      "companies": [
+        { "method": "GET", "path": "/api/v1/companies", "auth": "public" },
+        { "method": "GET", "path": "/api/v1/companies/:id", "auth": "public", "pathParams": ["id"] },
+        { "method": "POST", "path": "/api/v1/companies/create", "auth": "company_admin" },
+        { "method": "GET", "path": "/api/v1/companies/me", "auth": "company_admin" },
+        { "method": "PUT", "path": "/api/v1/companies/me", "auth": "company_admin" },
+        { "method": "GET", "path": "/api/v1/companies/me/jobs", "auth": "company_admin" },
+        { "method": "GET", "path": "/api/v1/companies/me/stats", "auth": "company_admin" },
+        { "method": "POST", "path": "/api/v1/companies/logo", "auth": "company_admin", "upload": "logo" },
+        { "method": "DELETE", "path": "/api/v1/companies/logo", "auth": "company_admin" },
+        { "method": "POST", "path": "/api/v1/companies/cover", "auth": "company_admin", "upload": "cover" },
+        { "method": "DELETE", "path": "/api/v1/companies/cover", "auth": "company_admin" },
+        { "method": "POST", "path": "/api/v1/companies/upload", "auth": "company_admin", "upload": "file" },
+        { "method": "PUT", "path": "/api/v1/companies/:id", "auth": "protected", "pathParams": ["id"] },
+        { "method": "DELETE", "path": "/api/v1/companies/:id", "auth": "protected", "pathParams": ["id"] },
+        { "method": "PUT", "path": "/api/v1/companies/:id/suspend", "auth": "super_admin", "pathParams": ["id"] },
+        { "method": "PUT", "path": "/api/v1/companies/:id/warn", "auth": "super_admin", "pathParams": ["id"] },
+        { "method": "DELETE", "path": "/api/v1/companies/:id/cover", "auth": "super_admin", "pathParams": ["id"] }
+      ],
+      "users": [
+        { "method": "GET", "path": "/api/v1/users/profile", "auth": "protected" },
+        { "method": "GET", "path": "/api/v1/users/profile/:id", "auth": "protected", "pathParams": ["id"] },
+        { "method": "POST", "path": "/api/v1/users/profile", "auth": "protected" },
+        { "method": "PUT", "path": "/api/v1/users/profile", "auth": "protected" },
+        { "method": "GET", "path": "/api/v1/users/me/stats", "auth": "protected" },
+        { "method": "GET", "path": "/api/v1/users", "auth": "super_admin" },
+        { "method": "PUT", "path": "/api/v1/users/profile/:id", "auth": "super_admin", "pathParams": ["id"] },
+        { "method": "DELETE", "path": "/api/v1/users/:id", "auth": "super_admin", "pathParams": ["id"] },
+        { "method": "PUT", "path": "/api/v1/users/:id/suspend", "auth": "super_admin", "pathParams": ["id"] },
+        { "method": "PUT", "path": "/api/v1/users/:id/warn", "auth": "super_admin", "pathParams": ["id"] },
+        { "method": "POST", "path": "/api/v1/users/avatar", "auth": "protected", "upload": "avatar" },
+        { "method": "POST", "path": "/api/v1/users/resume", "auth": "protected", "upload": "resume" }
+      ],
+      "notifications": [
+        { "method": "GET", "path": "/api/v1/notifications", "auth": "protected" }
+      ],
+      "lookup": [
+        { "method": "GET", "path": "/api/v1/categories", "auth": "public" },
+        { "method": "GET", "path": "/api/v1/locations", "auth": "public" },
+        { "method": "GET", "path": "/api/v1/stats", "auth": "public" },
+        { "method": "GET", "path": "/api/v1/stats/admin", "auth": "super_admin" },
+        { "method": "GET", "path": "/api/v1/settings/public", "auth": "public" },
+        { "method": "GET", "path": "/api/v1/settings", "auth": "super_admin" },
+        { "method": "PUT", "path": "/api/v1/settings", "auth": "super_admin" },
+        { "method": "GET", "path": "/api/v1/admin/logs", "auth": "super_admin" }
+      ]
+    },
+    "frontend": {
+      "public": [
+        "/",
+        "/jobs",
+        "/jobs/[id]",
+        "/companies",
+        "/companies/[id]",
+        "/about",
+        "/blog",
+        "/community",
+        "/events",
+        "/faq",
+        "/privacy",
+        "/terms"
+      ],
+      "auth": [
+        "/login",
+        "/register",
+        "/forgot-password",
+        "/reset-password",
+        "/verify-email",
+        "/auth/callback"
+      ],
+      "dashboardSeeker": [
+        "/dashboard/seeker",
+        "/dashboard/seeker/profile",
+        "/dashboard/seeker/applications",
+        "/dashboard/seeker/saved"
+      ],
+      "dashboardCompany": [
+        "/dashboard/company",
+        "/dashboard/company/profile",
+        "/dashboard/company/jobs",
+        "/dashboard/company/jobs/new",
+        "/dashboard/company/jobs/[id]",
+        "/dashboard/company/jobs/[id]/edit",
+        "/dashboard/company/jobs/[id]/applicants",
+        "/dashboard/company/applications",
+        "/dashboard/company/candidates",
+        "/dashboard/company/analytics"
+      ],
+      "dashboardAdmin": [
+        "/dashboard/admin",
+        "/dashboard/admin/users",
+        "/dashboard/admin/jobs",
+        "/dashboard/admin/companies",
+        "/dashboard/admin/companies/[id]",
+        "/dashboard/admin/settings",
+        "/dashboard/admin/logs"
+      ],
+      "nextApi": [
+        { "method": "GET", "path": "/api/og", "note": "Open Graph image generation" }
+      ],
+      "seo": [
+        "/robots.txt",
+        "/sitemap.xml",
+        "/manifest.webmanifest"
+      ]
+    }
+  },
+  "injectionTestTargets": {
+    "priorityParameters": [
+      { "endpoint": "GET /api/v1/jobs", "params": ["search", "location", "jobType", "page", "limit"], "type": "query" },
+      { "endpoint": "POST /api/v1/auth/login", "params": ["email", "password"], "type": "body" },
+      { "endpoint": "POST /api/v1/auth/register", "params": ["name", "email", "password"], "type": "body" },
+      { "endpoint": "POST /api/v1/jobs/create", "params": ["title", "description", "requirements", "skills", "tags"], "type": "body" },
+      { "endpoint": "GET /api/v1/jobs/:id", "params": ["id"], "type": "path", "note": "encrypted ID — test decrypt edge cases" },
+      { "endpoint": "PATCH /api/v1/applications/:id/status", "params": ["status"], "type": "body" },
+      { "endpoint": "GET /jobs", "params": ["q", "jobType"], "type": "query", "host": "frontend" }
+    ],
+    "ormMitigation": "Prisma parameterized queries (SQLi risk lowered; still verify raw queries if any)"
+  },
+  "accessControlTestTargets": {
+    "idorCandidates": [
+      "GET /api/v1/users/profile/:id",
+      "GET /api/v1/applications/job/:id/applicants",
+      "PATCH /api/v1/applications/:id/status",
+      "DELETE /api/v1/applications/:id",
+      "PUT /api/v1/jobs/:id",
+      "DELETE /api/v1/jobs/:id",
+      "GET /api/v1/companies/:id"
+    ],
+    "privilegeEscalationCandidates": [
+      "GET /api/v1/jobs/admin/all",
+      "GET /api/v1/admin/logs",
+      "PUT /api/v1/settings",
+      "DELETE /api/v1/users/:id"
+    ]
+  },
+  "hiddenPathsAndDiscovery": {
+    "robotsDisallow": [
+      "/dashboard/",
+      "/login",
+      "/register",
+      "/forgot-password",
+      "/reset-password",
+      "/verify-email",
+      "/auth/",
+      "/api/"
+    ],
+    "nginxDotfileDeny": ["/.env", "/.git", "/.htaccess"],
+    "docsProtected": "/docs and /openapi.json return 401 without super_admin session"
+  },
+  "liveFingerprint": {
+    "frontend": {
+      "server": "cloudflare",
+      "nextJsEvidence": ["_next/static", "__next_f", "next-size-adjust"],
+      "xPoweredBy": "absent (stripped)"
+    },
+    "api": {
+      "server": "cloudflare",
+      "helmet": true,
+      "corsWhitelist": true,
+      "apiRateLimit": "nginx 10 req/s + burst 20"
+    }
+  },
+  "phaseGate": {
+    "endpointMapExists": true,
+    "endpointCount": 104,
+    "proceedToPhase2": true,
+    "blockers": []
+  },
+  "nextPhase": {
+    "phase": 2,
+    "name": "Injection Testing",
+    "prompt": "Use injection testing on injectionTestTargets.priorityParameters from recon-report.json",
+    "prerequisite": "Phase 1 gate passed"
+  }
+}

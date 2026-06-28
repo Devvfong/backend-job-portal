@@ -1,0 +1,41 @@
+{
+  "auditedAt": "2026-06-28T17:46:33Z",
+  "targets": {
+    "frontend": "https://nexthire.devqii.me/",
+    "api": "https://devqii.me/api/v1/jobs"
+  },
+  "frontend": {
+    "strictTransportSecurity": { "present": true, "value": "max-age=31536000; includeSubDomains", "severityIfMissing": "high", "status": "pass" },
+    "contentSecurityPolicy": { "present": false, "severityIfMissing": "medium", "status": "gap", "note": "Optional hardening — Next.js CSP needs careful tuning" },
+    "xFrameOptions": { "present": true, "value": "SAMEORIGIN", "severityIfMissing": "medium", "status": "pass" },
+    "xContentTypeOptions": { "present": true, "value": "nosniff", "severityIfMissing": "low", "status": "pass" },
+    "referrerPolicy": { "present": true, "value": "strict-origin-when-cross-origin", "severityIfMissing": "low", "status": "pass" },
+    "permissionsPolicy": { "present": true, "value": "camera=(), microphone=(), geolocation=()", "severityIfMissing": "low", "status": "pass" },
+    "xPoweredBy": { "present": false, "status": "pass", "note": "Stripped via nginx + poweredByHeader: false" },
+    "httpsRedirect": { "status": "pass", "note": "HTTP 301 to HTTPS" }
+  },
+  "api": {
+    "contentSecurityPolicy": { "present": true, "source": "helmet", "status": "pass" },
+    "strictTransportSecurity": { "present": true, "status": "pass" },
+    "xFrameOptions": { "present": true, "value": "SAMEORIGIN", "status": "pass" },
+    "xContentTypeOptions": { "present": true, "value": "nosniff", "status": "pass" },
+    "referrerPolicy": { "present": true, "status": "pass" },
+    "corsWhitelist": {
+      "allowedOrigin": "https://nexthire.devqii.me",
+      "blockedOrigin": "https://evil.example",
+      "status": "pass",
+      "note": "Blocked origins receive no Access-Control-Allow-Origin"
+    },
+    "rateLimit": { "present": true, "note": "nginx limit_req 10r/s on API", "status": "pass" }
+  },
+  "verifyProductionScript": {
+    "command": "npm run verify:production",
+    "lastRun": "2026-06-28",
+    "result": "11 passed, 0 failed"
+  },
+  "openGaps": [
+    { "item": "Frontend CSP", "severity": "medium", "phase": 6 },
+    { "item": "WebSocket rate limiting", "severity": "low", "phase": 4 },
+    { "item": "Phases 1-5 pentest (injection, XSS, IDOR)", "severity": "n/a", "phase": "1-5", "note": "Requires scoped auth test accounts and user approval for brute-force" }
+  ]
+}
