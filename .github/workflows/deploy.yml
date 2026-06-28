@@ -3,7 +3,7 @@ name: Deploy Backend
 on:
   push:
     branches:
-      - main
+      - websocket
 
 jobs:
   deploy:
@@ -19,8 +19,10 @@ jobs:
             # Navigate to the backend directory on your server
             cd /home/backend/job-portal
             
-            # Pull the latest changes from the main branch
-            git pull origin main
+            # Pull the latest changes from the websocket branch
+            git fetch origin websocket
+            git checkout websocket
+            git pull origin websocket
             
             # Make sure the deploy script is executable
             chmod +x deploy.sh
