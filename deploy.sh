@@ -11,6 +11,16 @@ if [[ -d .git ]]; then
 	git reset --hard "origin/$BRANCH"
 fi
 
+if [[ -f .env ]] && command -v python3 >/dev/null 2>&1; then
+	echo "🔗 Ensuring DIRECT_URL for Prisma migrations..."
+	python3 nginx/ensure-direct-url.py .env || true
+fi
+
+if [[ -f nginx/install-cloudflare-nginx.sh ]] && command -v nginx >/dev/null 2>&1; then
+	echo "☁️ Updating nginx Cloudflare real-IP + CORS maps..."
+	bash nginx/install-cloudflare-nginx.sh || true
+fi
+
 if docker compose version >/dev/null 2>&1; then
 	DOCKER_COMPOSE="docker compose"
 elif command -v docker-compose >/dev/null 2>&1; then
