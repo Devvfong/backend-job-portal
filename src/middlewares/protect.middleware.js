@@ -66,4 +66,51 @@ const protect = async (req, res, next) => {
   }
 };
 
+const optionalProtect = async (req, res, next) => {
+  let token;
+  if (req.headers.authorization && /^bearer/i.test(req.headers.authorization)) {
+    token = req.headers.authorization.split(" ")[1];
+  } else if (req.cookies?.token) {
+    token = req.cookies.token;
+  } else if (req.query?.token) {
+    token = req.query.token;
+  }
+
+  if (!token) return next();
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        isSuspended: true,
+        companyId: true,
+        company: {
+          select: {
+            companyName: true,
+            logo: true,
+            isVerified: true,
+          },
+        },
+        avatar: true,
+        headline: true,
+        bio: true,
+        location: true,
+        phone: true,
+        skills: true,
+        resume: true,
+      },
+    });
+  } catch {
+    // Invalid or expired token — proceed as unauthenticated guest
+  }
+
+  return next();
+};
+
 export default protect;
+export { optionalProtect };

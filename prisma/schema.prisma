@@ -96,6 +96,8 @@ model Job {
   salaryMax    Int?
   salaryMin    Int?
   status       JobStatus     @default(open)
+  startDate    DateTime?
+  endDate      DateTime?
   benefits     String?
   requirements String?
   category     String?

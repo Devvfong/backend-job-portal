@@ -41,6 +41,8 @@ logs/
 # IDE/editor
 .vscode/
 .idea/
+terminals/
+mcps/
 
 # OS files
 .DS_Store

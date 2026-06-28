@@ -1,6 +1,6 @@
 import express from "express";
 import { z } from "zod";
-import protect from "../middlewares/protect.middleware.js";
+import protect, { optionalProtect } from "../middlewares/protect.middleware.js";
 import authorize from "../middlewares/authorize.middleware.js";
 import validate from "../middlewares/validate.middleware.js";
 import decryptMiddleware from "../middlewares/decrypt.middleware.js";
@@ -16,7 +16,8 @@ import {
 } from "../controllers/job.controller.js";
 
 const router = express.Router();
-const baseJobSchema = z.object({
+
+const jobFieldsSchema = z.object({
   title: z.string().min(1),
   description: z.string().min(1),
   location: z.string().min(1),
@@ -37,28 +38,45 @@ const baseJobSchema = z.object({
   tags: z.array(z.string()).optional().default([]),
   companyId: z.number().optional(),
   status: z.enum(["open", "closed"]).optional(),
-});
-const salaryRangeSchema = baseJobSchema.refine((data) => {
-  if (data.salaryNegotiable) return true;
-  if (data.salaryMin == null || data.salaryMax == null) return true;
-  return data.salaryMin < data.salaryMax;
-}, {
-  message: "salaryMin must be less than salaryMax",
-  path: ["salaryMin"],
+  startDate: z.union([z.string(), z.date(), z.null()]).optional(),
+  endDate: z.union([z.string(), z.date(), z.null()]).optional(),
 });
 
-const createJobSchema = salaryRangeSchema.refine((data) => data.salaryNegotiable || (data.salaryMin != null && data.salaryMax != null), {
-  message: "Provide salaryMin and salaryMax unless salaryNegotiable is true",
-  path: ["salaryMin"],
-});
-const updateJobSchema = baseJobSchema.partial().refine((data) => {
+const hasValidDateRange = (data) => {
+  if (!data.startDate || !data.endDate) return true;
+  return new Date(data.endDate) >= new Date(data.startDate);
+};
+
+const hasValidSalaryRange = (data) => {
   if (data.salaryNegotiable) return true;
   if (data.salaryMin == null || data.salaryMax == null) return true;
   return data.salaryMin < data.salaryMax;
-}, {
-  message: "salaryMin must be less than salaryMax",
-  path: ["salaryMin"],
-});
+};
+
+const createJobSchema = jobFieldsSchema
+  .refine(hasValidDateRange, {
+    message: "endDate must be on or after startDate",
+    path: ["endDate"],
+  })
+  .refine(hasValidSalaryRange, {
+    message: "salaryMin must be less than salaryMax",
+    path: ["salaryMin"],
+  })
+  .refine((data) => data.salaryNegotiable || (data.salaryMin != null && data.salaryMax != null), {
+    message: "Provide salaryMin and salaryMax unless salaryNegotiable is true",
+    path: ["salaryMin"],
+  });
+
+const updateJobSchema = jobFieldsSchema
+  .partial()
+  .refine(hasValidDateRange, {
+    message: "endDate must be on or after startDate",
+    path: ["endDate"],
+  })
+  .refine(hasValidSalaryRange, {
+    message: "salaryMin must be less than salaryMax",
+    path: ["salaryMin"],
+  });
 router.post(
   "/create",
   protect,
@@ -79,7 +97,7 @@ router.delete("/:id", decryptMiddleware, protect, authorize("company_admin"), de
 router.get("/", getJobsController);
 router.get("/admin/all", protect, authorize("super_admin"), getAdminJobsController);
 router.get("/saved", protect, getSavedJobsController);
-router.get("/:id", decryptMiddleware, getJobByIdController);
+router.get("/:id", decryptMiddleware, optionalProtect, getJobByIdController);
 router.post("/:id/save", decryptMiddleware, protect, authorize("job_seeker"), toggleSaveJobController);
 
 export default router;

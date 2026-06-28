@@ -1,6 +1,27 @@
 import { prisma } from "../config/db.js";
 import { NotFoundError, ForbiddenError, BadRequestError } from "../lib/errors.js";
 
+const parseOptionalDate = (value) => {
+  if (value == null || value === "") return null;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    throw new BadRequestError("Invalid date value");
+  }
+  return parsed;
+};
+
+const assertValidJobDateRange = (startDate, endDate) => {
+  if (startDate && endDate && endDate < startDate) {
+    throw new BadRequestError("endDate must be on or after startDate");
+  }
+};
+
+const isJobWithinActiveWindow = (job, now = new Date()) => {
+  if (job.startDate && job.startDate > now) return false;
+  if (job.endDate && job.endDate < now) return false;
+  return true;
+};
+
 const createJobService = async (data, user) => {
   // super_admin can optionally pass companyId in the body to create jobs for any company;
   // otherwise the job is created for the user's linked company
@@ -45,6 +66,10 @@ const createJobService = async (data, user) => {
     throw new BadRequestError("A job with identical details already exists for this company");
   }
 
+  const startDate = parseOptionalDate(data.startDate);
+  const endDate = parseOptionalDate(data.endDate);
+  assertValidJobDateRange(startDate, endDate);
+
   return prisma.job.create({
       data: {
         companyId: Number(companyId),
@@ -60,6 +85,9 @@ const createJobService = async (data, user) => {
         category: data.category || null,
         skills,
         tags,
+        status: data.status === "closed" ? "closed" : "open",
+        startDate,
+        endDate,
       },
       include: {
         company: { select: { companyName: true, logo: true } },
@@ -87,8 +115,17 @@ const getJobService = async (query) => {
   const limitNumber = Math.min(100, Math.max(1, Number(limit) || 10));
   const skip = (pageNumber - 1) * limitNumber;
 
+  const now = new Date();
   const where = {
     status: "open",
+    AND: [
+      {
+        OR: [{ startDate: null }, { startDate: { lte: now } }],
+      },
+      {
+        OR: [{ endDate: null }, { endDate: { gte: now } }],
+      },
+    ],
   };
 
   if (search) {
@@ -176,9 +213,9 @@ const getJobService = async (query) => {
 
 
 // After (Adding the Company details)
-const getJobByIdService = async (id) => {
-  return prisma.job.findFirst({
-    where: { id: id, status: "open" },
+const getJobByIdService = async (id, user = null) => {
+  const job = await prisma.job.findFirst({
+    where: { id },
     include: {
       company: {
         select: {
@@ -188,10 +225,19 @@ const getJobByIdService = async (id) => {
           industry: true,
           location: true,
           isVerified: true,
-        }
-      }
-    }
+        },
+      },
+    },
   });
+
+  if (!job) return null;
+
+  const isOwner = user?.role === "company_admin" && user.companyId === job.companyId;
+  const isSuperAdmin = user?.role === "super_admin";
+  if (isOwner || isSuperAdmin) return job;
+
+  if (job.status !== "open" || !isJobWithinActiveWindow(job)) return null;
+  return job;
 };
 
 
@@ -226,8 +272,14 @@ const updateJobService = async (id, data, user) => {
   if (has("benefits")) updateData.benefits = data.benefits ?? "";
   if (has("category")) updateData.category = data.category || null;
   if (has("status")) updateData.status = data.status;
+  if (has("startDate")) updateData.startDate = parseOptionalDate(data.startDate);
+  if (has("endDate")) updateData.endDate = parseOptionalDate(data.endDate);
   if (has("skills")) updateData.skills = data.skills;
   if (has("tags")) updateData.tags = data.tags;
+
+  const nextStartDate = has("startDate") ? updateData.startDate : job.startDate;
+  const nextEndDate = has("endDate") ? updateData.endDate : job.endDate;
+  assertValidJobDateRange(nextStartDate, nextEndDate);
 
   if (has("salaryNegotiable")) {
     updateData.salaryNegotiable = data.salaryNegotiable;

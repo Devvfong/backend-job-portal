@@ -24,6 +24,14 @@ const applyToJobService = async (jobId, userId, data) => {
     throw new BadRequestError("Job is no longer accepting applications");
   }
 
+  const now = new Date();
+  if (job.startDate && job.startDate > now) {
+    throw new BadRequestError("This job is not open for applications yet");
+  }
+  if (job.endDate && job.endDate < now) {
+    throw new BadRequestError("The application deadline for this job has passed");
+  }
+
   const includeConfig = {
     user: {
       select: {

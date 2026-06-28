@@ -132,6 +132,61 @@ const buildNewJobNotification = (job) => {
   });
 };
 
+const buildCompanyAlertNotification = (company, alertType, reason) => {
+  const isSuspend = alertType === "suspended";
+  const reasonText = Array.isArray(reason) ? reason.join(", ") : (reason || "Violation of terms");
+  
+  return normalizeNotification({
+    id: `company-alert-${company.id}-${Date.now()}`,
+    type: alertType,
+    icon: isSuspend ? "alert-triangle" : "alert-circle",
+    title: isSuspend ? "Company Suspended" : "Company Warning",
+    message: isSuspend 
+      ? `Your company profile was suspended. Reason: ${reasonText}`
+      : `Your company received a warning. Reason: ${reasonText}`,
+    time: new Date(),
+    read: false,
+    link: "/dashboard/company",
+  });
+};
+
+const buildJobAlertNotification = (job, alertType) => {
+  const isClosed = alertType === "closed";
+  const companyName = job.company?.companyName || "the company";
+  
+  return normalizeNotification({
+    id: `job-alert-${job.id}-${Date.now()}`,
+    jobId: job.id,
+    type: alertType,
+    icon: isClosed ? "lock" : "trash",
+    title: isClosed ? "Job Closed" : "Job Removed",
+    message: isClosed 
+      ? `The job "${job.title}" at ${companyName} has been closed.`
+      : `The job "${job.title}" at ${companyName} has been removed.`,
+    time: new Date(),
+    read: false,
+    avatar: job.company?.logo || null,
+    link: `/jobs/${job.id}`,
+  });
+};
+
+const buildJobReopenedNotification = (job) => {
+  const companyName = job.company?.companyName || "a company";
+
+  return normalizeNotification({
+    id: `job-reopened-${job.id}-${Date.now()}`,
+    jobId: job.id,
+    type: "reopened",
+    icon: "unlock",
+    title: "Job Reopened",
+    message: `Applications are open again for "${job.title}" at ${companyName}.`,
+    time: new Date(),
+    read: false,
+    avatar: job.company?.logo || null,
+    link: `/jobs/${job.id}`,
+  });
+};
+
 const buildApplicationRemovalPayload = (applicationId) => ({
   applicationId,
   ids: getApplicationNotificationIds(applicationId),
@@ -225,6 +280,9 @@ export {
   buildNewApplicantNotification,
   buildSuperAdminApplicationNotification,
   buildNewJobNotification,
+  buildCompanyAlertNotification,
+  buildJobAlertNotification,
+  buildJobReopenedNotification,
   buildApplicationRemovalPayload,
   getNotificationsForUser,
 };

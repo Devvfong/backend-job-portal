@@ -17,6 +17,15 @@ socket.on("open", () => {
 
 socket.on("message", (raw) => {
   console.log("Message:", raw.toString());
+
+  try {
+    const message = JSON.parse(raw.toString());
+    if (message.event === "connection:ready") {
+      socket.close(1000, "smoke test complete");
+    }
+  } catch {
+    // non-JSON frames are logged only
+  }
 });
 
 socket.on("close", (code, reason) => {

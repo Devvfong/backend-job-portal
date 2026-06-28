@@ -13,9 +13,14 @@ import {
   getMyCompanyJobsService,
   getAdminJobsService,
 } from "../services/job.service.js";
-import { buildNewJobNotification } from "../services/notification.service.js";
+import {
+  buildNewJobNotification,
+  buildJobAlertNotification,
+  buildJobReopenedNotification,
+} from "../services/notification.service.js";
 import { emitNotificationToRole } from "../realtime/websocket.js";
 import { encryptId, decryptId } from "../utils/crypto.js";
+import { prisma } from "../config/db.js";
 
 const createJobController = async (req, res, next) => {
   try {
@@ -83,7 +88,7 @@ const getJobByIdController = async (req, res, next) => {
         throw new BadRequestError("Invalid job id");
       }
     }
-    const job = await getJobByIdService(id);
+    const job = await getJobByIdService(id, req.user);
 
     if (!job) {
       throw new NotFoundError("Job not found");
@@ -104,7 +109,33 @@ const getJobByIdController = async (req, res, next) => {
 const updateJobController = async (req, res, next) => {
   try {
     const id = Number(req.params.id);
+    const previousJob = await prisma.job.findUnique({
+      where: { id },
+      select: { status: true },
+    });
     const job = await updateJobService(id, req.body, req.user);
+
+    if (req.body.status && previousJob && req.body.status !== previousJob.status) {
+      const jobForAlert = await prisma.job.findUnique({
+        where: { id },
+        include: { company: { select: { companyName: true, logo: true } } },
+      });
+
+      if (jobForAlert) {
+        if (req.body.status === "closed") {
+          emitNotificationToRole(
+            "job_seeker",
+            buildJobAlertNotification(jobForAlert, "closed"),
+          );
+        } else if (req.body.status === "open") {
+          emitNotificationToRole(
+            "job_seeker",
+            buildJobReopenedNotification(jobForAlert),
+          );
+        }
+      }
+    }
+
     return res.status(200).json({
       status: "success",
       data: job,
@@ -117,7 +148,18 @@ const updateJobController = async (req, res, next) => {
 const deleteJobController = async (req, res, next) => {
   try {
     const id = Number(req.params.id);
+
+    const job = await prisma.job.findUnique({
+      where: { id },
+      include: { company: { select: { companyName: true, logo: true } } },
+    });
+    
     await deleteJobService(id, req.user);
+
+    if (job) {
+      emitNotificationToRole("job_seeker", buildJobAlertNotification(job, "removed"));
+    }
+
     return res.status(200).json({
       status: "success",
       message: "Job deleted successfully",

@@ -21,6 +21,8 @@ import {
 import {
   uploadCompanyAsset,
 } from "../services/upload.service.js";
+import { emitNotificationToCompany } from "../realtime/websocket.js";
+import { buildCompanyAlertNotification } from "../services/notification.service.js";
 import { encryptId, decryptId } from "../utils/crypto.js";
 
 const createCompanyController = async (req, res, next) => {
@@ -353,6 +355,11 @@ const suspendCompanyController = async (req, res, next) => {
     const reasonArray = Array.isArray(reason) ? reason : [reason].filter(Boolean);
     const adminId = req.user.id;
     const updated = await suspendCompanyService(id, suspend, reasonArray, adminId);
+    
+    if (suspend) {
+      emitNotificationToCompany(updated.id, buildCompanyAlertNotification(updated, 'suspended', reasonArray));
+    }
+
     return res.status(200).json({
       status: "success",
       data: { ...updated, encryptedId: encryptId(updated.id) },
@@ -369,6 +376,9 @@ const warnCompanyController = async (req, res, next) => {
     const reasonArray = Array.isArray(reason) ? reason : [reason].filter(Boolean);
     const adminId = req.user.id;
     const updated = await warnCompanyService(id, reasonArray, adminId);
+    
+    emitNotificationToCompany(updated.id, buildCompanyAlertNotification(updated, 'warning', reasonArray));
+
     return res.status(200).json({
       status: "success",
       data: { ...updated, encryptedId: encryptId(updated.id) },
