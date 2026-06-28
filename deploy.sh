@@ -24,10 +24,14 @@ echo "🔽 Stopping containers..."
 $DOCKER_COMPOSE down --remove-orphans
 
 echo "🔨 Building containers..."
-$DOCKER_COMPOSE build
+$DOCKER_COMPOSE build --no-cache
 
 echo "🚀 Starting containers..."
-$DOCKER_COMPOSE up -d
+$DOCKER_COMPOSE up -d --force-recreate
+
+echo "🗄️ Checking database migrations..."
+sleep 8
+docker logs nexthire-backend --tail 40 2>&1 || true
 
 echo "📊 Showing status..."
 $DOCKER_COMPOSE ps
