@@ -18,5 +18,7 @@ jobs:
           script: |
             cd /home/backend/job-portal
             export BRANCH=websocket
+            git fetch origin websocket
+            git reset --hard origin/websocket
             chmod +x deploy.sh
-            ./deploy.sh
+            bash deploy.sh

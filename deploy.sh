@@ -7,8 +7,8 @@ BRANCH="${BRANCH:-websocket}"
 if [[ -d .git ]]; then
 	echo "🔽 Pulling latest from origin/$BRANCH..."
 	git fetch origin "$BRANCH"
-	git checkout "$BRANCH"
-	git pull --ff-only origin "$BRANCH"
+	git checkout -B "$BRANCH" "origin/$BRANCH"
+	git reset --hard "origin/$BRANCH"
 fi
 
 if docker compose version >/dev/null 2>&1; then
