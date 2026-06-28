@@ -85,6 +85,12 @@ for H in \
   fi
 done
 
+if echo "$FE_HEADERS" | grep -qi "x-powered-by:"; then
+  fail "Frontend exposes X-Powered-By (should be stripped by nginx)"
+else
+  pass "Frontend does not expose X-Powered-By"
+fi
+
 header "WebSocket endpoint"
 if command -v node >/dev/null 2>&1; then
   if ACCESS_TOKEN="${ACCESS_TOKEN:-test}" WS_URL="$WS_URL" node "$ROOT_DIR/features/realtime/test-websocket.js" >/dev/null 2>&1; then
