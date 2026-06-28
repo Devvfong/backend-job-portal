@@ -87,14 +87,18 @@ Last known: **18/18 passed** on VPS.
 | Phase | Status | Output |
 | --- | --- | --- |
 | 1 Reconnaissance | **Done** | `recon-report.json` |
-| 2 Injection | Not started | `injection-findings.json` |
+| 2 Injection | **Done** (77 probes, 0 confirmed) | `injection-findings.json` |
 | 3 XSS | Not started | `xss-findings.json` |
 | 4 Auth | Not started | `auth-findings.json` |
 | 5 Access control | Not started | `access-control-findings.json` |
 | 6 Headers | **Done** | `headers-audit.json` |
 | 7 Report | Waiting on 2–5 | final report |
 
-### Phase 2+ prerequisites
+### Phase 3 next
+- XSS on reflection points from Phase 2 (frontend `/jobs?q=`, API error messages)
+- Run: `node security/run-injection-phase2.js` to re-test injection
+
+### Phase 4+ prerequisites
 - Test accounts: `job_seeker`, `company_admin` (optional `super_admin`)
 - User approval before brute-force (Phase 4 gate)
 - Scope: production API + frontend only (no destructive scans)
