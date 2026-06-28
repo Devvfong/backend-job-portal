@@ -16,16 +16,7 @@ jobs:
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            # Navigate to the backend directory on your server
             cd /home/backend/job-portal
-            
-            # Pull the latest changes from the websocket branch
-            git fetch origin websocket
-            git checkout websocket
-            git pull origin websocket
-            
-            # Make sure the deploy script is executable
+            export BRANCH=websocket
             chmod +x deploy.sh
-            
-            # Run the deploy script (this stops containers, rebuilds, and starts them in detached mode)
             ./deploy.sh

@@ -2,6 +2,15 @@
 
 set -e
 
+BRANCH="${BRANCH:-websocket}"
+
+if [[ -d .git ]]; then
+	echo "🔽 Pulling latest from origin/$BRANCH..."
+	git fetch origin "$BRANCH"
+	git checkout "$BRANCH"
+	git pull --ff-only origin "$BRANCH"
+fi
+
 if docker compose version >/dev/null 2>&1; then
 	DOCKER_COMPOSE="docker compose"
 elif command -v docker-compose >/dev/null 2>&1; then
