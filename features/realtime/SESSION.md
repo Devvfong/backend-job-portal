@@ -54,7 +54,17 @@ Saved state after production deploy + WebSocket fixes on the `websocket` branch.
 ## Verify production
 
 ```bash
-# 1. Smoke test (any valid access token)
+# Full automated check (CORS, headers, WS, API/UI up)
+npm run verify:production
+
+# On the VPS (adds localhost bind + nginx + docker checks)
+npm run verify:production:vps
+# or: bash features/realtime/verify-production.sh --vps
+
+# With a real seeker access token (also tests connection:ready)
+ACCESS_TOKEN=<token> npm run verify:production
+
+# 1. Smoke test only
 WS_URL=wss://nexthire.devqii.me/ws ACCESS_TOKEN=<token> node features/realtime/test-websocket.js
 # Expect: connection:ready then exit 0
 

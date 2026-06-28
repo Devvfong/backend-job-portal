@@ -16,6 +16,8 @@
     "mcp:local": "npx -y @neondatabase/mcp-server-neon start $NEON_API_KEY",
     "mcp:local:win": "cmd /c \"npx -y @neondatabase/mcp-server-neon start %NEON_API_KEY%\"",
     "lint": "eslint src/",
+    "verify:production": "bash features/realtime/verify-production.sh",
+    "verify:production:vps": "bash features/realtime/verify-production.sh --vps",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
