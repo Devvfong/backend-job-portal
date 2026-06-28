@@ -2,7 +2,7 @@
 # Install Cloudflare real-IP trust + refresh CORS maps on the VPS nginx.
 set -euo pipefail
 
-BACKEND_DIR="${BACKEND_DIR:-/home/backend/job-portal}"
+BACKEND_DIR="${BACKEND_DIR:-/home/backend/nexthire}"
 CF_CONF="/etc/nginx/conf.d/cloudflare-real-ip.conf"
 CORS_CONF="/etc/nginx/conf.d/cors-map.conf"
 DEVQII_SITE="/etc/nginx/sites-available/devqii.me"
