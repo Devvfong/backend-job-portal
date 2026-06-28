@@ -53,7 +53,7 @@ realtime/websocket.js         → transport only (auth, client maps, broadcast)
 
 ### WebSocket path
 
-`ws://localhost:5000/ws` (production: `wss://<api-domain>/ws`)
+`ws://localhost:5000/ws` (production browser: `wss://nexthire.devqii.me/ws` via frontend nginx → backend :5000)
 
 Preferred auth: connect with no token in URL, then send:
 
@@ -147,11 +147,13 @@ Before marking realtime work done:
 
 - WebSocket at `/ws` with first-message auth
 - Shared notification payloads
-- Apply, status, withdraw, new job, super_admin emits
-- Frontend realtime hook + NotificationBell
-- Access/refresh token separation
-- Nginx `/ws` proxy
+- Apply, status, withdraw, new job, close/reopen, super_admin emits
+- Frontend realtime client + live jobs UI
+- Access/refresh token separation (prod refresh cookie: `SameSite=None`)
+- Production deploy on `websocket` branch (not `main`)
+- Nginx `/ws` proxy (API + frontend same-origin WS)
 - Integration guide + E2E script (12/12 passed live)
+- Session handoff: `features/realtime/SESSION.md`
 
 ### Not done yet
 

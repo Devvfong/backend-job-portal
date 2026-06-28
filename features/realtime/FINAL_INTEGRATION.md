@@ -8,10 +8,12 @@ This document is the combined, finalized reference for realtime notifications in
 
 ## 1. Quick Start & Status
 
-**Status: DONE (websocket branch)**
-- Live E2E: **12/12 passed**. Pushed to remote. No merge to `main` yet.
-- Backend: `websocket` branch (`80cbf3e`+)
-- Frontend (separate repo): `websocket` branch (`b05ac92`+)
+**Status: DONE + deployed to production (`websocket` branch)**
+- Live E2E: **12/12 passed** (local)
+- Production auto-deploy: push to `websocket` on both repos (not `main`)
+- Backend: `ed9a51e`+ — `Devvfong/backend-job-portal`
+- Frontend: `f062ea5`+ — `Devvfong/job-portal-ui`
+- Session snapshot: `features/realtime/SESSION.md`
 
 ### Run locally
 ```bash
@@ -83,15 +85,29 @@ realtime/websocket.js    → Transport only (Auth, client maps, broadcast)
 | `src/services/notification.service.js` | Payload builders + HTTP feed |
 | `src/controllers/application.controller.js` | Emit on apply/status/withdraw |
 | `src/controllers/job.controller.js` | Emit on open job create |
-| `nginx/default.conf` | `/ws` upgrade headers |
+| `nginx/default.conf` | API domain `/ws` upgrade (`devqii.me`) |
+| `src/utils/generateToken.js` | Refresh cookie `SameSite=None` in production |
 
 ### Frontend (Separate Repo)
 | File | Role |
 | --- | --- |
-| `lib/realtime.ts` | WS URL, dedupe helpers, token refresh |
+| `lib/realtime.ts` | WS URL (same-origin prod, localhost dev), token refresh |
+| `lib/realtime-client.ts` | Singleton WS connection |
 | `lib/auth-session.ts` | `persistAccessToken`, `clearAccessSession` |
-| `hooks/useRealtimeNotifications.ts` | Connect, auth frame, reconnect |
+| `components/layout/RealtimeProvider.tsx` | App-wide WS lifecycle |
+| `hooks/useRealtimeNotifications.ts` | Subscribe to WS events |
+| `hooks/useRealtimeJobEvents.ts` | Live job list/detail updates |
+| `deploy/nginx-nexthire-ui.conf` | Proxies `/ws` → backend :5000 |
 | `components/shared/NotificationBell.tsx` | HTTP load + realtime merge |
+
+### Production WebSocket URL
+
+```text
+Browser: wss://nexthire.devqii.me/ws   (nginx on frontend VPS → 127.0.0.1:5000)
+Local:   ws://localhost:5000/ws
+```
+
+After deploy or cookie changes: **log out and log in again** on production.
 
 ---
 
@@ -131,11 +147,17 @@ node features/realtime/e2e-websocket.js
 
 ---
 
-## 8. Not in Scope Yet (Future Work)
+## 8. Production Deploy
+
+- Branch: `websocket` only (GitHub Actions → VPS `143.198.86.248`)
+- Backend path: `/home/backend/job-portal`
+- Frontend path: `/opt/nexthire-ui`
+- Migrations: `npx prisma migrate deploy` on backend container start
+
+## 9. Not in Scope Yet (Future Work)
 
 - Postgres `Notification` table (notifications are currently computed, not stored).
 - DB read/unread state (read state is frontend browser-only today).
 - Redis for multi-instance WS (in-memory client map does not scale horizontally).
-- Production deploy verification.
 - Automated CI integration tests (only manual E2E script exists).
 - Rate limiting on `/ws` (optional hardening).
