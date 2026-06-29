@@ -1,6 +1,6 @@
-# Session Handoff — 2026-06-28 (Security + Production)
+# Session Handoff — 2026-06-29 (Frontend Security + OAuth)
 
-Saved state after production hardening, OWASP Phase 1–2 security testing.
+Saved state after CSP hardening, OAuth handoff, Playwright CI, and production verification.
 
 ---
 
@@ -19,95 +19,153 @@ Saved state after production hardening, OWASP Phase 1–2 security testing.
 
 | Repo | Path | Remote | Branch | Latest commit |
 | --- | --- | --- | --- | --- |
-| Backend | `C:\job-portal\backend` | `Devvfong/backend-job-portal` | `websocket` | `605be86` |
-| Frontend | `C:\Users\devqii\Downloads\job-portal-ui` | `Devvfong/job-portal-ui` | `websocket` | `536d516` |
+| Backend | `C:\job-portal\backend` | `Devvfong/backend-job-portal` | `websocket` | `6139126` |
+| Frontend | `C:\Users\devqii\Downloads\job-portal-ui` | `Devvfong/job-portal-ui` | `websocket` | `dc23f58` |
 
 **Production deploys from `websocket` only** (not `main`). Push → GitHub Actions → VPS.
 
 ---
 
-## VPS layout
+## What was completed this session
 
-| What | Path |
-| --- | --- |
-| Backend git + deploy | `/home/backend/nexthire` |
-| Symlink (legacy) | `/home/backend/job-portal` → `nexthire` |
-| Frontend git + deploy | `/opt/nexthire-ui` |
-| nginx frontend | `/etc/nginx/sites-available/nexthire-ui` |
-| nginx API | `/etc/nginx/sites-available/devqii.me` |
-| CORS map | `/etc/nginx/conf.d/cors-map.conf` |
-| Cloudflare real-IP | `/etc/nginx/conf.d/cloudflare-real-ip.conf` |
+### OAuth (no token in URL)
+- **Backend** `d887920`: GitHub/LinkedIn callbacks set `jwt` refresh cookie only; redirect to `/auth/callback` without `?token=`
+- **Frontend** `415f516`: `OAuthCallbackClient` exchanges cookie via `POST /auth/refresh` + `credentials: 'include'`, then `/auth/me`
 
-**Docker (localhost only):** `nexthire-ui` → `127.0.0.1:3001`, `nexthire-backend` → `127.0.0.1:5000`
+### Security headers
+- **Frontend** `9fac024`, `5a8429d`: CSP, COOP, CORP; nginx dedupes duplicate headers from Next
+- **Frontend** `415f516`: `POST /api/csp-report` + `report-uri` in enforcing CSP
+- **Frontend** `668f90c`: Self-hosted Leaflet (npm bundle); removed `unpkg.com` from CSP
+- **Frontend** `d21e25b`: `Content-Security-Policy-Report-Only` (no `unsafe-inline`) for violation telemetry
+- **Frontend** `dc23f58`: Per-request nonce via `proxy.ts` (not `middleware.ts` — Next.js 16 conflict)
 
----
+### Other hardening
+- `rel="noopener noreferrer"` on external `_blank` links
+- `window.open(..., 'noopener,noreferrer')` on admin API docs handoff
+- Company dashboard animations moved from inline `<style>` → `globals.css`
+- Async `JsonLd` reads `x-nonce` from `proxy.ts` for JSON-LD scripts
 
-## Security testing (`security/`)
-
-| File | Purpose |
-| --- | --- |
-| `Web Security Testing.md` | OWASP 7-phase playbook |
-| `recon-report.json` | Phase 1 — 104 endpoints |
-| `injection-findings.json` | Phase 2 — 77 probes, **0 confirmed** |
-| `headers-audit.json` | Phase 6 headers |
-| `run-injection-phase2.js` | Re-run Phase 2 script |
-| `SESSION.md` | This handoff |
-
-### Phase status
-
-| Phase | Status | Output |
-| --- | --- | --- |
-| 1 Reconnaissance | **Done** | `recon-report.json` |
-| 2 Injection | **Done** | `injection-findings.json` |
-| 3 XSS | **Next** | `xss-findings.json` |
-| 4 Auth | Not started | `auth-findings.json` |
-| 5 Access control | Not started | `access-control-findings.json` |
-| 6 Headers | **Done** | `headers-audit.json` |
-| 7 Report | Waiting on 3–5 | final report |
-
-### Phase 2 summary
-- SQLi, NoSQL, LDAP, path traversal on public API + frontend `/jobs?q=`
-- Code review: no raw SQL in `src/`, Prisma parameterized queries
-- **Gate passed** — proceed to Phase 3
-- Not tested without auth: job create, file uploads, application patch
-
-### Phase 3 targets (XSS)
-- Reflected: `https://nexthire.devqii.me/jobs?q=`, `jobType=`
-- Stored: job title/description, company profile, user bio (needs tokens)
-- DOM: URL hash/fragment on frontend
-
-### Phase 4–5 prerequisites
-- Test accounts: `job_seeker`, `company_admin` (optional `super_admin`)
-- User approval before brute-force (Phase 4 gate)
+### CI & verify
+- **Frontend** `d21e25b`: Playwright `tests/security-headers.spec.ts` + `.github/workflows/security.yml`
+- **Backend** `39868ef` → `6139126`: `features/realtime/verify-production.sh` now **24 checks** (was 11)
 
 ---
 
-## Production security (done)
+## Production CSP (live)
 
-- CORS whitelist, Cloudflare real-IP, security headers, `X-Powered-By` stripped
-- `DIRECT_URL` + Prisma `directUrl` for Neon migrations
-- `npm run verify:production` (11 checks) / `--vps` (18 checks)
+**Enforcing** (`Content-Security-Policy`):
+```
+script-src 'self' 'unsafe-inline'
+style-src 'self' 'unsafe-inline'
+report-uri https://nexthire.devqii.me/api/csp-report
+```
+No `unpkg.com`.
+
+**Report-only** (`Content-Security-Policy-Report-Only`):
+```
+script-src 'self'
+style-src 'self'
+```
+Violations POST to `/api/csp-report` (logged as `[csp-report]` in container logs). Site still works — report-only does not block.
+
+---
+
+## Verification (all passing)
+
+```bash
+# Backend repo — remote checks (24 passed)
+bash features/realtime/verify-production.sh
+
+# Frontend repo — Playwright (3 passed)
+cd C:\Users\devqii\Downloads\job-portal-ui
+npm run test:security
+```
+
+Last verified: **2026-06-29** — Playwright 3/3, verify-production 24/24.
+
+---
+
+## Key files
+
+| Area | Path |
+| --- | --- |
+| CSP builders | `job-portal-ui/lib/security-headers.mjs` |
+| CSP report API | `job-portal-ui/app/api/csp-report/route.ts` |
+| OAuth callback UI | `job-portal-ui/components/forms/OAuthCallbackClient.tsx` |
+| OAuth routes | `backend/src/routes/github.routes.js`, `linkedin.routes.js` |
+| Nonce + auth proxy | `job-portal-ui/proxy.ts` |
+| nginx CSP | `job-portal-ui/deploy/nginx-nexthire-ui.conf`, `setup-nginx.sh` |
+| Playwright tests | `job-portal-ui/tests/security-headers.spec.ts` |
+| Production verify | `backend/features/realtime/verify-production.sh` |
+| Security reference | `job-portal-ui/security/Frontend Security Coder.md` (not committed) |
+
+---
+
+## Deploy notes
+
+- VPS frontend path: `/opt/nexthire-ui`
+- Deploy runs `docker compose up --build` then `deploy/setup-nginx.sh`
+- **Build takes 3–5+ minutes** — headers lag until Docker + nginx finish
+- **Do not add `middleware.ts`** — Next.js 16 uses `proxy.ts` only; both files break the build
+
+### Why deploy looked “stuck”
+1. First push (`d21e25b`) failed build: `middleware.ts` + `proxy.ts` conflict
+2. Fixed in `dc23f58` — nonce merged into `proxy.ts`
+3. Tests run before deploy finished will fail until new image is live
+
+---
+
+## Not committed (intentional)
+
+| Path | Reason |
+| --- | --- |
+| `job-portal-ui/next-env.d.ts` | Auto-generated local dev path |
+| `job-portal-ui/security/` | Reference doc only |
+| `job-portal-ui/test-results/` | Playwright artifacts |
+| `backend/agent-tools/`, `k8s/` | Local/untracked |
+
+---
+
+## Deferred / next steps
+
+| Priority | Task |
+| --- | --- |
+| 1 | **Watch CSP reports** — `docker logs nexthire-ui` for `[csp-report]`; identify remaining inline script/style violations |
+| 2 | **Enforcing nonce CSP** — drop `unsafe-inline` once violations are near zero; extend `proxy.ts` to set nonce in enforcing CSP |
+| 3 | **Chart inline styles** — `components/ui/chart.tsx` dynamic `<style>` still violates report-only policy |
+| 4 | **OAuth live test** — click GitHub/LinkedIn login; confirm no `?token=` in URL and dashboard loads |
+| 5 | **OWASP Phase 3 XSS** — `security/Web Security Testing.md`; output `xss-findings.json` |
+| 6 | **Postgres Notification table** | Realtime branch backlog (see `Agents.md`) |
 
 ---
 
 ## Commands
 
 ```bash
-# Health check
-npm run verify:production
+# Production verify (24 checks)
+cd C:\job-portal\backend
+bash features/realtime/verify-production.sh
 
-# Re-run Phase 2 injection
-node security/run-injection-phase2.js
+# Playwright security smoke
+cd C:\Users\devqii\Downloads\job-portal-ui
+npm run test:security
 
-# VPS verify
+# Check live CSP headers
+curl -sI https://nexthire.devqii.me | grep -i content-security
+
+# VPS logs (CSP violations)
 ssh root@143.198.86.248
-cd /home/backend/nexthire && bash features/realtime/verify-production.sh --vps
+docker logs nexthire-ui 2>&1 | grep csp-report | tail -20
+
+# Re-run OWASP Phase 2 injection
+cd C:\job-portal\backend
+node security/run-injection-phase2.js
 ```
 
 ---
 
 ## Resume next session
 
-1. Open `security/SESSION.md` (this file)
-2. Run **Phase 3 XSS** → output `xss-findings.json`
-3. Provide test accounts before Phase 4–5
+1. Open this file: `security/SESSION.md`
+2. Run `bash features/realtime/verify-production.sh` and `npm run test:security` to confirm still green
+3. Pick next item from **Deferred** table above
