@@ -1,9 +1,10 @@
 import crypto from "crypto";
 
 const ENCRYPTION_KEY = String(process.env.ENCRYPTION_KEY || "");
+const ENCRYPTION_KEY_PREVIOUS = String(process.env.ENCRYPTION_KEY_PREVIOUS || "");
 
-function getKey() {
-  return crypto.createHash("sha256").update(ENCRYPTION_KEY).digest();
+function getKey(secret = ENCRYPTION_KEY) {
+  return crypto.createHash("sha256").update(secret).digest();
 }
 
 function base64urlEncode(buf) {
@@ -27,9 +28,8 @@ export function encryptId(plain) {
   return base64urlEncode(payload);
 }
 
-export function decryptId(token) {
-  if (!ENCRYPTION_KEY) throw new Error("ENCRYPTION_KEY not configured");
-  const key = getKey();
+function decryptIdWithKey(token, secret) {
+  const key = getKey(secret);
   const buf = base64urlDecode(token);
   const iv = buf.slice(0, 12);
   const tag = buf.slice(12, 28);
@@ -38,6 +38,21 @@ export function decryptId(token) {
   decipher.setAuthTag(tag);
   const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
   return decrypted.toString("utf8");
+}
+
+export function decryptId(token) {
+  if (!ENCRYPTION_KEY) throw new Error("ENCRYPTION_KEY not configured");
+  try {
+    return decryptIdWithKey(token, ENCRYPTION_KEY);
+  } catch (primaryError) {
+    if (
+      ENCRYPTION_KEY_PREVIOUS &&
+      ENCRYPTION_KEY_PREVIOUS !== ENCRYPTION_KEY
+    ) {
+      return decryptIdWithKey(token, ENCRYPTION_KEY_PREVIOUS);
+    }
+    throw primaryError;
+  }
 }
 
 export default { encryptId, decryptId };
