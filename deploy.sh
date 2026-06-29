@@ -3,6 +3,12 @@
 set -e
 
 BRANCH="${BRANCH:-websocket}"
+LOCK_FILE="${LOCK_FILE:-/tmp/nexthire-backend-deploy.lock}"
+exec 9>"$LOCK_FILE"
+if ! flock -n 9; then
+	echo "❌ Another backend deploy is already running. Exiting."
+	exit 1
+fi
 
 if [[ -d .git ]]; then
 	echo "🔽 Pulling latest from origin/$BRANCH..."
@@ -31,13 +37,15 @@ else
 fi
 
 echo "🔽 Stopping containers..."
-$DOCKER_COMPOSE down --remove-orphans
+$DOCKER_COMPOSE down --remove-orphans || true
 
-echo "🔨 Building containers..."
-$DOCKER_COMPOSE build --no-cache
-
-echo "🚀 Starting containers..."
-$DOCKER_COMPOSE up -d --force-recreate
+echo "🔨 Building and starting containers..."
+if [[ "${BUILD_NO_CACHE:-}" == "1" ]]; then
+	$DOCKER_COMPOSE build --no-cache
+	$DOCKER_COMPOSE up -d --force-recreate
+else
+	$DOCKER_COMPOSE up -d --build --force-recreate
+fi
 
 echo "🗄️ Checking database migrations..."
 sleep 8
