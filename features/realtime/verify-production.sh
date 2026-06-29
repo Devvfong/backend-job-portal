@@ -110,6 +110,11 @@ if [[ -n "$CSP_LINE" ]]; then
   else
     fail "CSP missing report-uri ${FRONTEND_URL}/api/csp-report"
   fi
+  if echo "$CSP_LINE" | grep -qi "unpkg.com"; then
+    fail "CSP still allows unpkg.com (should be self-hosted)"
+  else
+    pass "CSP does not allow unpkg.com"
+  fi
 else
   fail "Frontend missing content-security-policy"
 fi
