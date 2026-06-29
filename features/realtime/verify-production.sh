@@ -119,6 +119,23 @@ else
   fail "Frontend missing content-security-policy"
 fi
 
+CSP_RO_LINE="$(echo "$FE_HEADERS" | tr -d '\r' | grep -i '^content-security-policy-report-only:' | head -1 || true)"
+if [[ -n "$CSP_RO_LINE" ]]; then
+  pass "Frontend has content-security-policy-report-only"
+  if echo "$CSP_RO_LINE" | grep -qi "unsafe-inline"; then
+    fail "CSP report-only should not include unsafe-inline"
+  else
+    pass "CSP report-only excludes unsafe-inline"
+  fi
+  if echo "$CSP_RO_LINE" | grep -qi "report-uri ${FRONTEND_URL}/api/csp-report"; then
+    pass "CSP report-only report-uri points to ${FRONTEND_URL}/api/csp-report"
+  else
+    fail "CSP report-only missing report-uri"
+  fi
+else
+  fail "Frontend missing content-security-policy-report-only"
+fi
+
 for H in "cross-origin-opener-policy:" "cross-origin-resource-policy:"; do
   if echo "$FE_HEADERS" | grep -qi "$H"; then
     pass "Frontend has ${H%%:}"
