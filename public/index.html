@@ -26,40 +26,15 @@
       <h1>NextHire Backend Is Live</h1>
       <p>
         This service powers authentication, users, companies, jobs, and applications.
-        Use the links below to explore OpenAPI and interactive API docs.
+        API base URL: <code>/api/v1</code>
       </p>
-      <div class="actions">
-        <button class="btn docs protected-link" data-target="/docs" type="button">Open Scalar API Docs</button>
-        <button class="btn openapi protected-link" data-target="/docs#tag/Auth" type="button">Test Auth
-          Endpoints</button>
-        <button class="btn auth protected-link" data-target="/docs#tag/Jobs" type="button">Test Jobs API</button>
-      </div>
-      <p class="hint">Base URL: /api/v1</p>
     </section>
   </main>
-  <div class="modal-backdrop" id="authModal">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-      <h2 id="modalTitle">Enter Access Credentials</h2>
-      <div class="field">
-        <label for="tokenInput">Bearer Token</label>
-        <input id="tokenInput" type="password" placeholder="Paste your token" />
-      </div>
-      <p class="error-msg" id="errorMsg"></p>
-      <div class="modal-actions">
-        <button class="modal-btn" id="cancelBtn" type="button">Cancel</button>
-        <button class="modal-btn primary" id="submitBtn" type="button">Open</button>
-      </div>
-    </div>
-  </div>
-  <script src="/js/analytics-v2.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
   <script>
-    // Example: Encrypt job ID for URL
-    const secretKey = 'default-secret-key-change-in-prod'; // Match backend
-    function encryptId(id) {
-      return CryptoJS.AES.encrypt(id.toString(), secretKey).toString();
-    }
-    // Usage: const encrypted = encryptId(505); // Then use in URL like /jobs/${encrypted}
+    document.addEventListener("click", () => {
+      const bg = document.getElementById("bgMusic");
+      if (bg) bg.play().catch(() => {});
+    }, { once: true });
   </script>
 </body>
 

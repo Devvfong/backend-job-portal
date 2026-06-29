@@ -21,7 +21,12 @@ const openApiDocument = {
   ],
   tags: [
     { name: "System", description: "Health and documentation" },
-    { name: "Auth", description: "Authentication, refresh cookies, and docs handoff" },
+    {
+      name: "Auth",
+      description:
+        "Sign-up, login, session refresh, and account recovery. Access tokens (~5 min) go in JSON or Bearer header; " +
+        "refresh tokens (~1 day) use the httpOnly `jwt` cookie only.",
+    },
     { name: "Jobs", description: "Job postings management" },
     { name: "Users", description: "User profile and resume management" },
     { name: "Companies", description: "Company profiles and logo management" },
@@ -306,6 +311,9 @@ const openApiDocument = {
       post: {
         tags: ["Auth"],
         summary: "Register a new user",
+        description:
+          "Creates a new `job_seeker` account. Sends a verification email; the user must verify before logging in. " +
+          "Password may be RSA-encrypted by the frontend. Blocked when `maintenance_mode` is enabled. Rate limited: 10 requests per 15 minutes per IP.",
         requestBody: {
           required: true,
           content: { "application/json": { schema: { $ref: "#/components/schemas/RegisterRequest" } } },
@@ -320,7 +328,11 @@ const openApiDocument = {
     "/api/v1/auth/login": {
       post: {
         tags: ["Auth"],
-        summary: "Login and receive JWT cookie",
+        summary: "Login (access token in JSON + refresh cookie)",
+        description:
+          "Authenticates with email and password. Returns a short-lived access token in `data.token` (~5 min) for Bearer API calls and WebSocket auth. " +
+          "Also sets an httpOnly `jwt` refresh cookie (~1 day) used only by POST /api/v1/auth/refresh. " +
+          "Requires a verified email; suspended accounts are rejected. Rate limited: 10 requests per 15 minutes per IP.",
         requestBody: {
           required: true,
           content: { "application/json": { schema: { $ref: "#/components/schemas/LoginRequest" } } },
@@ -336,6 +348,9 @@ const openApiDocument = {
       post: {
         tags: ["Auth"],
         summary: "Logout current user",
+        description:
+          "Ends the session for the authenticated user. Clears the httpOnly `jwt` refresh cookie and invalidates the stored refresh token in the database. " +
+          "Requires a valid access token (Bearer header or `token` cookie).",
         security: [{ cookieAuth: [] }, { bearerAuth: [] }],
         responses: {
           200: { description: "Logged out successfully" },
@@ -390,6 +405,9 @@ const openApiDocument = {
       get: {
         tags: ["Auth"],
         summary: "Get current authenticated user info",
+        description:
+          "Returns the logged-in user's profile (name, email, role, `encryptedId`, resume signed URL, etc.). " +
+          "Requires a valid access token (Bearer header or `token` cookie).",
         security: [{ cookieAuth: [] }, { bearerAuth: [] }],
         responses: {
           200: { description: "User details returned" },
@@ -401,6 +419,9 @@ const openApiDocument = {
       post: {
         tags: ["Auth"],
         summary: "Request a password reset link",
+        description:
+          "Sends a password-reset email if an account exists for the given email. Always returns the same success message (does not reveal whether the email is registered). " +
+          "Rate limited: 3 requests per hour per IP.",
         requestBody: {
           required: true,
           content: { "application/json": { schema: { type: "object", properties: { email: { type: "string" } } } } },
@@ -412,6 +433,9 @@ const openApiDocument = {
       post: {
         tags: ["Auth"],
         summary: "Reset password using token",
+        description:
+          "Sets a new password using the token from the reset email link. Body field is `password` (not `newPassword`). " +
+          "Password may be RSA-encrypted by the frontend. Rate limited: 10 requests per 15 minutes per IP.",
         requestBody: {
           required: true,
           content: {
@@ -438,6 +462,8 @@ const openApiDocument = {
       post: {
         tags: ["Auth"],
         summary: "Verify user email",
+        description:
+          "Confirms the user's email using the token from the signup verification link. Required before the user can log in.",
         requestBody: {
           required: true,
           content: { "application/json": { schema: { type: "object", properties: { token: { type: "string" } } } } },
