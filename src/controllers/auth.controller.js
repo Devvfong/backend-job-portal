@@ -277,6 +277,39 @@ const verifyEmail = async (req, res, next) => {
   }
 };
 
+const docsHandoff = async (req, res, next) => {
+  try {
+    const raw = req.query.token;
+    const token = typeof raw === "string" ? raw : Array.isArray(raw) ? raw[0] : "";
+    if (!token) {
+      return next(new UnauthorizedError("Not authorized, no token"));
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (decoded.role !== "super_admin") {
+      return next(new ForbiddenError("Only super admins can access API docs"));
+    }
+
+    const isProduction = process.env.NODE_ENV === "production";
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: "lax",
+      maxAge: 5 * 60 * 1000,
+      path: "/",
+    });
+
+    const base = (process.env.BACKEND_URL || process.env.API_URL || `${req.protocol}://${req.get("host")}`)
+      .replace(/\/$/, "");
+    return res.redirect(302, `${base}/docs`);
+  } catch (error) {
+    if (error.name === "TokenExpiredError") {
+      return next(new UnauthorizedError("Not authorized, token expired"));
+    }
+    return next(new UnauthorizedError("Not authorized, invalid token"));
+  }
+};
+
 export {
   register,
   login,
@@ -286,4 +319,5 @@ export {
   forgotPassword,
   resetPasswordController,
   verifyEmail,
+  docsHandoff,
 };

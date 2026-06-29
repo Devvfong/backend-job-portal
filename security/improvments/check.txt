@@ -1,0 +1,253 @@
+# NextHire — Security Improvement Recommendations
+
+**Date:** 2026-06-29
+**Assessment scope:** `nexthire.devqii.me` (frontend) · `devqii.me/api/v1` (backend)
+**Branch:** websocket (production)
+
+---
+
+## Summary
+
+No confirmed exploitable vulnerabilities were found. All items below are hardening recommendations derived from live probes, code review, and testing gaps identified during the 5-phase assessment.
+
+| Priority | Count |
+|---|---|
+| Medium | 2 |
+| Low | 6 |
+| Info | 2 |
+
+---
+
+## Medium
+
+### IMP-001 — Add Content-Security-Policy on frontend
+
+**File:** `next.config.js` or nginx config
+**Risk:** Without CSP, any future XSS has no browser-level containment.
+
+Start with report-only mode to avoid breaking existing behavior:
+
+```js
+// next.config.js
+const securityHeaders = [
+  {
+    key: "Content-Security-Policy-Report-Only",
+    value: [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline'",  // tighten after audit
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: https:",
+      "connect-src 'self' https://devqii.me wss://nexthire.devqii.me",
+      "font-src 'self'",
+      "report-uri /api/csp-report",
+    ].join("; "),
+  },
+];
+```
+
+Once stable, switch to enforcing `Content-Security-Policy` and remove `'unsafe-inline'` by moving styles to external files.
+
+---
+
+### IMP-002 — Escape `</script>` in JsonLd output
+
+**File:** `components/shared/JsonLd.tsx`
+**Risk:** `dangerouslySetInnerHTML + JSON.stringify` does not escape `<`. A job title containing `</script><script>alert(1)</script>` breaks out of the JSON-LD script block — stored XSS via company_admin.
+
+```tsx
+// Before (vulnerable)
+<script
+  type="application/ld+json"
+  dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+/>
+
+// After (safe)
+<script
+  type="application/ld+json"
+  dangerouslySetInnerHTML={{
+    __html: JSON.stringify(data).replace(/</g, '\\u003c'),
+  }}
+/>
+```
+
+`\u003c` is valid JSON and renders correctly in browsers — it only prevents script-tag breakout.
+
+---
+
+## Low
+
+### IMP-003 — Rate-limit `POST /auth/refresh`
+
+**File:** `auth.routes.js`
+**Risk:** No rate limit on the refresh endpoint means an attacker with a stolen refresh cookie can generate access tokens indefinitely.
+
+```js
+import rateLimit from "express-rate-limit";
+
+const refreshRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 min
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { status: "fail", message: "Too many refresh attempts, please try again later" },
+});
+
+router.post("/refresh", refreshRateLimiter, authController.refresh);
+```
+
+---
+
+### IMP-004 — Remove token acceptance via query string
+
+**File:** `protect.middleware.js`
+**Risk:** `req.query.token` causes JWT to appear in URLs — logged by Cloudflare, nginx, and any proxy in between. Token leakage via referrer headers and server logs.
+
+```js
+// Before
+const token =
+  req.headers.authorization?.split(" ")[1] ||
+  req.query.token;
+
+// After — header or cookie only
+const token = req.headers.authorization?.startsWith("Bearer ")
+  ? req.headers.authorization.split(" ")[1]
+  : null;
+```
+
+---
+
+### IMP-005 — Fix `jobType` returning 500 on invalid enum values
+
+**File:** Job query handler / Zod schema for `GET /api/v1/jobs`
+**Risk:** Invalid `jobType` values crash to 500 instead of returning 400. Not an injection risk (Prisma handles it) but leaks unhandled exception behavior and breaks client error handling.
+
+```js
+// Add to query param Zod schema
+const jobQuerySchema = z.object({
+  search:   z.string().optional(),
+  location: z.string().optional(),
+  jobType:  z.enum(["FULL_TIME", "PART_TIME", "CONTRACT", "INTERNSHIP", "REMOTE"]).optional(),
+  page:     z.coerce.number().int().positive().optional(),
+  limit:    z.coerce.number().int().positive().max(100).optional(),
+});
+```
+
+Apply `validate(jobQuerySchema)` middleware on the `GET /jobs` route before it hits the controller.
+
+---
+
+### IMP-006 — Reorder middleware on `POST /jobs/create`
+
+**File:** `job.routes.js`
+**Risk:** `validate()` runs before `authorize()` — a job_seeker sending an invalid body receives 400 instead of 403, which leaks middleware execution order and is inconsistent RBAC behavior.
+
+```js
+// Before
+router.post("/create", protect, validate(createJobSchema), authorize("company_admin"), createJobController);
+
+// After
+router.post("/create", protect, authorize("company_admin"), validate(createJobSchema), createJobController);
+```
+
+---
+
+### IMP-007 — Add per-email login throttle
+
+**File:** `auth.routes.js` or `auth.service.js`
+**Risk:** Current rate limit is IP-based only. An attacker rotating IPs (proxies, botnets) can still brute-force a specific account.
+
+```js
+// Track failed attempts per email in Redis
+const perEmailKey = `login_fail:${hashEmail(email)}`;
+const fails = await redis.incr(perEmailKey);
+await redis.expire(perEmailKey, 60 * 15); // 15 min window
+
+if (fails > 5) {
+  return res.status(429).json({
+    status: "fail",
+    message: "Too many failed attempts for this account, please try again later",
+  });
+}
+```
+
+Reset the counter on successful login.
+
+---
+
+### IMP-008 — Enforce mass assignment protection with Zod `.strict()`
+
+**File:** Job, application, and user service schemas
+**Risk:** Extra fields sent in request body (e.g. `role`, `companyId`, `isVerified`) are silently ignored by Prisma — but only because the service layer explicitly maps fields. `.strict()` adds an explicit rejection layer.
+
+```js
+const createJobSchema = z.object({
+  title:        z.string().min(3).max(100),
+  description:  z.string().min(10),
+  requirements: z.string().optional(),
+  benefits:     z.string().optional(),
+  jobType:      z.enum(["FULL_TIME", "PART_TIME", "CONTRACT", "INTERNSHIP", "REMOTE"]),
+  location:     z.string().max(100),
+  salary:       z.string().optional(),
+  categoryId:   z.number().int().positive(),
+  skills:       z.array(z.string()).optional(),
+  tags:         z.array(z.string()).optional(),
+  closingDate:  z.string().datetime().optional(),
+}).strict(); // rejects any extra fields not in schema
+```
+
+Also ensure `companyId`, `status`, `role`, and `userId` are never accepted from `req.body` — always derived from `req.user`.
+
+---
+
+## Info
+
+### IMP-009 — Add MFA for admin accounts
+
+**Risk:** No MFA/OTP on `company_admin` or `super_admin` accounts. A compromised password is sufficient for full account takeover.
+
+Recommended approach: TOTP via `otplib` + QR code enrollment. Enforce on first login for admin roles. WebAuthn (passkeys) is the more future-proof option if you want to go further.
+
+---
+
+### IMP-010 — Add dependency CVE scanning to CI
+
+**Risk:** A06 (Vulnerable Components) was not assessed in this pass. Known CVEs in `npm` dependencies are a common attack vector.
+
+```bash
+# Run locally
+npm audit --audit-level=moderate
+
+# Add to CI pipeline (GitHub Actions)
+- name: Security audit
+  run: npm audit --audit-level=moderate
+  working-directory: ./backend
+```
+
+Consider adding `socket.dev` or `snyk` for continuous monitoring beyond `npm audit`.
+
+---
+
+## Testing gaps to close
+
+These were not live-tested during the assessment and should be verified before the next security review:
+
+| Gap | How to close |
+|---|---|
+| Stored XSS on `description`/`requirements` | Rerun Phase 3 with fresh `COMPANY_ADMIN_TOKEN` |
+| Session invalidation on logout | Live test with real session: login → logout → attempt reuse of old access token |
+| Dependency CVE scan | `npm audit` on both `/frontend` and `/backend` |
+| Phase 2 injection on `/jobs` + `/companies` | API returned 502 during test run — rerun when stable |
+
+---
+
+## Pre-deploy checklist
+
+Before each production deploy, verify:
+
+- [ ] `npm audit` passes at `--audit-level=moderate` on frontend and backend
+- [ ] `jobType` query param returns 400 (not 500) for invalid values
+- [ ] `authorize()` runs before `validate()` on all protected routes
+- [ ] No `req.query.token` references in middleware
+- [ ] `JsonLd.tsx` escapes `<` in JSON.stringify output
+- [ ] CSP header present (at minimum in report-only mode)
+- [ ] `POST /auth/refresh` has rate limiter attached

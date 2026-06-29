@@ -1,0 +1,642 @@
+{
+  "phase": 5,
+  "phaseName": "Access Control Testing",
+  "completedAt": "2026-06-29T04:38:54.028Z",
+  "target": "https://devqii.me/api/v1",
+  "methodology": "Unauthenticated route probes; vertical/horizontal IDOR with job_seeker + company_admin tokens; code review of ownership checks",
+  "auth": {
+    "source": "jwt_sign",
+    "seekerId": 200,
+    "adminId": 184,
+    "authenticatedTestsRun": true,
+    "error": null
+  },
+  "probeIds": {
+    "otherCompanyJobId": 580,
+    "ownCompanyJobId": 388
+  },
+  "summary": {
+    "testsRun": 32,
+    "confirmedVulnerabilities": 0,
+    "passedChecks": 32,
+    "authenticatedTests": 23,
+    "codeReviewItems": 6,
+    "gateStatus": "pass",
+    "proceedToPhase7": true
+  },
+  "unauthenticated": [
+    {
+      "test": "unauth:GET /users",
+      "method": "GET",
+      "route": "/users",
+      "expected": [
+        401
+      ],
+      "actual": 401,
+      "code": "UNAUTHORIZED",
+      "message": "Not authorized, no token",
+      "pass": true,
+      "vuln": false,
+      "severity": "none",
+      "reason": "Returned 401 as expected",
+      "error": null
+    },
+    {
+      "test": "unauth:GET /jobs/admin/all",
+      "method": "GET",
+      "route": "/jobs/admin/all",
+      "expected": [
+        401
+      ],
+      "actual": 401,
+      "code": "UNAUTHORIZED",
+      "message": "Not authorized, no token",
+      "pass": true,
+      "vuln": false,
+      "severity": "none",
+      "reason": "Returned 401 as expected",
+      "error": null
+    },
+    {
+      "test": "unauth:GET /settings",
+      "method": "GET",
+      "route": "/settings",
+      "expected": [
+        401
+      ],
+      "actual": 401,
+      "code": "UNAUTHORIZED",
+      "message": "Not authorized, no token",
+      "pass": true,
+      "vuln": false,
+      "severity": "none",
+      "reason": "Returned 401 as expected",
+      "error": null
+    },
+    {
+      "test": "unauth:GET /admin/logs",
+      "method": "GET",
+      "route": "/admin/logs",
+      "expected": [
+        401
+      ],
+      "actual": 401,
+      "code": "UNAUTHORIZED",
+      "message": "Not authorized, no token",
+      "pass": true,
+      "vuln": false,
+      "severity": "none",
+      "reason": "Returned 401 as expected",
+      "error": null
+    },
+    {
+      "test": "unauth:GET /stats/admin",
+      "method": "GET",
+      "route": "/stats/admin",
+      "expected": [
+        401
+      ],
+      "actual": 401,
+      "code": "UNAUTHORIZED",
+      "message": "Not authorized, no token",
+      "pass": true,
+      "vuln": false,
+      "severity": "none",
+      "reason": "Returned 401 as expected",
+      "error": null
+    },
+    {
+      "test": "unauth:GET /applications/company",
+      "method": "GET",
+      "route": "/applications/company",
+      "expected": [
+        401
+      ],
+      "actual": 401,
+      "code": "UNAUTHORIZED",
+      "message": "Not authorized, no token",
+      "pass": true,
+      "vuln": false,
+      "severity": "none",
+      "reason": "Returned 401 as expected",
+      "error": null
+    },
+    {
+      "test": "unauth:POST /jobs/create",
+      "method": "POST",
+      "route": "/jobs/create",
+      "expected": [
+        401
+      ],
+      "actual": 401,
+      "code": "UNAUTHORIZED",
+      "message": "Not authorized, no token",
+      "pass": true,
+      "vuln": false,
+      "severity": "none",
+      "reason": "Returned 401 as expected",
+      "error": null
+    },
+    {
+      "test": "unauth:PATCH /applications/1/status",
+      "method": "PATCH",
+      "route": "/applications/1/status",
+      "expected": [
+        401
+      ],
+      "actual": 401,
+      "code": "UNAUTHORIZED",
+      "message": "Not authorized, no token",
+      "pass": true,
+      "vuln": false,
+      "severity": "none",
+      "reason": "Returned 401 as expected",
+      "error": null
+    },
+    {
+      "test": "unauth:DELETE /applications/1",
+      "method": "DELETE",
+      "route": "/applications/1",
+      "expected": [
+        401
+      ],
+      "actual": 401,
+      "code": "UNAUTHORIZED",
+      "message": "Not authorized, no token",
+      "pass": true,
+      "vuln": false,
+      "severity": "none",
+      "reason": "Returned 401 as expected",
+      "error": null
+    },
+    {
+      "test": "public_profile_scope",
+      "route": "GET /users/profile/200",
+      "finding": {
+        "vuln": false,
+        "severity": "none",
+        "reason": "Public profile omits email/phone/resume (by design)"
+      },
+      "evidence": {
+        "status": 200,
+        "fields": [
+          "id",
+          "name",
+          "headline",
+          "bio",
+          "location",
+          "avatar",
+          "skills",
+          "createdAt",
+          "updatedAt",
+          "encryptedId"
+        ]
+      }
+    }
+  ],
+  "authenticated": [
+    {
+      "test": "seeker:GET /applications/company",
+      "method": "GET",
+      "route": "/applications/company",
+      "expected": [
+        403
+      ],
+      "actual": 403,
+      "code": "FORBIDDEN",
+      "message": "Forbidden: insufficient permissions",
+      "pass": true,
+      "vuln": false,
+      "severity": "none",
+      "reason": "Returned 403 as expected",
+      "error": null,
+      "role": "seeker"
+    },
+    {
+      "test": "seeker:GET /applications/job/580/applicants",
+      "method": "GET",
+      "route": "/applications/job/580/applicants",
+      "expected": [
+        403
+      ],
+      "actual": 403,
+      "code": "FORBIDDEN",
+      "message": "Forbidden: insufficient permissions",
+      "pass": true,
+      "vuln": false,
+      "severity": "none",
+      "reason": "Returned 403 as expected",
+      "error": null,
+      "role": "seeker"
+    },
+    {
+      "test": "seeker:GET /jobs/admin/all",
+      "method": "GET",
+      "route": "/jobs/admin/all",
+      "expected": [
+        403
+      ],
+      "actual": 403,
+      "code": "FORBIDDEN",
+      "message": "Forbidden: insufficient permissions",
+      "pass": true,
+      "vuln": false,
+      "severity": "none",
+      "reason": "Returned 403 as expected",
+      "error": null,
+      "role": "seeker"
+    },
+    {
+      "test": "seeker:GET /users",
+      "method": "GET",
+      "route": "/users",
+      "expected": [
+        403
+      ],
+      "actual": 403,
+      "code": "FORBIDDEN",
+      "message": "Forbidden: insufficient permissions",
+      "pass": true,
+      "vuln": false,
+      "severity": "none",
+      "reason": "Returned 403 as expected",
+      "error": null,
+      "role": "seeker"
+    },
+    {
+      "test": "seeker:GET /stats/admin",
+      "method": "GET",
+      "route": "/stats/admin",
+      "expected": [
+        403
+      ],
+      "actual": 403,
+      "code": "FORBIDDEN",
+      "message": "Forbidden: insufficient permissions",
+      "pass": true,
+      "vuln": false,
+      "severity": "none",
+      "reason": "Returned 403 as expected",
+      "error": null,
+      "role": "seeker"
+    },
+    {
+      "test": "seeker:POST /jobs/create",
+      "method": "POST",
+      "route": "/jobs/create",
+      "expected": [
+        403
+      ],
+      "actual": 403,
+      "code": "FORBIDDEN",
+      "message": "Forbidden: insufficient permissions",
+      "pass": true,
+      "vuln": false,
+      "severity": "none",
+      "reason": "Returned 403 as expected",
+      "error": null,
+      "role": "seeker"
+    },
+    {
+      "test": "seeker:PATCH /applications/1/status",
+      "method": "PATCH",
+      "route": "/applications/1/status",
+      "expected": [
+        403
+      ],
+      "actual": 403,
+      "code": "FORBIDDEN",
+      "message": "Forbidden: insufficient permissions",
+      "pass": true,
+      "vuln": false,
+      "severity": "none",
+      "reason": "Returned 403 as expected",
+      "error": null,
+      "role": "seeker"
+    },
+    {
+      "test": "admin:GET /users",
+      "method": "GET",
+      "route": "/users",
+      "expected": [
+        403
+      ],
+      "actual": 403,
+      "code": "FORBIDDEN",
+      "message": "Forbidden: insufficient permissions",
+      "pass": true,
+      "vuln": false,
+      "severity": "none",
+      "reason": "Returned 403 as expected",
+      "error": null,
+      "role": "admin"
+    },
+    {
+      "test": "admin:GET /settings",
+      "method": "GET",
+      "route": "/settings",
+      "expected": [
+        403
+      ],
+      "actual": 403,
+      "code": "FORBIDDEN",
+      "message": "Forbidden: insufficient permissions",
+      "pass": true,
+      "vuln": false,
+      "severity": "none",
+      "reason": "Returned 403 as expected",
+      "error": null,
+      "role": "admin"
+    },
+    {
+      "test": "admin:GET /jobs/admin/all",
+      "method": "GET",
+      "route": "/jobs/admin/all",
+      "expected": [
+        403
+      ],
+      "actual": 403,
+      "code": "FORBIDDEN",
+      "message": "Forbidden: insufficient permissions",
+      "pass": true,
+      "vuln": false,
+      "severity": "none",
+      "reason": "Returned 403 as expected",
+      "error": null,
+      "role": "admin"
+    },
+    {
+      "test": "admin:GET /stats/admin",
+      "method": "GET",
+      "route": "/stats/admin",
+      "expected": [
+        403
+      ],
+      "actual": 403,
+      "code": "FORBIDDEN",
+      "message": "Forbidden: insufficient permissions",
+      "pass": true,
+      "vuln": false,
+      "severity": "none",
+      "reason": "Returned 403 as expected",
+      "error": null,
+      "role": "admin"
+    },
+    {
+      "test": "admin:PUT /users/1/suspend",
+      "method": "PUT",
+      "route": "/users/1/suspend",
+      "expected": [
+        403
+      ],
+      "actual": 403,
+      "code": "FORBIDDEN",
+      "message": "Forbidden: insufficient permissions",
+      "pass": true,
+      "vuln": false,
+      "severity": "none",
+      "reason": "Returned 403 as expected",
+      "error": null,
+      "role": "admin"
+    },
+    {
+      "test": "admin:cross-company applicants",
+      "method": "GET",
+      "route": "/applications/job/580/applicants",
+      "expected": [
+        403
+      ],
+      "actual": 403,
+      "code": "FORBIDDEN",
+      "message": "You can only view applicants for your own company jobs",
+      "pass": true,
+      "vuln": false,
+      "severity": "none",
+      "reason": "Returned 403 as expected",
+      "error": null,
+      "role": "company_admin",
+      "note": "Admin company vs job 580"
+    },
+    {
+      "test": "admin:cross-company job update",
+      "method": "PUT",
+      "route": "/jobs/580",
+      "expected": [
+        403
+      ],
+      "actual": 403,
+      "code": "FORBIDDEN",
+      "message": "You do not have permission to update this job",
+      "pass": true,
+      "vuln": false,
+      "severity": "none",
+      "reason": "Returned 403 as expected",
+      "error": null,
+      "role": "company_admin"
+    },
+    {
+      "test": "admin:cross-company job delete",
+      "method": "DELETE",
+      "route": "/jobs/580",
+      "expected": [
+        403
+      ],
+      "actual": 403,
+      "code": "FORBIDDEN",
+      "message": "You do not have permission to delete this job",
+      "pass": true,
+      "vuln": false,
+      "severity": "none",
+      "reason": "Returned 403 as expected",
+      "error": null,
+      "role": "company_admin"
+    },
+    {
+      "test": "admin:cross-company application status",
+      "method": "PATCH",
+      "route": "/applications/1/status",
+      "expected": [
+        403,
+        404
+      ],
+      "actual": 403,
+      "code": "FORBIDDEN",
+      "message": "You cannot manage applications for other companies",
+      "pass": true,
+      "vuln": false,
+      "severity": "none",
+      "reason": "Returned 403 as expected",
+      "error": null,
+      "role": "company_admin"
+    },
+    {
+      "test": "admin:own-company applicants",
+      "method": "GET",
+      "route": "/applications/job/388/applicants",
+      "expected": [
+        200,
+        403
+      ],
+      "actual": 200,
+      "code": null,
+      "message": null,
+      "pass": true,
+      "vuln": false,
+      "severity": "none",
+      "reason": "Returned 200 as expected",
+      "error": null,
+      "role": "company_admin",
+      "informational": true,
+      "note": "200 expected when job belongs to admin company"
+    },
+    {
+      "test": "seeker:withdraw app 1",
+      "method": "DELETE",
+      "route": "/applications/1",
+      "expected": [
+        403,
+        404
+      ],
+      "actual": 403,
+      "code": "FORBIDDEN",
+      "message": "You can only withdraw your own applications",
+      "pass": true,
+      "vuln": false,
+      "severity": "none",
+      "reason": "Returned 403 as expected",
+      "error": null,
+      "role": "job_seeker"
+    },
+    {
+      "test": "seeker:withdraw app 2",
+      "method": "DELETE",
+      "route": "/applications/2",
+      "expected": [
+        403,
+        404
+      ],
+      "actual": 403,
+      "code": "FORBIDDEN",
+      "message": "You can only withdraw your own applications",
+      "pass": true,
+      "vuln": false,
+      "severity": "none",
+      "reason": "Returned 403 as expected",
+      "error": null,
+      "role": "job_seeker"
+    },
+    {
+      "test": "seeker:withdraw app 3",
+      "method": "DELETE",
+      "route": "/applications/3",
+      "expected": [
+        403,
+        404
+      ],
+      "actual": 403,
+      "code": "FORBIDDEN",
+      "message": "You can only withdraw your own applications",
+      "pass": true,
+      "vuln": false,
+      "severity": "none",
+      "reason": "Returned 403 as expected",
+      "error": null,
+      "role": "job_seeker"
+    },
+    {
+      "test": "seeker:withdraw app 4",
+      "method": "DELETE",
+      "route": "/applications/4",
+      "expected": [
+        403,
+        404
+      ],
+      "actual": 403,
+      "code": "FORBIDDEN",
+      "message": "You can only withdraw your own applications",
+      "pass": true,
+      "vuln": false,
+      "severity": "none",
+      "reason": "Returned 403 as expected",
+      "error": null,
+      "role": "job_seeker"
+    },
+    {
+      "test": "seeker:withdraw app 7",
+      "method": "DELETE",
+      "route": "/applications/7",
+      "expected": [
+        403,
+        404
+      ],
+      "actual": 403,
+      "code": "FORBIDDEN",
+      "message": "You can only withdraw your own applications",
+      "pass": true,
+      "vuln": false,
+      "severity": "none",
+      "reason": "Returned 403 as expected",
+      "error": null,
+      "role": "job_seeker"
+    },
+    {
+      "test": "seeker:withdraw app 8",
+      "method": "DELETE",
+      "route": "/applications/8",
+      "expected": [
+        403,
+        404
+      ],
+      "actual": 403,
+      "code": "FORBIDDEN",
+      "message": "You can only withdraw your own applications",
+      "pass": true,
+      "vuln": false,
+      "severity": "none",
+      "reason": "Returned 403 as expected",
+      "error": null,
+      "role": "job_seeker"
+    }
+  ],
+  "codeReview": [
+    {
+      "item": "Application ownership",
+      "status": "pass",
+      "detail": "withdrawApplicationService checks application.userId === user.id",
+      "source": "application.service.js"
+    },
+    {
+      "item": "Applicant list scoping",
+      "status": "pass",
+      "detail": "getApplicantsForJobService checks user.companyId === job.companyId",
+      "source": "application.service.js"
+    },
+    {
+      "item": "Job mutate scoping",
+      "status": "pass",
+      "detail": "updateJobService/deleteJobService verify company_admin owns job.companyId",
+      "source": "job.service.js"
+    },
+    {
+      "item": "Role middleware",
+      "status": "pass",
+      "detail": "authorize() blocks non-matching roles; super_admin bypasses role list",
+      "source": "authorize.middleware.js"
+    },
+    {
+      "item": "Job create middleware order",
+      "status": "info",
+      "severity": "low",
+      "detail": "POST /jobs/create runs validate() before authorize() — wrong role may get 400 before 403 with invalid body",
+      "source": "job.routes.js"
+    },
+    {
+      "item": "Public user profiles",
+      "status": "by_design",
+      "detail": "GET /users/profile/:id is unauthenticated but returns getPublicProfile (no email/phone/resume)",
+      "source": "user.routes.js"
+    }
+  ],
+  "confirmed": [],
+  "decision": "No access control failures on tested routes — ready for Phase 7 report aggregation"
+}

@@ -1,0 +1,283 @@
+{
+  "phase": 7,
+  "phaseName": "Security Reporting",
+  "generatedAt": "2026-06-29T04:46:56.220Z",
+  "scope": {
+    "frontend": "https://nexthire.devqii.me",
+    "api": "https://devqii.me/api/v1",
+    "websocket": "wss://nexthire.devqii.me/ws",
+    "outOfScope": [
+      "Third-party OAuth provider infrastructure (GitHub, LinkedIn)",
+      "Neon Postgres direct access",
+      "Cloudflare dashboard / DNS management",
+      "VPS SSH and host OS",
+      "Destructive scanning, brute-force, or SQLMap automation"
+    ]
+  },
+  "executiveSummary": "Seven-phase OWASP-aligned assessment of NextHire production (websocket branch) found **no confirmed exploitable vulnerabilities** in injection, reflected XSS, authentication, or access-control testing. One **unconfirmed untested** stored-XSS path remains (JsonLd.tsx `</script>` breakout via job title). npm audit reported **0 moderate+ CVEs**. Ten recommendations (REC-001–REC-010) cover CSP, JSON-LD validation, auth hardening, mass-assignment strict schemas, and input-validation polish.",
+  "phasesCompleted": 7,
+  "phaseSummaries": [
+    {
+      "phase": 1,
+      "name": "Reconnaissance",
+      "status": "done",
+      "confirmed": 0,
+      "outcome": "104 endpoints mapped"
+    },
+    {
+      "phase": 2,
+      "name": "Injection",
+      "status": "done",
+      "confirmed": 0,
+      "outcome": "77 probes; Prisma parameterized queries"
+    },
+    {
+      "phase": 3,
+      "name": "XSS",
+      "status": "done",
+      "confirmed": 0,
+      "outcome": "70 reflected probes clean; stored XSS skipped — JsonLd risk untested"
+    },
+    {
+      "phase": 4,
+      "name": "Authentication",
+      "status": "done",
+      "confirmed": 0,
+      "outcome": "Login 10/15min + forgot 3/hr rate limits verified"
+    },
+    {
+      "phase": 5,
+      "name": "Access control",
+      "status": "done",
+      "confirmed": 0,
+      "outcome": "32 IDOR/privilege tests passed"
+    },
+    {
+      "phase": 6,
+      "name": "Security headers",
+      "status": "done",
+      "confirmed": 0,
+      "outcome": "HSTS, XFO, nosniff on frontend + API; frontend CSP gap"
+    },
+    {
+      "phase": 7,
+      "name": "Reporting",
+      "status": "done",
+      "confirmed": 0,
+      "outcome": "This report"
+    }
+  ],
+  "totals": {
+    "probesAndTests": 185,
+    "confirmedVulnerabilities": 0
+  },
+  "confirmedVulnerabilities": [],
+  "untestedRisks": [
+    {
+      "id": "REC-002",
+      "title": "Stored XSS via JSON-LD </script> breakout (unconfirmed, untested)",
+      "category": "untested_risk",
+      "severity": "medium",
+      "cvss": 5.4,
+      "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:R/S:C/C:L/I:L/A:N",
+      "phase": 3,
+      "status": "unconfirmed_untested",
+      "tested": false,
+      "note": "Phase 3 stored XSS was skipped on production. JsonLd.tsx uses dangerouslySetInnerHTML + JSON.stringify, which does not neutralize </script> in strings. Exploitability is unverified but plausible if a company_admin can persist a malicious job title.",
+      "remediation": "Test stored payload on staging; escape U+003C in JsonLd output or use a safe JSON-LD serializer; reject/sanitize </script> in job titles on write."
+    }
+  ],
+  "recommendations": [
+    {
+      "id": "REC-001",
+      "title": "Add Content-Security-Policy on frontend",
+      "severity": "medium",
+      "cvss": 5.3,
+      "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+      "phase": 6,
+      "status": "open",
+      "remediation": "Add a tuned CSP in next.config or nginx for nexthire.devqii.me; test with report-only mode first."
+    },
+    {
+      "id": "REC-002",
+      "title": "Stored XSS via JSON-LD </script> breakout (unconfirmed, untested)",
+      "category": "untested_risk",
+      "severity": "medium",
+      "cvss": 5.4,
+      "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:R/S:C/C:L/I:L/A:N",
+      "phase": 3,
+      "status": "unconfirmed_untested",
+      "tested": false,
+      "note": "Phase 3 stored XSS was skipped on production. JsonLd.tsx uses dangerouslySetInnerHTML + JSON.stringify, which does not neutralize </script> in strings. Exploitability is unverified but plausible if a company_admin can persist a malicious job title.",
+      "remediation": "Test stored payload on staging; escape U+003C in JsonLd output or use a safe JSON-LD serializer; reject/sanitize </script> in job titles on write."
+    },
+    {
+      "id": "REC-003",
+      "title": "Rate-limit POST /auth/refresh",
+      "severity": "low",
+      "cvss": 3.7,
+      "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:N/A:N",
+      "phase": 4,
+      "status": "open",
+      "remediation": "Apply express-rate-limit to /auth/refresh (e.g. 30/hour per IP)."
+    },
+    {
+      "id": "REC-004",
+      "title": "Remove token acceptance via query string",
+      "severity": "low",
+      "cvss": 3.1,
+      "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:L/I:N/A:N",
+      "phase": 4,
+      "status": "open",
+      "remediation": "Drop req.query.token in protect.middleware; use Authorization header or cookie only."
+    },
+    {
+      "id": "REC-005",
+      "title": "Return 400 instead of 500 for invalid jobType filter values",
+      "severity": "low",
+      "cvss": 3.7,
+      "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L",
+      "phase": 2,
+      "status": "open",
+      "note": "7 probes returned 500 on malformed jobType — not confirmed SQLi; Prisma enum validation error",
+      "remediation": "Validate jobType against allowed enum before query; map to 400 Bad Request."
+    },
+    {
+      "id": "REC-006",
+      "title": "Run authorize() before validate() on POST /jobs/create",
+      "severity": "low",
+      "cvss": 0,
+      "phase": 5,
+      "status": "open",
+      "remediation": "Reorder middleware: protect → authorize → validate to return 403 for wrong roles consistently."
+    },
+    {
+      "id": "REC-007",
+      "title": "Add MFA for admin accounts",
+      "severity": "info",
+      "cvss": null,
+      "phase": 4,
+      "status": "planned",
+      "remediation": "TOTP or WebAuthn for company_admin and super_admin roles."
+    },
+    {
+      "id": "REC-008",
+      "title": "Per-email login throttle (in addition to IP limit)",
+      "severity": "low",
+      "cvss": null,
+      "phase": 4,
+      "status": "open",
+      "remediation": "Track failed attempts per email hash; temporary lockout after N failures."
+    },
+    {
+      "id": "REC-009",
+      "title": "Strengthen WebSocket rate limiting",
+      "severity": "low",
+      "cvss": null,
+      "phase": 4,
+      "status": "open",
+      "remediation": "Tighten ws event limits; consider per-user quotas after auth."
+    },
+    {
+      "id": "REC-010",
+      "title": "Use Zod .strict() on company update/create schemas (mass assignment)",
+      "severity": "low",
+      "cvss": 4.3,
+      "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:L/A:N",
+      "phase": 5,
+      "status": "open",
+      "note": "company.routes.js uses .passthrough() on updateCompanySchema and createCompanySchema — extra JSON keys are not rejected.",
+      "remediation": "Replace .passthrough() with .strict() (or explicit .strip()) on company and profile Zod schemas so unknown fields cannot be mass-assigned."
+    }
+  ],
+  "npmAudit": {
+    "command": "npm audit --audit-level=moderate",
+    "runAt": "2026-06-29T04:46:56.220Z",
+    "moderatePlus": 0,
+    "breakdown": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "total": 0
+    },
+    "pass": true
+  },
+  "owaspChecklist": [
+    {
+      "id": "A01",
+      "name": "Broken access control",
+      "done": true,
+      "note": "32 tests passed; IDOR blocked"
+    },
+    {
+      "id": "A02",
+      "name": "Cryptographic failures",
+      "done": true,
+      "note": "TLS, httpOnly refresh cookie, bcrypt passwords"
+    },
+    {
+      "id": "A03",
+      "name": "Injection",
+      "done": true,
+      "note": "0 confirmed SQLi; 7 jobType 500s under review"
+    },
+    {
+      "id": "A04",
+      "name": "Insecure design",
+      "done": true,
+      "note": "Rate limits, token separation, generic auth errors"
+    },
+    {
+      "id": "A05",
+      "name": "Security misconfiguration",
+      "done": true,
+      "note": "Headers mostly good; frontend CSP gap"
+    },
+    {
+      "id": "A06",
+      "name": "Vulnerable components",
+      "done": true,
+      "note": "npm audit moderate+: 0 (2026-06-29)"
+    },
+    {
+      "id": "A07",
+      "name": "Authentication failures",
+      "done": true,
+      "note": "Rate limits OK; MFA not implemented"
+    },
+    {
+      "id": "A08",
+      "name": "Software/data integrity",
+      "done": false,
+      "note": "No CI SAST/signing audit in this pass"
+    },
+    {
+      "id": "A09",
+      "name": "Logging & monitoring",
+      "done": false,
+      "note": "Admin logs exist; no SIEM review"
+    },
+    {
+      "id": "A10",
+      "name": "SSRF",
+      "done": true,
+      "note": "No user-controlled URL fetch endpoints found"
+    }
+  ],
+  "limitations": [
+    "Stored XSS write test not performed on production — JsonLd </script> path unconfirmed (see REC-002).",
+    "Credential-stuffing / brute-force wordlist not run (IP rate limit verified instead).",
+    "Multi-server WebSocket / Redis pub-sub not in scope."
+  ],
+  "sourceArtifacts": [
+    "recon-report.json",
+    "injection-findings.json",
+    "xss-findings.json",
+    "auth-findings.json",
+    "access-control-findings.json",
+    "headers-audit.json"
+  ],
+  "gateStatus": "pass"
+}

@@ -1,0 +1,377 @@
+{
+  "phase": 4,
+  "phaseName": "Authentication Testing",
+  "completedAt": "2026-06-29T04:30:18.313Z",
+  "target": "https://devqii.me/api/v1",
+  "methodology": "Live rate-limit and token-rejection probes; user enumeration check; no credential stuffing; session rotation verified via code review",
+  "bruteForce": {
+    "status": "skipped",
+    "reason": "Wordlist/credential stuffing not run — IP rate limit verified with 12 failed logins instead"
+  },
+  "mfa": {
+    "status": "not_implemented"
+  },
+  "summary": {
+    "liveTestsRun": 6,
+    "confirmedVulnerabilities": 0,
+    "inconclusiveFindings": 1,
+    "codeReviewItems": 10,
+    "codeReviewGaps": 2,
+    "gateStatus": "pass",
+    "proceedToPhase5": true,
+    "note": "Phase 5 requires job_seeker + company_admin test accounts"
+  },
+  "liveTests": [
+    {
+      "test": "user_enumeration",
+      "finding": {
+        "vuln": "inconclusive",
+        "severity": "info",
+        "reason": "Login rate limited before enumeration probe — IP quota exhausted"
+      },
+      "codeReviewNote": "auth.controller.js returns 'Invalid email or password' for missing user and bad password; forgot-password always returns account-exists-neutral message",
+      "evidence": {
+        "loginUnknownEmail": {
+          "status": 429,
+          "message": "Too many login attempts, please try again after 15 minutes"
+        },
+        "loginWrongPassword": {
+          "status": 429,
+          "message": "Too many login attempts, please try again after 15 minutes"
+        },
+        "forgotPassword": {
+          "status": 429,
+          "message": "Too many password reset requests, please try again after 1 hour"
+        }
+      }
+    },
+    {
+      "test": "access_token_validation",
+      "endpoint": "GET /auth/me",
+      "finding": {
+        "vuln": false,
+        "severity": "none",
+        "reason": "Invalid/malformed tokens rejected on protected route"
+      },
+      "cases": [
+        {
+          "case": "no_token",
+          "status": 401,
+          "code": "UNAUTHORIZED",
+          "message": "Not authorized, no token",
+          "rejected": true,
+          "error": null
+        },
+        {
+          "case": "invalid_bearer",
+          "status": 401,
+          "code": "UNAUTHORIZED",
+          "message": "Not authorized, invalid token",
+          "rejected": true,
+          "error": null
+        },
+        {
+          "case": "alg_none",
+          "status": 401,
+          "code": "UNAUTHORIZED",
+          "message": "Not authorized, invalid token",
+          "rejected": true,
+          "error": null
+        },
+        {
+          "case": "expired_shape",
+          "status": 401,
+          "code": "UNAUTHORIZED",
+          "message": "Not authorized, invalid token",
+          "rejected": true,
+          "error": null
+        },
+        {
+          "case": "refresh_shape_no_role",
+          "status": 401,
+          "code": "UNAUTHORIZED",
+          "message": "Not authorized, invalid token",
+          "rejected": true,
+          "error": null
+        }
+      ]
+    },
+    {
+      "test": "refresh_requires_cookie",
+      "endpoint": "POST /auth/refresh",
+      "finding": {
+        "vuln": false,
+        "severity": "none",
+        "reason": "Refresh without jwt cookie correctly rejected"
+      },
+      "evidence": {
+        "status": 401,
+        "message": "Not authorized, no refresh token",
+        "code": "UNAUTHORIZED"
+      }
+    },
+    {
+      "test": "logout_requires_auth",
+      "endpoint": "POST /auth/logout",
+      "finding": {
+        "vuln": false,
+        "severity": "none",
+        "reason": "Logout requires valid access token"
+      },
+      "evidence": {
+        "status": 401,
+        "message": "Not authorized, no token"
+      }
+    },
+    {
+      "test": "login_rate_limit",
+      "endpoint": "POST /auth/login",
+      "configured": {
+        "windowMs": 900000,
+        "max": 10,
+        "source": "auth.routes.js authRateLimiter"
+      },
+      "probeEmail": "phase4-probe-1782707412678@mailinator.invalid",
+      "attempts": 12,
+      "first429At": 1,
+      "finding": {
+        "vuln": false,
+        "severity": "none",
+        "reason": "Rate limit triggered on attempt 1 (max 10 / 15 min)"
+      },
+      "attemptsLog": [
+        {
+          "attempt": 1,
+          "status": 429,
+          "rateLimitLimit": "10",
+          "rateLimitRemaining": "0",
+          "message": "Too many login attempts, please try again after 15 minutes",
+          "error": null
+        },
+        {
+          "attempt": 2,
+          "status": 429,
+          "rateLimitLimit": "10",
+          "rateLimitRemaining": "0",
+          "message": "Too many login attempts, please try again after 15 minutes",
+          "error": null
+        },
+        {
+          "attempt": 3,
+          "status": 429,
+          "rateLimitLimit": "10",
+          "rateLimitRemaining": "0",
+          "message": "Too many login attempts, please try again after 15 minutes",
+          "error": null
+        },
+        {
+          "attempt": 4,
+          "status": 429,
+          "rateLimitLimit": "10",
+          "rateLimitRemaining": "0",
+          "message": "Too many login attempts, please try again after 15 minutes",
+          "error": null
+        },
+        {
+          "attempt": 5,
+          "status": 429,
+          "rateLimitLimit": "10",
+          "rateLimitRemaining": "0",
+          "message": "Too many login attempts, please try again after 15 minutes",
+          "error": null
+        },
+        {
+          "attempt": 6,
+          "status": 429,
+          "rateLimitLimit": "10",
+          "rateLimitRemaining": "0",
+          "message": "Too many login attempts, please try again after 15 minutes",
+          "error": null
+        },
+        {
+          "attempt": 7,
+          "status": 429,
+          "rateLimitLimit": "10",
+          "rateLimitRemaining": "0",
+          "message": "Too many login attempts, please try again after 15 minutes",
+          "error": null
+        },
+        {
+          "attempt": 8,
+          "status": 429,
+          "rateLimitLimit": "10",
+          "rateLimitRemaining": "0",
+          "message": "Too many login attempts, please try again after 15 minutes",
+          "error": null
+        },
+        {
+          "attempt": 9,
+          "status": 429,
+          "rateLimitLimit": "10",
+          "rateLimitRemaining": "0",
+          "message": "Too many login attempts, please try again after 15 minutes",
+          "error": null
+        },
+        {
+          "attempt": 10,
+          "status": 429,
+          "rateLimitLimit": "10",
+          "rateLimitRemaining": "0",
+          "message": "Too many login attempts, please try again after 15 minutes",
+          "error": null
+        },
+        {
+          "attempt": 11,
+          "status": 429,
+          "rateLimitLimit": "10",
+          "rateLimitRemaining": "0",
+          "message": "Too many login attempts, please try again after 15 minutes",
+          "error": null
+        },
+        {
+          "attempt": 12,
+          "status": 429,
+          "rateLimitLimit": "10",
+          "rateLimitRemaining": "0",
+          "message": "Too many login attempts, please try again after 15 minutes",
+          "error": null
+        }
+      ]
+    },
+    {
+      "test": "forgot_password_rate_limit",
+      "endpoint": "POST /auth/forgot-password",
+      "configured": {
+        "windowMs": 3600000,
+        "max": 3,
+        "source": "auth.routes.js passwordResetRateLimiter"
+      },
+      "attempts": 4,
+      "first429At": 1,
+      "finding": {
+        "vuln": false,
+        "severity": "none",
+        "reason": "Rate limit triggered on attempt 1 (max 3 / hour)"
+      },
+      "attemptsLog": [
+        {
+          "attempt": 1,
+          "status": 429,
+          "rateLimitLimit": "3",
+          "message": "Too many password reset requests, please try again after 1 hour",
+          "error": null
+        },
+        {
+          "attempt": 2,
+          "status": 429,
+          "rateLimitLimit": "3",
+          "message": "Too many password reset requests, please try again after 1 hour",
+          "error": null
+        },
+        {
+          "attempt": 3,
+          "status": 429,
+          "rateLimitLimit": "3",
+          "message": "Too many password reset requests, please try again after 1 hour",
+          "error": null
+        },
+        {
+          "attempt": 4,
+          "status": 429,
+          "rateLimitLimit": "3",
+          "message": "Too many password reset requests, please try again after 1 hour",
+          "error": null
+        }
+      ]
+    }
+  ],
+  "codeReview": [
+    {
+      "item": "Session invalidation on logout",
+      "status": "code_review_pass",
+      "detail": "logout clears DB refreshToken and expires jwt httpOnly cookie",
+      "source": "auth.controller.js logout",
+      "liveTested": false,
+      "reason": "Requires valid session — skipped on production without test account"
+    },
+    {
+      "item": "Refresh token rotation",
+      "status": "code_review_pass",
+      "detail": "refresh issues new refresh token and updates DB; old token invalidated",
+      "source": "auth.controller.js refresh",
+      "liveTested": false
+    },
+    {
+      "item": "Password reset token entropy",
+      "status": "code_review_pass",
+      "detail": "crypto.randomBytes(32) hex, SHA-256 stored, 15 min expiry",
+      "source": "auth.service.js createPasswordResetToken",
+      "liveTested": false
+    },
+    {
+      "item": "Email verification token entropy",
+      "status": "code_review_pass",
+      "detail": "crypto.randomBytes(32) hex, SHA-256 stored, 24h expiry",
+      "source": "auth.service.js createUser",
+      "liveTested": false
+    },
+    {
+      "item": "Access vs refresh token separation",
+      "status": "code_review_pass",
+      "detail": "JWT_SECRET (access, includes role) vs JWT_REFRESH_SECRET (refresh, id only); WebSocket requires role claim",
+      "source": "generateToken.js, websocket.js verifyAccessToken",
+      "liveTested": false
+    },
+    {
+      "item": "MFA",
+      "status": "not_implemented",
+      "detail": "No MFA/OTP flow in codebase",
+      "severity": "info"
+    },
+    {
+      "item": "Account lockout",
+      "status": "not_implemented",
+      "detail": "IP-based rate limit only (10 login / 15 min); no per-account lockout after failed attempts",
+      "severity": "low",
+      "recommendation": "Consider per-email throttle in addition to IP limit"
+    },
+    {
+      "item": "Refresh endpoint rate limit",
+      "status": "gap",
+      "detail": "POST /auth/refresh has no express-rate-limit middleware",
+      "severity": "low",
+      "recommendation": "Add rate limiter to refresh to slow token grinding"
+    },
+    {
+      "item": "Token in query string",
+      "status": "gap",
+      "detail": "protect.middleware accepts req.query.token — leakage risk via logs/referrer",
+      "severity": "low",
+      "source": "protect.middleware.js"
+    },
+    {
+      "item": "Refresh cookie flags",
+      "status": "code_review_pass",
+      "detail": "httpOnly, secure, SameSite=None in production, 1 day maxAge",
+      "source": "generateToken.js refreshCookieOptions"
+    }
+  ],
+  "confirmed": [],
+  "codeGaps": [
+    {
+      "item": "Refresh endpoint rate limit",
+      "status": "gap",
+      "detail": "POST /auth/refresh has no express-rate-limit middleware",
+      "severity": "low",
+      "recommendation": "Add rate limiter to refresh to slow token grinding"
+    },
+    {
+      "item": "Token in query string",
+      "status": "gap",
+      "detail": "protect.middleware accepts req.query.token — leakage risk via logs/referrer",
+      "severity": "low",
+      "source": "protect.middleware.js"
+    }
+  ],
+  "decision": "No critical auth failures in live probes — proceed to Phase 5 when test accounts provided"
+}

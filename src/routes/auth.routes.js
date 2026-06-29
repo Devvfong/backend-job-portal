@@ -9,6 +9,7 @@ import {
   forgotPassword,
   resetPasswordController,
   verifyEmail,
+  docsHandoff,
 } from "../controllers/auth.controller.js";
 import validate from "../middlewares/validate.middleware.js";
 import protect from "../middlewares/protect.middleware.js";
@@ -64,6 +65,7 @@ router.post("/login", authRateLimiter, validate(loginSchema), login); // validat
 router.post("/forgot-password", passwordResetRateLimiter, validate(forgotPasswordSchema), forgotPassword);
 router.post("/reset-password", authRateLimiter, validate(resetPasswordSchema), resetPasswordController);
 router.post("/verify-email", validate(verifyEmailSchema), verifyEmail);
+router.get("/docs-handoff", docsHandoff);
 router.get("/me", protect, getMe);
 router.post("/refresh", refresh);
 router.post("/logout", protect, logout);
