@@ -91,6 +91,47 @@ else
   pass "Frontend does not expose X-Powered-By"
 fi
 
+CSP_LINE="$(echo "$FE_HEADERS" | tr -d '\r' | grep -i '^content-security-policy:' | head -1 || true)"
+if [[ -n "$CSP_LINE" ]]; then
+  pass "Frontend has content-security-policy"
+  for DIRECTIVE in \
+    "default-src 'self'" \
+    "connect-src" \
+    "frame-ancestors 'self'" \
+    "upgrade-insecure-requests"; do
+    if echo "$CSP_LINE" | grep -qi "$DIRECTIVE"; then
+      pass "CSP includes ${DIRECTIVE%% *}"
+    else
+      fail "CSP missing ${DIRECTIVE%% *}"
+    fi
+  done
+  if echo "$CSP_LINE" | grep -qi "report-uri ${FRONTEND_URL}/api/csp-report"; then
+    pass "CSP report-uri points to ${FRONTEND_URL}/api/csp-report"
+  else
+    fail "CSP missing report-uri ${FRONTEND_URL}/api/csp-report"
+  fi
+else
+  fail "Frontend missing content-security-policy"
+fi
+
+for H in "cross-origin-opener-policy:" "cross-origin-resource-policy:"; do
+  if echo "$FE_HEADERS" | grep -qi "$H"; then
+    pass "Frontend has ${H%%:}"
+  else
+    fail "Frontend missing ${H%%:}"
+  fi
+done
+
+CSP_REPORT_CODE="$(curl -sS -o /dev/null -w "%{http_code}" --max-time 15 \
+  -X POST "${FRONTEND_URL}/api/csp-report" \
+  -H "Content-Type: application/csp-report" \
+  -d '{"csp-report":{"violated-directive":"script-src"}}')"
+if [[ "$CSP_REPORT_CODE" == "204" ]]; then
+  pass "CSP report endpoint returns 204"
+else
+  fail "CSP report endpoint expected 204, got ${CSP_REPORT_CODE}"
+fi
+
 header "WebSocket endpoint"
 if command -v node >/dev/null 2>&1; then
   if ACCESS_TOKEN="${ACCESS_TOKEN:-test}" WS_URL="$WS_URL" node "$ROOT_DIR/features/realtime/test-websocket.js" >/dev/null 2>&1; then
