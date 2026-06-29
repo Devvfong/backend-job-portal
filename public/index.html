@@ -7,68 +7,101 @@
   <title>NextHire | Find Your Dream Career</title>
   <link rel="icon" type="image/png" href="/favicon.png" />
   <link rel="apple-touch-icon" href="/favicon.png" />
-  <meta name="description" content="NextHire connects talented job seekers with growing companies across Cambodia." />
+  <meta name="description" content="NextHire connects talented job seekers with growing companies." />
   <meta property="og:title" content="NextHire" />
   <meta property="og:description" content="Find your next career move." />
   <meta property="og:image" content="/favicon.png" />
-  <meta name="theme-color" content="#5bc8af" />
+  <meta name="theme-color" content="#4A9460" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap"
+    rel="stylesheet" />
   <link rel="stylesheet" href="/css/landing.css" />
 </head>
 
 <body>
-  <audio id="bgMusic" src="/bg-s.mp3" loop></audio>
-  <main>
-    <section class="card">
-      <header class="top-row">
-        <img src="/logo-dark.svg" alt="NextHire" class="logo" />
-        <div class="status-pill" id="statusPill" aria-live="polite">
-          <span class="status-dot" id="statusDot"></span>
-          <span id="statusText">Checking status…</span>
+  <div class="ambient" aria-hidden="true"></div>
+
+  <header class="site-header">
+    <a class="brand" id="appLink" href="http://localhost:3000" aria-label="NextHire home">
+      <img src="/logo-dark.svg" alt="" class="brand-logo" width="162" height="33" />
+    </a>
+    <div class="status" id="statusPill" aria-live="polite">
+      <span class="status-dot" id="statusDot"></span>
+      <span id="statusText">Checking status</span>
+    </div>
+  </header>
+
+  <main class="hero">
+    <div class="hero-badge">
+      <span class="hero-badge-dot"></span>
+      Cambodia job portal
+    </div>
+
+    <h1 class="hero-title">
+      Find your next
+      <span class="hero-accent">dream job</span>
+    </h1>
+
+    <p class="hero-copy">
+      Browse curated listings from verified companies. Apply in seconds and track
+      every application — powered by the NextHire API.
+    </p>
+
+    <div class="hero-actions">
+      <a class="btn btn-primary" id="jobsLink" href="http://localhost:3000/jobs">Browse jobs</a>
+      <a class="btn btn-secondary" id="loginLink" href="http://localhost:3000/login">Sign in</a>
+    </div>
+
+    <section class="stats" id="statsGrid" aria-label="Platform statistics">
+      <article class="stat-card">
+        <div class="stat-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+            <rect x="2" y="7" width="20" height="14" rx="2" />
+            <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
+          </svg>
         </div>
-      </header>
+        <p class="stat-value" data-stat="totalJobs">—</p>
+        <p class="stat-label">Active jobs</p>
+      </article>
 
-      <p class="eyebrow">Job portal platform</p>
-      <h1>Hire smarter.<br />Move faster.</h1>
-      <p class="lede">
-        NextHire powers job discovery, applications, company profiles, and live notifications
-        for seekers, employers, and admins.
-      </p>
+      <article class="stat-card">
+        <div class="stat-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+            <path d="M3 21h18" />
+            <path d="M5 21V7l7-4 7 4v14" />
+            <path d="M9 21v-6h6v6" />
+          </svg>
+        </div>
+        <p class="stat-value" data-stat="totalCompanies">—</p>
+        <p class="stat-label">Companies</p>
+      </article>
 
-      <div class="stats" id="statsGrid" aria-label="Platform statistics">
-        <article class="stat">
-          <span class="stat-value" data-stat="totalJobs">—</span>
-          <span class="stat-label">Job listings</span>
-        </article>
-        <article class="stat">
-          <span class="stat-value" data-stat="totalCompanies">—</span>
-          <span class="stat-label">Companies</span>
-        </article>
-        <article class="stat">
-          <span class="stat-value" data-stat="totalUsers">—</span>
-          <span class="stat-label">Job seekers</span>
-        </article>
-        <article class="stat">
-          <span class="stat-value" data-stat="totalApplications">—</span>
-          <span class="stat-label">Applications</span>
-        </article>
-      </div>
+      <article class="stat-card">
+        <div class="stat-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+            <circle cx="12" cy="8" r="4" />
+            <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+          </svg>
+        </div>
+        <p class="stat-value" data-stat="totalUsers">—</p>
+        <p class="stat-label">Job seekers</p>
+      </article>
 
-      <div class="actions">
-        <a class="btn primary" id="appLink" href="http://localhost:3000">Open NextHire</a>
-        <a class="btn ghost" id="jobsLink" href="http://localhost:3000/jobs">Browse jobs</a>
-      </div>
-
-      <ul class="tags" aria-label="Platform capabilities">
-        <li>Secure auth</li>
-        <li>Realtime alerts</li>
-        <li>Company dashboards</li>
-        <li>Resume uploads</li>
-      </ul>
+      <article class="stat-card">
+        <div class="stat-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <path d="M14 2v6h6M9 15l2 2 4-4" />
+          </svg>
+        </div>
+        <p class="stat-value" data-stat="totalApplications">—</p>
+        <p class="stat-label">Applications</p>
+      </article>
     </section>
   </main>
+
   <script src="/js/landing.js"></script>
 </body>
 
