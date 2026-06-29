@@ -1014,7 +1014,7 @@ const openApiDocument = {
         tags: ["OAuth"],
         summary: "GitHub OAuth callback (sets JWT cookie / redirects to frontend)",
         responses: {
-          302: { description: "Redirect back to frontend with token query param" },
+          302: { description: "Redirect to frontend /auth/callback (refresh cookie set; no token in URL)" },
           401: { description: "Authentication failed" },
         },
       },
@@ -1033,7 +1033,7 @@ const openApiDocument = {
         tags: ["OAuth"],
         summary: "LinkedIn OAuth callback (sets JWT cookie / redirects to frontend)",
         responses: {
-          302: { description: "Redirect back to frontend with token query param" },
+          302: { description: "Redirect to frontend /auth/callback (refresh cookie set; no token in URL)" },
           401: { description: "Authentication failed" },
         },
       },

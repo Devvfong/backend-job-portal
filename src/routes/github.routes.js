@@ -27,20 +27,11 @@ router.get(
       return res.redirect(`${frontendUrl}/login?error=maintenance`);
     }
 
-    const { accessToken, refreshToken } = generateTokens(req.user.id, req.user.role, res);
+    const { refreshToken } = generateTokens(req.user.id, req.user.role, res);
     updateRefreshToken(req.user.id, refreshToken).catch(console.error);
 
-    // Set access token as a non-httpOnly cookie so the frontend can read it
-    // without leaking it in the URL (browser history, server logs, Referer header).
-    res.cookie("access_token", accessToken, {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 5 * 60 * 1000, // 5 minutes — matches JWT expiry
-      path: "/",
-    });
-
-    res.redirect(`${frontendCallbackUrl()}?token=${accessToken}`);
+    // Refresh cookie (jwt) is set by generateTokens. Frontend exchanges it via POST /auth/refresh.
+    res.redirect(frontendCallbackUrl());
   },
 );
 
