@@ -1,17 +1,56 @@
 import { prisma } from "../config/db.js";
+import {
+  emitNotificationToCompany,
+  emitNotificationToRole,
+  emitNotificationToUser,
+} from "../realtime/websocket.js";
+
+const NOTIFICATION_LIST_LIMIT = 50;
 
 const normalizeNotification = (notification) => ({
   ...notification,
   createdAt: notification.createdAt ?? notification.time,
 });
 
-const getApplicationNotificationIds = (applicationId) => ([
+const recordToPayload = (record) =>
+  normalizeNotification({
+    id: record.id,
+    applicationId: record.applicationId ?? undefined,
+    jobId: record.jobId ?? undefined,
+    type: record.type,
+    icon: record.icon ?? undefined,
+    title: record.title,
+    message: record.message,
+    read: record.read,
+    link: record.link ?? undefined,
+    avatar: record.avatar ?? undefined,
+    time: record.createdAt,
+    createdAt: record.createdAt,
+  });
+
+const payloadToRecord = (userId, payload) => ({
+  userId,
+  id: String(payload.id),
+  type: payload.type || "info",
+  icon: payload.icon ?? null,
+  title: payload.title,
+  message: payload.message,
+  read: Boolean(payload.read),
+  link: payload.link ?? null,
+  avatar: payload.avatar ?? null,
+  applicationId: payload.applicationId ?? null,
+  jobId: payload.jobId ?? null,
+  createdAt: payload.time ? new Date(payload.time) : payload.createdAt ? new Date(payload.createdAt) : new Date(),
+});
+
+const getApplicationNotificationIds = (applicationId) => [
   `app-pending-${applicationId}`,
   `app-reviewed-${applicationId}`,
   `app-accepted-${applicationId}`,
   `app-rejected-${applicationId}`,
   `new-applicant-${applicationId}`,
-]);
+  `admin-applicant-${applicationId}`,
+];
 
 const buildSeekerApplicationNotification = (application, eventTime = null) => {
   const jobTitle = application.job?.title || "a job";
@@ -135,13 +174,13 @@ const buildNewJobNotification = (job) => {
 const buildCompanyAlertNotification = (company, alertType, reason) => {
   const isSuspend = alertType === "suspended";
   const reasonText = Array.isArray(reason) ? reason.join(", ") : (reason || "Violation of terms");
-  
+
   return normalizeNotification({
     id: `company-alert-${company.id}-${Date.now()}`,
     type: alertType,
     icon: isSuspend ? "alert-triangle" : "alert-circle",
     title: isSuspend ? "Company Suspended" : "Company Warning",
-    message: isSuspend 
+    message: isSuspend
       ? `Your company profile was suspended. Reason: ${reasonText}`
       : `Your company received a warning. Reason: ${reasonText}`,
     time: new Date(),
@@ -153,14 +192,14 @@ const buildCompanyAlertNotification = (company, alertType, reason) => {
 const buildJobAlertNotification = (job, alertType) => {
   const isClosed = alertType === "closed";
   const companyName = job.company?.companyName || "the company";
-  
+
   return normalizeNotification({
     id: `job-alert-${job.id}-${Date.now()}`,
     jobId: job.id,
     type: alertType,
     icon: isClosed ? "lock" : "trash",
     title: isClosed ? "Job Closed" : "Job Removed",
-    message: isClosed 
+    message: isClosed
       ? `The job "${job.title}" at ${companyName} has been closed.`
       : `The job "${job.title}" at ${companyName} has been removed.`,
     time: new Date(),
@@ -192,87 +231,155 @@ const buildApplicationRemovalPayload = (applicationId) => ({
   ids: getApplicationNotificationIds(applicationId),
 });
 
+const upsertNotificationForUser = async (userId, payload) => {
+  const record = payloadToRecord(userId, payload);
+  const saved = await prisma.notification.upsert({
+    where: {
+      userId_id: {
+        userId,
+        id: record.id,
+      },
+    },
+    create: record,
+    update: {
+      type: record.type,
+      icon: record.icon,
+      title: record.title,
+      message: record.message,
+      read: false,
+      link: record.link,
+      avatar: record.avatar,
+      applicationId: record.applicationId,
+      jobId: record.jobId,
+      createdAt: record.createdAt,
+    },
+  });
+
+  return recordToPayload(saved);
+};
+
+const persistNotificationForUsers = async (userIds, payload) => {
+  if (!userIds.length) return [];
+
+  const records = userIds.map((userId) => payloadToRecord(userId, payload));
+  await prisma.notification.createMany({
+    data: records,
+    skipDuplicates: true,
+  });
+
+  return records.map((record) => recordToPayload(record));
+};
+
+const getCompanyAdminIds = async (companyId) => {
+  if (!companyId) return [];
+  const users = await prisma.user.findMany({
+    where: { companyId, role: "company_admin" },
+    select: { id: true },
+  });
+  return users.map((user) => user.id);
+};
+
+const getUserIdsByRole = async (role) => {
+  const users = await prisma.user.findMany({
+    where: { role },
+    select: { id: true },
+  });
+  return users.map((user) => user.id);
+};
+
+const notifyUser = async (userId, payload) => {
+  const notification = await upsertNotificationForUser(userId, payload);
+  emitNotificationToUser(userId, notification);
+  return notification;
+};
+
+const notifyCompany = async (companyId, payload) => {
+  const userIds = await getCompanyAdminIds(companyId);
+  await persistNotificationForUsers(userIds, payload);
+  emitNotificationToCompany(companyId, payload);
+};
+
+const notifyRole = async (role, payload) => {
+  const userIds = await getUserIdsByRole(role);
+  await persistNotificationForUsers(userIds, payload);
+  emitNotificationToRole(role, payload);
+};
+
+const clearApplicationNotificationsForUser = async (userId, applicationId) => {
+  const ids = getApplicationNotificationIds(applicationId).filter(
+    (id) => id.startsWith("app-"),
+  );
+
+  await prisma.notification.deleteMany({
+    where: {
+      userId,
+      id: { in: ids },
+    },
+  });
+};
+
+const removeNotificationsForUser = async (userId, payload) => {
+  const ids = payload?.ids || [];
+  if (!ids.length) return;
+
+  await prisma.notification.deleteMany({
+    where: {
+      userId,
+      id: { in: ids.map(String) },
+    },
+  });
+};
+
 const getNotificationsForUser = async (user) => {
-  const notifications = [];
+  const records = await prisma.notification.findMany({
+    where: { userId: user.id },
+    orderBy: { createdAt: "desc" },
+    take: NOTIFICATION_LIST_LIMIT,
+  });
 
-  if (user.role === "job_seeker") {
-    const applications = await prisma.application.findMany({
-      where: { userId: user.id },
-      include: {
-        job: {
-          include: {
-            company: { select: { companyName: true, logo: true } },
-          },
-        },
-      },
-      orderBy: { appliedDate: "desc" },
-      take: 20,
-    });
+  return records.map(recordToPayload);
+};
 
-    for (const application of applications) {
-      notifications.push(buildSeekerApplicationNotification(application));
-    }
-
-    const recentJobs = await prisma.job.findMany({
+const markNotificationRead = async (userId, notificationId) => {
+  try {
+    const updated = await prisma.notification.update({
       where: {
-        createdAt: { gte: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) },
-        status: "open",
-      },
-      include: { company: { select: { companyName: true, logo: true } } },
-      take: 5,
-    });
-
-    for (const job of recentJobs) {
-      notifications.push(buildNewJobNotification(job));
-    }
-  } else if (user.role === "company_admin" && user.companyId) {
-    const applications = await prisma.application.findMany({
-      where: {
-        job: { companyId: user.companyId },
-        appliedDate: {
-          gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+        userId_id: {
+          userId,
+          id: String(notificationId),
         },
       },
-      include: {
-        job: { select: { id: true, title: true } },
-        user: { select: { id: true, name: true, avatar: true, headline: true } },
-      },
-      orderBy: { appliedDate: "desc" },
-      take: 20,
+      data: { read: true },
     });
-
-    for (const application of applications) {
-      notifications.push(buildNewApplicantNotification(application));
-    }
-  } else if (user.role === "super_admin") {
-    const applications = await prisma.application.findMany({
-      where: {
-        appliedDate: {
-          gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-        },
-      },
-      include: {
-        job: {
-          select: {
-            id: true,
-            title: true,
-            company: { select: { companyName: true, logo: true } },
-          },
-        },
-        user: { select: { id: true, name: true, avatar: true, headline: true } },
-      },
-      orderBy: { appliedDate: "desc" },
-      take: 20,
-    });
-
-    for (const application of applications) {
-      notifications.push(buildSuperAdminApplicationNotification(application));
-    }
+    return recordToPayload(updated);
+  } catch (error) {
+    if (error.code === "P2025") return null;
+    throw error;
   }
+};
 
-  notifications.sort((a, b) => new Date(b.time) - new Date(a.time));
+const markAllNotificationsRead = async (userId) => {
+  await prisma.notification.updateMany({
+    where: { userId, read: false },
+    data: { read: true },
+  });
+};
 
-  return notifications.slice(0, 15);
+const deleteNotificationForUser = async (userId, notificationId) => {
+  try {
+    await prisma.notification.delete({
+      where: {
+        userId_id: {
+          userId,
+          id: String(notificationId),
+        },
+      },
+    });
+    return true;
+  } catch (error) {
+    if (error.code === "P2025") return false;
+    throw error;
+  }
 };
 
 export {
@@ -284,5 +391,14 @@ export {
   buildJobAlertNotification,
   buildJobReopenedNotification,
   buildApplicationRemovalPayload,
+  getApplicationNotificationIds,
   getNotificationsForUser,
+  notifyUser,
+  notifyCompany,
+  notifyRole,
+  clearApplicationNotificationsForUser,
+  removeNotificationsForUser,
+  markNotificationRead,
+  markAllNotificationsRead,
+  deleteNotificationForUser,
 };

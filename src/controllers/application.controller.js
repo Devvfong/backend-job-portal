@@ -14,6 +14,11 @@ import {
   buildNewApplicantNotification,
   buildSeekerApplicationNotification,
   buildSuperAdminApplicationNotification,
+  notifyUser,
+  notifyCompany,
+  notifyRole,
+  clearApplicationNotificationsForUser,
+  removeNotificationsForUser,
 } from "../services/notification.service.js";
 import { encryptId } from "../utils/crypto.js";
 import { createSignedUrlFromSupabaseUrl } from "../services/upload.service.js";
@@ -21,12 +26,7 @@ import {
   sendApplicationStatusEmail,
   sendApplicationSubmittedEmail,
 } from "../services/email.service.js";
-import {
-  emitNotificationToCompany,
-  emitNotificationToRole,
-  emitNotificationToUser,
-  removeNotificationFromUser,
-} from "../realtime/websocket.js";
+import { removeNotificationFromUser } from "../realtime/websocket.js";
 
 const withSignedApplicantResume = async (app) => {
   if (!app.user?.resume) return app;
@@ -47,9 +47,9 @@ const applyToJobController = async (req, res, next) => {
     const application = await applyToJobService(jobId, userId, req.body);
     await sendApplicationSubmittedEmail(application);
 
-    emitNotificationToUser(userId, buildSeekerApplicationNotification(application));
-    emitNotificationToCompany(application.job?.companyId, buildNewApplicantNotification(application));
-    emitNotificationToRole("super_admin", buildSuperAdminApplicationNotification(application));
+    await notifyUser(userId, buildSeekerApplicationNotification(application));
+    await notifyCompany(application.job?.companyId, buildNewApplicantNotification(application));
+    await notifyRole("super_admin", buildSuperAdminApplicationNotification(application));
 
     return res.status(201).json({
       status: "success",
@@ -102,7 +102,8 @@ const updateApplicationStatusController = async (req, res, next) => {
 
     const application = await updateApplicationStatusService(applicationId, status, req.user);
     await sendApplicationStatusEmail(application);
-    emitNotificationToUser(
+    await clearApplicationNotificationsForUser(application.userId, application.id);
+    await notifyUser(
       application.userId,
       buildSeekerApplicationNotification(application, new Date()),
     );
@@ -122,10 +123,9 @@ const withdrawApplicationController = async (req, res, next) => {
     const applicationId = Number(req.params.id);
     const application = await withdrawApplicationService(applicationId, req.user);
 
-    removeNotificationFromUser(
-      req.user.id,
-      buildApplicationRemovalPayload(application.id),
-    );
+    const removalPayload = buildApplicationRemovalPayload(application.id);
+    await removeNotificationsForUser(req.user.id, removalPayload);
+    removeNotificationFromUser(req.user.id, removalPayload);
 
     return res.status(200).json({
       status: "success",

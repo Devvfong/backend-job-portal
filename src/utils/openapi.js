@@ -649,7 +649,7 @@ const openApiDocument = {
       get: {
         tags: ["Notifications"],
         summary: "Get notifications for the current user",
-        description: "HTTP fallback for the notification feed. Live events are also pushed via WebSocket (notification:new / notification:remove).",
+        description: "Reads persisted notifications from Postgres. Live events are also pushed via WebSocket (notification:new / notification:remove).",
         security: [{ bearerAuth: [] }, { accessTokenCookie: [] }],
         responses: {
           200: {
@@ -670,6 +670,43 @@ const openApiDocument = {
               },
             },
           },
+          401: { description: "Not authorized" },
+        },
+      },
+    },
+    "/api/v1/notifications/read-all": {
+      patch: {
+        tags: ["Notifications"],
+        summary: "Mark all notifications as read",
+        security: [{ bearerAuth: [] }, { accessTokenCookie: [] }],
+        responses: {
+          200: { description: "All notifications marked as read" },
+          401: { description: "Not authorized" },
+        },
+      },
+    },
+    "/api/v1/notifications/{id}/read": {
+      patch: {
+        tags: ["Notifications"],
+        summary: "Mark one notification as read",
+        security: [{ bearerAuth: [] }, { accessTokenCookie: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        responses: {
+          200: { description: "Notification marked as read" },
+          404: { description: "Notification not found" },
+          401: { description: "Not authorized" },
+        },
+      },
+    },
+    "/api/v1/notifications/{id}": {
+      delete: {
+        tags: ["Notifications"],
+        summary: "Delete a notification",
+        security: [{ bearerAuth: [] }, { accessTokenCookie: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        responses: {
+          200: { description: "Notification deleted" },
+          404: { description: "Notification not found" },
           401: { description: "Not authorized" },
         },
       },

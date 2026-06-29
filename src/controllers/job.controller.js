@@ -17,8 +17,8 @@ import {
   buildNewJobNotification,
   buildJobAlertNotification,
   buildJobReopenedNotification,
+  notifyRole,
 } from "../services/notification.service.js";
-import { emitNotificationToRole } from "../realtime/websocket.js";
 import { encryptId, decryptId } from "../utils/crypto.js";
 import { prisma } from "../config/db.js";
 
@@ -27,7 +27,7 @@ const createJobController = async (req, res, next) => {
     const job = await createJobService(req.body, req.user);
 
     if (job?.status === "open") {
-      emitNotificationToRole("job_seeker", buildNewJobNotification(job));
+      await notifyRole("job_seeker", buildNewJobNotification(job));
     }
 
     return res.status(201).json({
@@ -123,12 +123,12 @@ const updateJobController = async (req, res, next) => {
 
       if (jobForAlert) {
         if (req.body.status === "closed") {
-          emitNotificationToRole(
+          await notifyRole(
             "job_seeker",
             buildJobAlertNotification(jobForAlert, "closed"),
           );
         } else if (req.body.status === "open") {
-          emitNotificationToRole(
+          await notifyRole(
             "job_seeker",
             buildJobReopenedNotification(jobForAlert),
           );
@@ -157,7 +157,7 @@ const deleteJobController = async (req, res, next) => {
     await deleteJobService(id, req.user);
 
     if (job) {
-      emitNotificationToRole("job_seeker", buildJobAlertNotification(job, "removed"));
+      await notifyRole("job_seeker", buildJobAlertNotification(job, "removed"));
     }
 
     return res.status(200).json({
