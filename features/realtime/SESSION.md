@@ -1,6 +1,6 @@
 # Session Handoff — 2026-06-29
 
-**Full security + production detail:** `security/SESSION.md`
+**Full detail:** `security/SESSION.md`
 
 ---
 
@@ -19,21 +19,23 @@
 
 | Repo | Latest |
 | --- | --- |
-| Backend | `6139126` — verify CSP report-only (24 production checks) |
-| Frontend | `dc23f58` — Playwright CI, CSP report-only, nonce in proxy.ts |
+| Backend | `c2af4cc` — Postgres `Notification` table + read/delete API |
+| Frontend | `c41ee75` — notification read/delete via API |
 
 ---
 
-## Security / realtime status
+## Realtime + notifications status
 
-| Area | Status |
+| Feature | Status |
 | --- | --- |
-| WebSocket + notifications | Done on `websocket` branch |
-| OAuth (no `?token=` URL) | Done — refresh cookie handoff |
-| CSP + COOP + CORP + report-uri | Live on production |
-| CSP report-only (telemetry) | Live — no `unsafe-inline` in report-only |
-| Playwright security CI | `.github/workflows/security.yml` — 3 tests |
-| `verify-production.sh` | **24/24 passed** (remote) |
+| WebSocket `/ws` + first-message auth | Done |
+| Shared builders in `notification.service.js` | Done |
+| Emit after DB success | Done |
+| **Postgres `Notification` table** | **Done** — migration applied to Neon |
+| HTTP `GET /notifications` | Reads from DB (not rebuilt from applications) |
+| Read/delete API | `PATCH read-all`, `PATCH :id/read`, `DELETE :id` |
+| Frontend read state | API (not localStorage) |
+| Multi-server Redis pub/sub | Not done |
 
 ---
 
@@ -41,12 +43,11 @@
 
 ```bash
 bash features/realtime/verify-production.sh
-ACCESS_TOKEN=<jwt> bash features/realtime/verify-production.sh   # + WS auth
-node features/realtime/e2e-websocket.js                           # 12 E2E checks
+ACCESS_TOKEN=<jwt> bash features/realtime/verify-production.sh
+node features/realtime/e2e-websocket.js
 ```
 
 ```bash
-# Frontend (separate repo)
 cd C:\Users\devqii\Downloads\job-portal-ui
 npm run test:security
 ```
@@ -64,4 +65,4 @@ Frontend: C:\Users\devqii\Downloads\job-portal-ui
 
 ## Next
 
-See `security/SESSION.md` → **Deferred / next steps** (CSP reports, enforcing nonce, OAuth click-test, OWASP Phase 3 XSS).
+See `security/SESSION.md` → test notifications live, optional backfill, CSP/OAuth follow-ups.
