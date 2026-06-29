@@ -15,6 +15,7 @@
     "mcp:add:with-key": "npx add-mcp https://mcp.neon.tech/mcp --header \"Authorization: Bearer $NEON_API_KEY\"",
     "mcp:local": "npx -y @neondatabase/mcp-server-neon start $NEON_API_KEY",
     "mcp:local:win": "cmd /c \"npx -y @neondatabase/mcp-server-neon start %NEON_API_KEY%\"",
+    "export:openapi": "node features/realtime/export-openapi.js",
     "lint": "eslint src/",
     "verify:production": "bash features/realtime/verify-production.sh",
     "verify:production:vps": "bash features/realtime/verify-production.sh --vps",

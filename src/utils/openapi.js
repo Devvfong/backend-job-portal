@@ -2,18 +2,26 @@ const openApiDocument = {
   openapi: "3.1.0",
   info: {
     title: "NextHire Backend API",
-    version: "1.0.0",
-    description: "API documentation for the Web-Based Job Finder System. Includes endpoints for Job Seekers and Company Admins.",
+    version: "1.1.0",
+    description:
+      "API documentation for the NextHire job portal. Covers job seekers, company admins, and super admins. " +
+      "Access tokens (5 min) are returned in JSON and may be stored in the `token` cookie or Bearer header. " +
+      "Refresh tokens (1 day) use the httpOnly `jwt` cookie only — required for POST /api/v1/auth/refresh and OAuth handoff. " +
+      "Realtime notifications are also pushed over WebSocket at /ws (access token auth).",
   },
   servers: [
     {
       url: "http://localhost:5000",
       description: "Local development",
     },
+    {
+      url: "https://devqii.me",
+      description: "Production",
+    },
   ],
   tags: [
     { name: "System", description: "Health and documentation" },
-    { name: "Auth", description: "Authentication and Authorization" },
+    { name: "Auth", description: "Authentication, refresh cookies, and docs handoff" },
     { name: "Jobs", description: "Job postings management" },
     { name: "Users", description: "User profile and resume management" },
     { name: "Companies", description: "Company profiles and logo management" },
@@ -22,7 +30,8 @@ const openApiDocument = {
     { name: "Lookup", description: "Public lookup data such as categories and locations" },
     { name: "Dashboard", description: "Global dashboard metrics" },
     { name: "Notifications", description: "Authenticated notification feed" },
-    { name: "Admin", description: "Super admin management endpoints" }
+    { name: "Admin", description: "Super admin management endpoints" },
+    { name: "Settings", description: "Platform settings (public + super admin)" },
   ],
   components: {
     securitySchemes: {
@@ -35,6 +44,13 @@ const openApiDocument = {
         type: "apiKey",
         in: "cookie",
         name: "jwt",
+        description: "Refresh token cookie (httpOnly). Used by POST /api/v1/auth/refresh and set by login/OAuth.",
+      },
+      accessTokenCookie: {
+        type: "apiKey",
+        in: "cookie",
+        name: "token",
+        description: "Short-lived access token cookie (optional; Bearer header also supported).",
       },
     },
     schemas: {
@@ -222,13 +238,31 @@ const openApiDocument = {
       Notification: {
         type: "object",
         properties: {
-          id: { type: "integer", example: 1 },
-          title: { type: "string", example: "New application received" },
-          message: { type: "string", example: "A candidate has applied to your job posting." },
+          id: { type: "string", example: "app-pending-42" },
+          applicationId: { type: "integer", nullable: true, example: 42 },
+          type: { type: "string", example: "applied" },
+          icon: { type: "string", example: "check" },
+          title: { type: "string", example: "Application Submitted" },
+          message: { type: "string", example: "You applied for \"Backend Engineer\" at Tech Corp." },
           read: { type: "boolean", example: false },
-          createdAt: { type: "string", format: "date-time", example: "2026-05-24T12:00:00Z" },
+          time: { type: "string", format: "date-time", example: "2026-06-29T12:00:00Z" },
+          createdAt: { type: "string", format: "date-time", example: "2026-06-29T12:00:00Z" },
+          avatar: { type: "string", nullable: true, example: "https://example.com/logo.png" },
+          link: { type: "string", example: "/dashboard/seeker/applications" },
         },
-      }
+      },
+      RefreshTokenResponse: {
+        type: "object",
+        properties: {
+          status: { type: "string", example: "success" },
+          data: {
+            type: "object",
+            properties: {
+              token: { type: "string", description: "New access token (JWT, includes id + role)" },
+            },
+          },
+        },
+      },
     },
   },
   paths: {
@@ -241,6 +275,28 @@ const openApiDocument = {
           200: {
             description: "HTML Landing Page",
           },
+        },
+      },
+    },
+    "/openapi.json": {
+      get: {
+        tags: ["System"],
+        summary: "OpenAPI document (JSON)",
+        description: "Public when DOCS_PUBLIC=true; otherwise requires super_admin Bearer/cookie session.",
+        responses: {
+          200: { description: "OpenAPI 3.1 document" },
+          401: { description: "Not authorized (when docs are protected)" },
+        },
+      },
+    },
+    "/docs": {
+      get: {
+        tags: ["System"],
+        summary: "Scalar API reference UI",
+        description: "Public when DOCS_PUBLIC=true; otherwise requires super_admin session.",
+        responses: {
+          200: { description: "Interactive API docs HTML" },
+          401: { description: "Not authorized (when docs are protected)" },
         },
       },
     },
@@ -289,11 +345,44 @@ const openApiDocument = {
     "/api/v1/auth/refresh": {
       post: {
         tags: ["Auth"],
-        summary: "Refresh the access token using the refresh cookie",
+        summary: "Exchange refresh cookie for a new access token",
+        description:
+          "Reads the httpOnly `jwt` refresh cookie, validates it, rotates refresh token, and returns a new access token in JSON. " +
+          "Used by the frontend after OAuth (cross-origin POST with credentials: include) and for silent session refresh.",
         security: [{ cookieAuth: [] }],
         responses: {
-          200: { description: "Access token refreshed" },
-          401: { description: "Not authorized" },
+          200: {
+            description: "Access token refreshed",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/RefreshTokenResponse" },
+              },
+            },
+          },
+          401: { description: "Missing or invalid refresh cookie" },
+        },
+      },
+    },
+    "/api/v1/auth/docs-handoff": {
+      get: {
+        tags: ["Auth", "System"],
+        summary: "Super admin docs handoff (sets short-lived token cookie → /docs)",
+        description:
+          "Accepts a super_admin access token as query param, sets a 5-minute httpOnly `token` cookie on the API host, " +
+          "then redirects to /docs. Used by the admin sidebar API Docs link.",
+        parameters: [
+          {
+            name: "token",
+            in: "query",
+            required: true,
+            schema: { type: "string" },
+            description: "Super admin access JWT",
+          },
+        ],
+        responses: {
+          302: { description: "Redirect to /docs with token cookie set" },
+          401: { description: "Missing, expired, or invalid token" },
+          403: { description: "Token is not super_admin" },
         },
       },
     },
@@ -325,9 +414,24 @@ const openApiDocument = {
         summary: "Reset password using token",
         requestBody: {
           required: true,
-          content: { "application/json": { schema: { type: "object", properties: { token: { type: "string" }, newPassword: { type: "string" } } } } },
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["token", "password"],
+                properties: {
+                  token: { type: "string", minLength: 32 },
+                  password: { type: "string", minLength: 6 },
+                },
+              },
+            },
+          },
         },
-        responses: { 200: { description: "Password reset successful" } },
+        responses: {
+          200: { description: "Password reset successful" },
+          400: { description: "Invalid or expired token" },
+          429: { description: "Too many attempts (rate limited)" },
+        },
       },
     },
     "/api/v1/auth/verify-email": {
@@ -358,10 +462,9 @@ const openApiDocument = {
       get: {
         tags: ["Jobs"],
         summary: "Get all jobs with pagination & filtering",
-        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        description: "Public endpoint. Authentication is not required.",
         responses: {
           200: { description: "List of jobs returned" },
-          401: { description: "Not authorized" },
         },
       },
     },
@@ -380,12 +483,11 @@ const openApiDocument = {
       get: {
         tags: ["Jobs"],
         summary: "Get specific job by ID",
-        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        description: "Public endpoint. Optional auth may affect saved/applied state in the response.",
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
         responses: {
           200: { description: "Job details returned" },
           404: { description: "Job not found" },
-          401: { description: "Not authorized" },
         },
       },
       put: {
@@ -547,15 +649,23 @@ const openApiDocument = {
       get: {
         tags: ["Notifications"],
         summary: "Get notifications for the current user",
-        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        description: "HTTP fallback for the notification feed. Live events are also pushed via WebSocket (notification:new / notification:remove).",
+        security: [{ bearerAuth: [] }, { accessTokenCookie: [] }],
         responses: {
           200: {
             description: "Notifications returned",
             content: {
               "application/json": {
                 schema: {
-                  type: "array",
-                  items: { $ref: "#/components/schemas/Notification" },
+                  type: "object",
+                  properties: {
+                    status: { type: "string", example: "success" },
+                    data: {
+                      type: "array",
+                      items: { $ref: "#/components/schemas/Notification" },
+                    },
+                    unread: { type: "integer", example: 2 },
+                  },
                 },
               },
             },
@@ -1012,7 +1122,11 @@ const openApiDocument = {
     "/auth/github/callback": {
       get: {
         tags: ["OAuth"],
-        summary: "GitHub OAuth callback (sets JWT cookie / redirects to frontend)",
+        summary: "GitHub OAuth callback",
+        description:
+          "On success: sets httpOnly `jwt` refresh cookie via generateTokens, then redirects to FRONTEND_URL/auth/callback (no access token in URL). " +
+          "Frontend completes sign-in with POST /api/v1/auth/refresh (credentials: include). " +
+          "If maintenance_mode is on and user is not super_admin, redirects to FRONTEND_URL/login?error=maintenance.",
         responses: {
           302: { description: "Redirect to frontend /auth/callback (refresh cookie set; no token in URL)" },
           401: { description: "Authentication failed" },
@@ -1031,7 +1145,11 @@ const openApiDocument = {
     "/auth/linkedin/callback": {
       get: {
         tags: ["OAuth"],
-        summary: "LinkedIn OAuth callback (sets JWT cookie / redirects to frontend)",
+        summary: "LinkedIn OAuth callback",
+        description:
+          "On success: sets httpOnly `jwt` refresh cookie via generateTokens, then redirects to FRONTEND_URL/auth/callback (no access token in URL). " +
+          "Frontend completes sign-in with POST /api/v1/auth/refresh (credentials: include). " +
+          "If maintenance_mode is on and user is not super_admin, redirects to FRONTEND_URL/login?error=maintenance.",
         responses: {
           302: { description: "Redirect to frontend /auth/callback (refresh cookie set; no token in URL)" },
           401: { description: "Authentication failed" },
