@@ -7,7 +7,7 @@
   <title>NextHire | Find Your Dream Career</title>
   <link rel="icon" type="image/png" href="/favicon.png" />
   <link rel="apple-touch-icon" href="/favicon.png" />
-  <meta name="description" content="A premium NextHire platform to connect top talent with best companies." />
+  <meta name="description" content="NextHire connects talented job seekers with growing companies across Cambodia." />
   <meta property="og:title" content="NextHire" />
   <meta property="og:description" content="Find your next career move." />
   <meta property="og:image" content="/favicon.png" />
@@ -22,20 +22,54 @@
   <audio id="bgMusic" src="/bg-s.mp3" loop></audio>
   <main>
     <section class="card">
-      <img src="/logo-dark.svg" alt="NextHire Logo" style="height: 48px; margin-bottom: 24px;" />
-      <h1>NextHire Backend Is Live</h1>
-      <p>
-        This service powers authentication, users, companies, jobs, and applications.
-        API base URL: <code>/api/v1</code>
+      <header class="top-row">
+        <img src="/logo-dark.svg" alt="NextHire" class="logo" />
+        <div class="status-pill" id="statusPill" aria-live="polite">
+          <span class="status-dot" id="statusDot"></span>
+          <span id="statusText">Checking status…</span>
+        </div>
+      </header>
+
+      <p class="eyebrow">Job portal platform</p>
+      <h1>Hire smarter.<br />Move faster.</h1>
+      <p class="lede">
+        NextHire powers job discovery, applications, company profiles, and live notifications
+        for seekers, employers, and admins.
       </p>
+
+      <div class="stats" id="statsGrid" aria-label="Platform statistics">
+        <article class="stat">
+          <span class="stat-value" data-stat="totalJobs">—</span>
+          <span class="stat-label">Job listings</span>
+        </article>
+        <article class="stat">
+          <span class="stat-value" data-stat="totalCompanies">—</span>
+          <span class="stat-label">Companies</span>
+        </article>
+        <article class="stat">
+          <span class="stat-value" data-stat="totalUsers">—</span>
+          <span class="stat-label">Job seekers</span>
+        </article>
+        <article class="stat">
+          <span class="stat-value" data-stat="totalApplications">—</span>
+          <span class="stat-label">Applications</span>
+        </article>
+      </div>
+
+      <div class="actions">
+        <a class="btn primary" id="appLink" href="http://localhost:3000">Open NextHire</a>
+        <a class="btn ghost" id="jobsLink" href="http://localhost:3000/jobs">Browse jobs</a>
+      </div>
+
+      <ul class="tags" aria-label="Platform capabilities">
+        <li>Secure auth</li>
+        <li>Realtime alerts</li>
+        <li>Company dashboards</li>
+        <li>Resume uploads</li>
+      </ul>
     </section>
   </main>
-  <script>
-    document.addEventListener("click", () => {
-      const bg = document.getElementById("bgMusic");
-      if (bg) bg.play().catch(() => {});
-    }, { once: true });
-  </script>
+  <script src="/js/landing.js"></script>
 </body>
 
 </html>
