@@ -160,34 +160,55 @@ const updateApplicationStatusService = async (applicationId, status, user) => {
     throw new ForbiddenError("You cannot manage applications for other companies");
   }
 
-  return prisma.application.update({
-    where: { id: applicationId },
-    data: { status },
-    include: {
-      user: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          avatar: true,
-          headline: true,
+  return prisma.$transaction(async (tx) => {
+    const updatedApplication = await tx.application.update({
+      where: { id: applicationId },
+      data: { status },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+            headline: true,
+          },
         },
-      },
-      job: {
-        select: {
-          id: true,
-          title: true,
-          companyId: true,
-          company: {
-            select: {
-              companyName: true,
-              logo: true,
-              isVerified: true,
+        job: {
+          select: {
+            id: true,
+            title: true,
+            companyId: true,
+            company: {
+              select: {
+                companyName: true,
+                logo: true,
+                isVerified: true,
+              },
             },
           },
         },
       },
-    },
+    });
+
+    if (updatedApplication.status !== application.status) {
+      await tx.warningLog.create({
+        data: {
+          reason: [
+            `[APPLICATION_STATUS] applicationId=${applicationId}`,
+            `from=${application.status}`,
+            `to=${status}`,
+            `jobId=${application.jobId}`,
+            `companyId=${application.job.companyId}`,
+          ],
+          issuedById: Number(user.id),
+          targetUserId: updatedApplication.userId,
+          targetCompanyId: application.job.companyId,
+        },
+      });
+    }
+
+    return updatedApplication;
   });
 };
 

@@ -2,13 +2,14 @@ import WebSocket from "ws";
 
 const baseUrl = process.env.WS_URL || "ws://localhost:5000/ws";
 const token = process.env.ACCESS_TOKEN;
+const origin = process.env.WS_ORIGIN || "http://localhost:3000";
 
 if (!token) {
   console.error("Set ACCESS_TOKEN to a valid JWT access token before running this script.");
   process.exit(1);
 }
 
-const socket = new WebSocket(baseUrl);
+const socket = new WebSocket(baseUrl, { origin });
 
 socket.on("open", () => {
   console.log("Socket opened, sending auth frame...");

@@ -2,7 +2,6 @@ import { prisma } from "../config/db.js";
 import crypto from "crypto";
 import { deleteFileFromSupabase } from "./upload.service.js";
 import { decryptId } from "../utils/crypto.js";
-
 import { sendSuspensionEmail } from "./email.service.js";
 
 const SUPER_ADMIN_ROLE = "super_admin";
@@ -36,13 +35,13 @@ const createProfile = async (data, id) => {
     },
     // Update the user's profile information, but keep existing values if not provided in the update data
     data: {
-headline: data.headline !== undefined ? data.headline : user.headline,
-bio: data.bio !== undefined ? data.bio : user.bio,
-location: data.location !== undefined ? data.location : user.location,
-phone: data.phone !== undefined ? data.phone : user.phone,
-avatar: data.avatar !== undefined ? data.avatar : user.avatar,
-skills: data.skills !== undefined ? data.skills : user.skills,
-resume: data.resume !== undefined ? data.resume : user.resume,
+      headline: data.headline !== undefined ? data.headline : user.headline,
+      bio: data.bio !== undefined ? data.bio : user.bio,
+      location: data.location !== undefined ? data.location : user.location,
+      phone: data.phone !== undefined ? data.phone : user.phone,
+      avatar: data.avatar !== undefined ? data.avatar : user.avatar,
+      skills: data.skills !== undefined ? data.skills : user.skills,
+      resume: data.resume !== undefined ? data.resume : user.resume,
     },
     select: {
       id: true,
@@ -218,6 +217,8 @@ const updateProfile = async (data, id, currentUser) => {
     updateData.isVerified = false;
     updateData.verificationToken = crypto.randomBytes(32).toString("hex");
     updateData.verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    updateData.resetPasswordToken = null;
+    updateData.resetPasswordExpires = null;
   }
 
   // Only super_admin can change role or companyId

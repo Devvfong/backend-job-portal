@@ -4,6 +4,7 @@ import WebSocket from "ws";
 
 const API_BASE = process.env.E2E_API_BASE || "http://localhost:5000/api/v1";
 const WS_URL = process.env.E2E_WS_URL || "ws://localhost:5000/ws";
+const WS_ORIGIN = process.env.E2E_WS_ORIGIN || "http://localhost:3000";
 
 const SEEKER = { id: 230, role: "job_seeker" };
 const ADMIN = { id: 184, role: "company_admin", companyId: 63 };
@@ -31,7 +32,7 @@ function wait(ms) {
 function connectRealtime(label, token) {
   return new Promise((resolve, reject) => {
     const events = [];
-    const socket = new WebSocket(WS_URL);
+    const socket = new WebSocket(WS_URL, { origin: WS_ORIGIN });
     const timeout = setTimeout(() => {
       socket.close();
       reject(new Error(`${label}: timed out waiting for connection:ready`));

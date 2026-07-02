@@ -173,6 +173,23 @@ else
   fail "node not found — cannot test WebSocket"
 fi
 
+header "WebSocket origin validation"
+if command -v node >/dev/null 2>&1; then
+  if WS_URL="$WS_URL" WS_ORIGIN="$ALLOWED_ORIGIN" node "$ROOT_DIR/features/realtime/test-websocket-origin.js" >/dev/null 2>&1; then
+    pass "Allowed origin accepted (${ALLOWED_ORIGIN})"
+  else
+    fail "Allowed origin rejected (${ALLOWED_ORIGIN})"
+  fi
+
+  if WS_URL="$WS_URL" WS_ORIGIN="$BLOCKED_ORIGIN" node "$ROOT_DIR/features/realtime/test-websocket-origin.js" >/dev/null 2>&1; then
+    fail "Blocked origin was accepted (${BLOCKED_ORIGIN})"
+  else
+    pass "Blocked origin rejected (${BLOCKED_ORIGIN})"
+  fi
+else
+  fail "node not found — cannot test WebSocket origin validation"
+fi
+
 if [[ -n "${ACCESS_TOKEN:-}" && "$ACCESS_TOKEN" != "test" ]]; then
   header "WebSocket auth (ACCESS_TOKEN provided)"
   if ACCESS_TOKEN="$ACCESS_TOKEN" WS_URL="$WS_URL" node "$ROOT_DIR/features/realtime/test-websocket.js" >/dev/null 2>&1; then

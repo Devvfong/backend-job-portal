@@ -18,6 +18,7 @@ const REALTIME_EVENTS = {
 const clientsByUser = new Map();
 const clientsByCompany = new Map();
 const clientsByRole = new Map();
+const userRateLimits = new Map();
 let wss;
 
 const addClient = (map, key, ws) => {
@@ -35,6 +36,38 @@ const removeClient = (map, key, ws) => {
   if (!clients) return;
   clients.delete(ws);
   if (clients.size === 0) map.delete(normalizedKey);
+};
+
+const getSlidingWindowState = (map, key, now) => {
+  const normalizedKey = String(key);
+  const current = map.get(normalizedKey);
+
+  if (!current || now - current.windowStart > RATE_LIMIT_WINDOW_MS) {
+    const next = { count: 0, windowStart: now };
+    map.set(normalizedKey, next);
+    return next;
+  }
+
+  return current;
+};
+
+const incrementConnectionRateLimit = (ws, now) => {
+  if (!ws._rateLimit) {
+    ws._rateLimit = { count: 0, windowStart: now };
+  }
+
+  if (now - ws._rateLimit.windowStart > RATE_LIMIT_WINDOW_MS) {
+    ws._rateLimit = { count: 0, windowStart: now };
+  }
+
+  ws._rateLimit.count += 1;
+  return ws._rateLimit.count <= RATE_LIMIT_MAX * 2;
+};
+
+const incrementSlidingWindow = (map, key, limit, now) => {
+  const state = getSlidingWindowState(map, key, now);
+  state.count += 1;
+  return state.count <= limit;
 };
 
 const send = (ws, event, payload) => {
@@ -93,6 +126,10 @@ const unregisterClient = (ws) => {
   removeClient(clientsByUser, user.id, ws);
   if (user.companyId) removeClient(clientsByCompany, user.companyId, ws);
   removeClient(clientsByRole, user.role, ws);
+
+  if (!clientsByUser.has(String(user.id))) {
+    userRateLimits.delete(String(user.id));
+  }
 };
 
 const authenticateFromRequest = async (request) => {
@@ -102,10 +139,36 @@ const authenticateFromRequest = async (request) => {
   return verifyAccessToken(token);
 };
 
+const getAllowedOrigins = () => {
+  const origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "https://nexthire.devqii.me",
+    "https://next-hire.devqii.me",
+    process.env.FRONTEND_URL,
+    ...(process.env.CORS_ORIGINS || "")
+      .split(",")
+      .map((o) => o.trim())
+      .filter(Boolean),
+  ];
+  return origins;
+};
+
+const isAllowedOrigin = (origin, allowedOrigins) => {
+  if (!origin || typeof origin !== "string") return false;
+  return allowedOrigins.includes(origin);
+};
+
 const initRealtime = (server) => {
   wss = new WebSocketServer({ server, path: WS_PATH, maxPayload: 1024 * 1024 });
+  const allowedOrigins = getAllowedOrigins();
 
   wss.on("connection", async (ws, request) => {
+    const origin = request.headers.origin;
+    if (!isAllowedOrigin(origin, allowedOrigins)) {
+      ws.close(1008, "Origin not allowed");
+      return;
+    }
     let authTimer = null;
 
     const closeUnauthorized = (reason = "Unauthorized") => {
@@ -143,19 +206,19 @@ const initRealtime = (server) => {
     });
 
     ws.on("message", async (rawMessage) => {
-      // Rate limit: track messages per connection (applies to both pre and post auth)
       const now = Date.now();
-      if (!ws._rateLimit) {
-        ws._rateLimit = { count: 0, windowStart: now };
-      }
-      if (now - ws._rateLimit.windowStart > RATE_LIMIT_WINDOW_MS) {
-        ws._rateLimit = { count: 0, windowStart: now };
-      }
-      ws._rateLimit.count++;
-      if (ws._rateLimit.count > RATE_LIMIT_MAX * 2) {
+      if (!incrementConnectionRateLimit(ws, now)) {
         send(ws, "error", { message: "Rate limit exceeded" });
         ws.close(1008, "Rate limit exceeded");
         return;
+      }
+
+      if (ws.authenticated && ws.user?.id) {
+        if (!incrementSlidingWindow(userRateLimits, ws.user.id, RATE_LIMIT_MAX * 2, now)) {
+          send(ws, "error", { message: "Rate limit exceeded" });
+          ws.close(1008, "Rate limit exceeded");
+          return;
+        }
       }
 
       if (ws.authenticated) return;

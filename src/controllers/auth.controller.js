@@ -25,7 +25,7 @@ let privateKey;
 if (process.env.RSA_PRIVATE_KEY) {
   privateKey = process.env.RSA_PRIVATE_KEY.replace(/\\n/g, '\n');
 } else {
-  throw new Error('RSA_PRIVATE_KEY environment variable is required for auth encryption');
+  console.warn('RSA_PRIVATE_KEY not set — password decryption will be disabled');
 }
 
 const decryptParam = (encrypted) => {
@@ -57,6 +57,14 @@ const decryptParam = (encrypted) => {
   }
 };
 
+const isStrongPassword = (password) => {
+  return typeof password === "string"
+    && password.length >= 8
+    && /[a-z]/.test(password)
+    && /[A-Z]/.test(password)
+    && /\d/.test(password);
+};
+
 const register = async (req, res, next) => {
   try {
     if (getSetting("maintenance_mode") === "true") {
@@ -66,9 +74,16 @@ const register = async (req, res, next) => {
     const { name, email, password } = req.body;
     const decryptedPassword = decryptParam(password);
 
+    if (!isStrongPassword(decryptedPassword)) {
+      throw new BadRequestError("Password must be at least 8 characters and include uppercase, lowercase, and a number");
+    }
+
     const userExists = await findUserByEmail(email);
     if (userExists) {
-      throw new BadRequestError("User already exists");
+      return res.status(200).json({
+        status: "success",
+        message: "If your email is eligible for registration, you will receive a verification message shortly.",
+      });
     }
 
     const { user, verificationToken } = await createUser({
@@ -245,6 +260,11 @@ const resetPasswordController = async (req, res, next) => {
   try {
     const { token, password } = req.body;
     const decryptedPassword = decryptParam(password);
+
+    if (!isStrongPassword(decryptedPassword)) {
+      throw new BadRequestError("Password must be at least 8 characters and include uppercase, lowercase, and a number");
+    }
+
     const didReset = await resetPassword(token, decryptedPassword);
 
     if (!didReset) {
