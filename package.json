@@ -30,7 +30,6 @@
     "@scalar/api-reference": "^1.48.5",
     "@scalar/express-api-reference": "^0.9.3",
     "@supabase/supabase-js": "^2.99.3",
-    "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.3",
     "connect-pg-simple": "^10.0.0",
     "cookie-parser": "^1.4.7",

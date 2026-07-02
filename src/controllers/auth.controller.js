@@ -205,6 +205,22 @@ const getMe = async (req, res, next) => {
 
 const refresh = async (req, res, next) => {
   try {
+    // CSRF protection: validate Origin header on cross-origin cookie-based requests.
+    // SameSite=None cookies are sent cross-origin; this blocks attacker-controlled origins.
+    const origin = req.headers.origin || req.headers.referer;
+    if (origin) {
+      const allowedOrigins = [
+        process.env.FRONTEND_URL,
+        "https://nexthire.devqii.me",
+        "https://next-hire.devqii.me",
+        "http://localhost:3000",
+      ].filter(Boolean);
+      const isValid = allowedOrigins.some((allowed) => origin.startsWith(allowed));
+      if (!isValid) {
+        throw new UnauthorizedError("Not authorized, invalid origin");
+      }
+    }
+
     const refreshToken = req.cookies.jwt;
     if (!refreshToken) {
       throw new UnauthorizedError("Not authorized, no refresh token");

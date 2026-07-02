@@ -149,8 +149,10 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
-      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      httpOnly: true,
       secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     },
   }),
 );
@@ -159,12 +161,18 @@ app.use(passport.session()); // Middleware to manage user sessions
 
 app.use(maintenanceMiddleware);
 
-// Global API rate limiter — 100 requests per minute per IP
+// Global API rate limiter — 100 requests per minute per IP (or per user when authenticated)
 const globalRateLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 100,
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req) => {
+    // Use user ID when authenticated to prevent IP-rotation bypass
+    // and avoid throttling entire shared-IP networks
+    if (req.user?.id) return `user:${req.user.id}`;
+    return req.ip;
+  },
   skip: (req) => req.path === "/health" || req.path === "/robots.txt",
   message: {
     status: "fail",

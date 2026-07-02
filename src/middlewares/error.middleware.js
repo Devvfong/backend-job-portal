@@ -33,7 +33,7 @@ const errorHandler = (err, req, res, _next) => {
   }
 
   console.error(`[${req.id || 'N/A'}] Internal Server Error:`, err)
-  return res.status(err.status || 500).json({
+  return res.status(500).json({
     status: 'error',
     code: 'INTERNAL_ERROR',
     message: process.env.NODE_ENV === 'development' ? (err.message || 'Internal Server Error') : 'Internal Server Error',

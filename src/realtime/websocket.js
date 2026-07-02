@@ -237,12 +237,8 @@ const initRealtime = (server) => {
     });
 
     try {
-      const user = await authenticateFromRequest(request);
-      if (user) {
-        registerClient(ws, user);
-        return;
-      }
-
+      // Enforce first-message-only auth — no URL token fallback.
+      // URL tokens leak in server logs and access logs.
       authTimer = setTimeout(() => {
         if (!ws.authenticated) closeUnauthorized("Auth timeout");
       }, AUTH_TIMEOUT_MS);
