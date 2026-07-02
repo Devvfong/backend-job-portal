@@ -1,6 +1,6 @@
 import { prisma } from "./../config/db.js";
 import { deleteFileFromSupabase } from "./upload.service.js";
-import { ConflictError } from "../lib/errors.js";
+import { ConflictError, UnauthorizedError, NotFoundError, BadRequestError } from "../lib/errors.js";
 import { sendSuspensionEmail } from "./email.service.js";
 
 
@@ -58,7 +58,7 @@ const getCompanyLogoUrl = (data) => {
 const createCompanyService = async (data, user) => {
   // Only authenticated users allowed.
   if (!user) {
-    throw new Error("Unauthorized");
+    throw new UnauthorizedError("Unauthorized");
   }
 
   // Allow super_admin to create companies.
@@ -67,21 +67,21 @@ const createCompanyService = async (data, user) => {
   } else if (user.role === "company_admin") {
     // company_admin may create a company only if not already linked to one
     if (user.companyId) {
-      throw new Error("User is already linked to a company");
+      throw new BadRequestError("User is already linked to a company");
     }
   } else {
-    throw new Error("Unauthorized");
+    throw new UnauthorizedError("Unauthorized");
   }
 
   const companyName = data.companyName?.trim(); // Trim whitespace from companyName
   const email = data.email?.trim().toLowerCase();
   // Basic validation to ensure required fields are provided and not just whitespace
   if (!companyName || companyName === "") {
-    throw new Error("companyName is required");
+    throw new BadRequestError("companyName is required");
   }
 
   if (!email || email === "") {
-    throw new Error("email is required");
+    throw new BadRequestError("email is required");
   }
 
   try {
@@ -286,7 +286,7 @@ const getCompanyServiceById = async (id, includeSensitive = false) => {
 
 const getMyCompanyService = async (companyId) => {
   if (!companyId) {
-    throw new Error("Company not found");
+    throw new NotFoundError("Company not found");
   }
   // For authenticated users, include sensitive fields like email
   return getCompanyServiceById(Number(companyId), true);
@@ -298,7 +298,7 @@ const updateCompanyService = async (id, data, user) => {
   const isOwnCompanyAdmin = user?.role === "company_admin" && user.companyId === id;
 
   if (!isSuperAdmin && !isOwnCompanyAdmin) {
-    throw new Error("Unauthorized");
+    throw new UnauthorizedError("Unauthorized");
   }
 
   const company = await prisma.company.findUnique({
@@ -306,7 +306,7 @@ const updateCompanyService = async (id, data, user) => {
   });
 
   if (!company) {
-    throw new Error("Company not found");
+    throw new NotFoundError("Company not found");
   }
 
   if (!isSuperAdmin) {
@@ -320,7 +320,7 @@ const updateCompanyService = async (id, data, user) => {
       requestedEmail !== company.email;
 
     if (isChangingCompanyName || isChangingEmail) {
-      throw new Error("Company identity changes require super admin approval");
+      throw new BadRequestError("Company identity changes require super admin approval");
     }
 
     delete data.companyName;
@@ -360,14 +360,14 @@ const deleteCompanyService = async (id, user) => {
     where: { id },
   })
   if (!company) {
-    throw new Error("Company not found");
+    throw new NotFoundError("Company not found");
   }
   // Verify permissions: super_admin bypass or company admin role
   const isSuperAdmin = user?.role === "super_admin";
   const isOwnCompanyAdmin = user?.role === "company_admin" && user.companyId === id;
 
   if (!isSuperAdmin && !isOwnCompanyAdmin) {
-    throw new Error("Unauthorized");
+    throw new UnauthorizedError("Unauthorized");
   }
 
   if (company.logo) {
@@ -403,7 +403,7 @@ const deleteCompanyLogo = async (user, companyId) => {
   const isOwnCompanyAdmin = user?.role === "company_admin" && user.companyId === companyId;
 
   if (!isSuperAdmin && !isOwnCompanyAdmin) {
-    throw new Error("Unauthorized");
+    throw new UnauthorizedError("Unauthorized");
   }
 
   const company = await prisma.company.findUnique({
@@ -411,7 +411,7 @@ const deleteCompanyLogo = async (user, companyId) => {
   });
 
   if (!company) {
-    throw new Error("Company not found");
+    throw new NotFoundError("Company not found");
   }
 
   const previousLogo = company.logo ?? null;
@@ -452,7 +452,7 @@ const deleteCompanyCover = async (user, companyId) => {
   const isOwnCompanyAdmin = user?.role === "company_admin" && user.companyId === targetCompanyId;
 
   if (!isSuperAdmin && !isOwnCompanyAdmin) {
-    throw new Error("Unauthorized");
+    throw new UnauthorizedError("Unauthorized");
   }
 
   const company = await prisma.company.findUnique({
@@ -460,7 +460,7 @@ const deleteCompanyCover = async (user, companyId) => {
   });
 
   if (!company) {
-    throw new Error("Company not found");
+    throw new NotFoundError("Company not found");
   }
 
   const previousCover = company.coverImage ?? null;
@@ -519,7 +519,7 @@ const suspendCompanyService = async (id, suspend, reasons = [], adminId) => {
     where: { id: Number(id) },
   });
   if (!company) {
-    throw new Error("Company not found");
+    throw new NotFoundError("Company not found");
   }
 
   const updated = await prisma.$transaction(async (tx) => {
@@ -553,7 +553,7 @@ const warnCompanyService = async (id, reasons, adminId) => {
     where: { id: Number(id) },
   });
   if (!company) {
-    throw new Error("Company not found");
+    throw new NotFoundError("Company not found");
   }
   return prisma.$transaction(async (tx) => {
     const updated = await tx.company.update({

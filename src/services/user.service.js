@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { deleteFileFromSupabase } from "./upload.service.js";
 import { decryptId } from "../utils/crypto.js";
 import { sendSuspensionEmail } from "./email.service.js";
+import { NotFoundError, ForbiddenError, BadRequestError } from "../lib/errors.js";
 
 const SUPER_ADMIN_ROLE = "super_admin";
 
@@ -26,7 +27,7 @@ const createProfile = async (data, id) => {
   });
 
   if (!user) {
-    throw new Error("User not found");
+    throw new NotFoundError("User not found");
   }
 
   return prisma.user.update({
@@ -167,7 +168,7 @@ const deleteUser = async (id) => {
   });
 
   if (!user) {
-    throw new Error("User not found");
+    throw new NotFoundError("User not found");
   }
 
   // Cleanup files from storage before deleting the user record
@@ -187,7 +188,7 @@ const deleteUser = async (id) => {
 const updateProfile = async (data, id, currentUser) => {
   // Check permissions: only the owner or a super admin can update this profile
   if (currentUser.id !== Number(id) && currentUser.role !== SUPER_ADMIN_ROLE) {
-    throw new Error("Forbidden: You cannot update this profile");
+    throw new ForbiddenError("Forbidden: You cannot update this profile");
   }
 
   const user = await prisma.user.findUnique({
@@ -197,7 +198,7 @@ const updateProfile = async (data, id, currentUser) => {
   });
 
   if (!user) {
-    throw new Error("User not found");
+    throw new NotFoundError("User not found");
   }
 
   const updateData = {
@@ -225,7 +226,7 @@ const updateProfile = async (data, id, currentUser) => {
   if (currentUser.role === SUPER_ADMIN_ROLE) {
     let finalRole = user.role;
     if (data.role && data.role !== user.role) {
-      throw new Error("User roles cannot be modified");
+      throw new BadRequestError("User roles cannot be modified");
     }
 
     let finalCompanyId = user.companyId;
@@ -242,7 +243,7 @@ const updateProfile = async (data, id, currentUser) => {
 
     // Validate that only company_admins can be linked to a company
     if (finalCompanyId !== null && finalCompanyId !== undefined && finalRole !== "company_admin") {
-      throw new Error("Only users with the role 'company_admin' can be linked to a company");
+      throw new BadRequestError("Only users with the role 'company_admin' can be linked to a company");
     }
   }
 
@@ -363,7 +364,7 @@ const suspendUser = async (id, suspend, reasons = [], adminId) => {
     where: { id: Number(id) },
   });
   if (!user) {
-    throw new Error("User not found");
+    throw new NotFoundError("User not found");
   }
 
   const updated = await prisma.$transaction(async (tx) => {
@@ -397,7 +398,7 @@ const warnUser = async (id, reasons, adminId) => {
     where: { id: Number(id) },
   });
   if (!user) {
-    throw new Error("User not found");
+    throw new NotFoundError("User not found");
   }
   return prisma.$transaction(async (tx) => {
     const updated = await tx.user.update({

@@ -30,6 +30,7 @@ import settingsRoutes from "./routes/settings.routes.js";
 import protect from "./middlewares/protect.middleware.js";
 import authorize from "./middlewares/authorize.middleware.js";
 import maintenanceMiddleware from "./middlewares/maintenance.middleware.js";
+import csrfProtection from "./middlewares/csrf.middleware.js";
 import errorHandler from "./middlewares/error.middleware.js";
 import "./utils/cron.js"; // Initialize the cron jobs
 import { initRealtime } from "./realtime/websocket.js";
@@ -160,6 +161,9 @@ app.use(passport.initialize()); // Middleware to initialize passport
 app.use(passport.session()); // Middleware to manage user sessions
 
 app.use(maintenanceMiddleware);
+
+// CSRF protection on state-changing methods
+app.use(csrfProtection);
 
 // Global API rate limiter — 100 requests per minute per IP (or per user when authenticated)
 const globalRateLimiter = rateLimit({
