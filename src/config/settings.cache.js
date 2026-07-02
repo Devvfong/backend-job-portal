@@ -36,7 +36,5 @@ const refreshSettingsCache = async () => {
   }
 };
 
-if (typeof window === 'undefined') {
-  setInterval(refreshSettingsCache, SETTINGS_REFRESH_MS);
-}
+setInterval(refreshSettingsCache, SETTINGS_REFRESH_MS);
 

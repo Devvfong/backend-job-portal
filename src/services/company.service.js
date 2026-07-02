@@ -110,7 +110,7 @@ const createCompanyService = async (data, user) => {
     });
   } catch (error) {
     if (error.code === 'P2002' && (error.meta?.target?.includes('email') || error.meta?.target === 'email')) {
-      throw new ConflictError("Company already exists", { cause: error });
+      throw new ConflictError("Company already exists");
     }
     throw error;
   }

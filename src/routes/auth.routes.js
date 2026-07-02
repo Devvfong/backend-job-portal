@@ -37,6 +37,17 @@ const passwordResetRateLimiter = rateLimit({
   },
 });
 
+const refreshRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 30, // 30 refresh attempts per 15 min
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    status: "fail",
+    message: "Too many refresh attempts, please try again later",
+  },
+});
+
 const router = express.Router();
 // Validation schemas for registration and login
 const registerSchema = z.object({
@@ -67,7 +78,7 @@ router.post("/reset-password", authRateLimiter, validate(resetPasswordSchema), r
 router.post("/verify-email", validate(verifyEmailSchema), verifyEmail);
 router.get("/docs-handoff", docsHandoff);
 router.get("/me", protect, getMe);
-router.post("/refresh", refresh);
+router.post("/refresh", refreshRateLimiter, refresh);
 router.post("/logout", protect, logout);
 // router.get("/me", protect, getMe);
 export default router;

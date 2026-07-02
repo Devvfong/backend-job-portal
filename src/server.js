@@ -8,6 +8,7 @@ import cookieParser from "cookie-parser";
 import session from "express-session";
 import pgSimple from "connect-pg-simple";
 import { fileURLToPath } from "url";
+import { rateLimit } from "express-rate-limit";
 import passport from "./config/passport.js";
 import { apiReference } from "@scalar/express-api-reference";
 import { connectDB, disconnectDB } from "./config/db.js";
@@ -158,6 +159,31 @@ app.use(passport.session()); // Middleware to manage user sessions
 
 app.use(maintenanceMiddleware);
 
+// Global API rate limiter — 100 requests per minute per IP
+const globalRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => req.path === "/health" || req.path === "/robots.txt",
+  message: {
+    status: "fail",
+    message: "Too many requests, please try again later",
+  },
+});
+app.use("/api/", globalRateLimiter);
+
+// Health check endpoint
+app.get("/health", async (req, res) => {
+  try {
+    const { prisma } = await import("./config/db.js");
+    await prisma.$queryRaw`SELECT 1`;
+    res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
+  } catch {
+    res.status(503).json({ status: "error", message: "Database unavailable" });
+  }
+});
+
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/jobs", jobroutes);
 app.use("/api/v1/users", userroutes);
@@ -210,11 +236,6 @@ connectDB().then(async () => {
   console.warn(err?.message || err);
 });
 
-// Prevent process from exiting cleanly in environments where event loop might drain
-process.stdin.resume();
-setInterval(() => { }, 1000 * 60 * 60); // Keep alive every hour
-// =========================================================================================================
-
 // ================================================================================================================
 // This for unhandle promise rejection, for example when database connection fails
 process.on("unhandledRejection", (err) => {
@@ -232,12 +253,16 @@ process.on("uncaughtException", async (err) => {
   process.exit(1);
 });
 
-// This for graceful shutdown, for example when the server is stopped or restarted
-// process.on("SIGINT", async () => {
-//   console.log("SIGINT received, shutting down gracefully...");
-//   await disconnectDB();
-//   process.exit(0);
-// });
-// ================================================================================================================
+const gracefulShutdown = async (signal) => {
+  console.log(`${signal} received, shutting down gracefully...`);
+  server.close(async () => {
+    await disconnectDB();
+    process.exit(0);
+  });
+  setTimeout(() => process.exit(1), 10000);
+};
+
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
 
 
