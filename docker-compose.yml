@@ -14,7 +14,23 @@ services:
       - "127.0.0.1:5000:5000"
     command: sh -c "npx prisma migrate deploy && npm start"
     depends_on:
+      - db
       - nexthire-redis
+    networks:
+      - nexthire-net
+
+  db:
+    image: postgres:15-alpine
+    container_name: nexthire-db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nexthire_secure_password}
+      POSTGRES_DB: nexthire
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
     networks:
       - nexthire-net
 
@@ -30,3 +46,6 @@ services:
 networks:
   nexthire-net:
     driver: bridge
+
+volumes:
+  pgdata:

@@ -23,7 +23,7 @@ import githubAuthRoutes from "./routes/github.routes.js";
 import linkedinAuthRoutes from "./routes/linkedin.routes.js";
 import statsRoutes from "./routes/stats.routes.js";
 import locationRoutes from "./routes/location.routes.js";
-import notificationRoutes from "./routes/notification.routes.js";
+import notificationRoutes from "./routes/notification.routes.js"; 
 import openApiDocument from "./utils/openapi.js";
 import adminRoutes from "./routes/admin.routes.js";
 import settingsRoutes from "./routes/settings.routes.js";

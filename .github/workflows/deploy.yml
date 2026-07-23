@@ -3,7 +3,7 @@ name: Deploy Backend
 on:
   push:
     branches:
-      - websocket
+      - database
 
 jobs:
   deploy:
@@ -17,8 +17,8 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd /home/backend/nexthire
-            export BRANCH=websocket
-            git fetch origin websocket
-            git reset --hard origin/websocket
+            export BRANCH=database
+            git fetch origin database
+            git reset --hard origin/database
             chmod +x deploy.sh
             bash deploy.sh
