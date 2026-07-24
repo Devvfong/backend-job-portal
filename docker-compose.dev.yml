@@ -17,7 +17,15 @@ services:
       - NODE_ENV=production
     depends_on:
       - db
+      - nexthire-redis
     restart: always
+
+  nexthire-redis:
+    image: redis:alpine
+    container_name: nexthire-redis-dev
+    restart: always
+    ports:
+      - "6379:6379"
 
   db:
     image: postgres:15-alpine
@@ -28,7 +36,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nexthire_secure_password}
       POSTGRES_DB: nexthire
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - pgdata-dev:/var/lib/postgresql/data
 

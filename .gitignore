@@ -96,6 +96,59 @@ tmp/
 debug.log
 .vscode-test/
 check-db-sync.js
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker (optional)
+*.dockerfile
+docker-compose.override.yml
+
+# PM2 / local server files
+pids/
+*.pid
+
+skills-lock.json
+sites-enabled/
+
+# Neon MCP and local secret files
+.mcp.json
+.mcp.json.local
+.mcp.*.local
+
+# Local env variants
+.env.local
+.env.*.local
+.env.*.secret
+
+# Secrets and keys
+*.pem
+*.key
+*.crt
+*.p12
+*.jks
+
+# CI and secret folders
+secrets/
+*.secret
+
+# Build, cache, and test artifacts
+coverage/
+.nyc_output/
+.cache/
+.turbo/
+.parcel-cache/
+.eslintcache
+dist/
+build/
+tmp/
+.next/
+
+# Debug logs
+debug.log
+.vscode-test/
+check-db-sync.js
 check-users.js
 diagnose_db.js
 fix-final.cjs
@@ -104,3 +157,5 @@ cline.md
 note.md
 architecture.dot
 architecture.svg
+neon_backup*.sql
+run_migration_on_do.sh

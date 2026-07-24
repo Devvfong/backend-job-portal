@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import { WebSocket, WebSocketServer } from "ws";
 import { prisma } from "../config/db.js";
+import { initRedis, publishEvent, CHANNELS } from "./redis.js";
 
 const WS_PATH = "/ws";
 const HEARTBEAT_MS = 30000;
@@ -160,6 +161,7 @@ const isAllowedOrigin = (origin, allowedOrigins) => {
 };
 
 const initRealtime = (server) => {
+  initRedis().catch((err) => console.error("Failed to initialize Redis", err));
   wss = new WebSocketServer({ server, path: WS_PATH, maxPayload: 1024 * 1024 });
   const allowedOrigins = getAllowedOrigins();
 
@@ -293,28 +295,32 @@ const sendToRole = (role, event, payload) => {
 };
 
 const emitNotificationToUser = (userId, notification) => {
-  sendToUser(userId, REALTIME_EVENTS.NOTIFICATION_NEW, notification);
+  publishEvent(CHANNELS.USER, { userId, event: REALTIME_EVENTS.NOTIFICATION_NEW, payload: notification });
 };
 
 const emitNotificationToCompany = (companyId, notification) => {
-  sendToCompany(companyId, REALTIME_EVENTS.NOTIFICATION_NEW, notification);
+  publishEvent(CHANNELS.COMPANY, { companyId, event: REALTIME_EVENTS.NOTIFICATION_NEW, payload: notification });
 };
 
 const emitNotificationToRole = (role, notification) => {
-  sendToRole(role, REALTIME_EVENTS.NOTIFICATION_NEW, notification);
+  publishEvent(CHANNELS.ROLE, { role, event: REALTIME_EVENTS.NOTIFICATION_NEW, payload: notification });
 };
 
 const removeNotificationFromUser = (userId, payload) => {
-  sendToUser(userId, REALTIME_EVENTS.NOTIFICATION_REMOVE, payload);
+  publishEvent(CHANNELS.USER, { userId, event: REALTIME_EVENTS.NOTIFICATION_REMOVE, payload });
 };
 
-const broadcastToAll = (event, payload) => {
+const broadcastToAllLocal = (event, payload) => {
   if (!wss) return;
   for (const ws of wss.clients) {
     if (ws.readyState === WebSocket.OPEN && ws.authenticated) {
       send(ws, event, payload);
     }
   }
+};
+
+const broadcastToAll = (event, payload) => {
+  publishEvent(CHANNELS.BROADCAST, { event, payload });
 };
 
 export {
@@ -327,6 +333,7 @@ export {
   emitNotificationToRole,
   removeNotificationFromUser,
   broadcastToAll,
+  broadcastToAllLocal,
   REALTIME_EVENTS,
 };
 
