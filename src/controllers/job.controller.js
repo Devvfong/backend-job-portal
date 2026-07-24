@@ -21,6 +21,7 @@ import {
 } from "../services/notification.service.js";
 import { encryptId, decryptId } from "../utils/crypto.js";
 import { prisma } from "../config/db.js";
+import { sanitizeLogoUrl } from "./company.controller.js";
 
 const createJobController = async (req, res, next) => {
   try {
@@ -53,15 +54,18 @@ const getJobsController = async (req, res, next) => {
 
     const result = await getJobService(query);
     const jobs = result.jobs.map((job) => {
-      const { company, ...rest } = job;
-      const companySanitized = company ? (({ id: cId, ...cRest }) => ({
-        ...cRest,
-        encryptedId: encryptId(cId),
-      }))(company) : company;
+      const { company, id, ...rest } = job;
+      const companySanitized = company
+        ? (({ id: cId, logo, ...cRest }) => ({
+            ...cRest,
+            logo: sanitizeLogoUrl(logo),
+            encryptedId: encryptId(cId),
+          }))(company)
+        : company;
 
       return {
         ...rest,
-        encryptedId: encryptId(rest.id),
+        encryptedId: encryptId(id),
         company: companySanitized,
       };
     });
@@ -94,12 +98,18 @@ const getJobByIdController = async (req, res, next) => {
       throw new NotFoundError("Job not found");
     }
 
-    const { company, ...jobRest } = job;
-    const companySanitized = company ? (({ id: cId, ...cRest }) => ({ ...cRest, encryptedId: encryptId(cId) }))(company) : null;
+    const { id: jobId, company, ...jobRest } = job;
+    const companySanitized = company
+      ? (({ id: cId, logo, ...cRest }) => ({
+          ...cRest,
+          logo: sanitizeLogoUrl(logo),
+          encryptedId: encryptId(cId),
+        }))(company)
+      : null;
 
     return res.status(200).json({
       status: "success",
-      data: { ...jobRest, encryptedId: encryptId(jobRest.id), company: companySanitized },
+      data: { ...jobRest, encryptedId: encryptId(jobId), company: companySanitized },
     });
   } catch (error) {
     next(error);
@@ -186,10 +196,30 @@ const toggleSaveJobController = async (req, res, next) => {
 const getSavedJobsController = async (req, res, next) => {
   try {
     const jobs = await getSavedJobsService(req.user.id);
-    const mapped = jobs.map((s) => ({
-      ...s,
-      job: s.job ? { ...s.job, encryptedId: encryptId(s.job.id), company: s.job.company ? { ...s.job.company, encryptedId: s.job.company.id ? encryptId(s.job.company.id) : undefined } : s.job.company } : s.job,
-    }));
+    const mapped = jobs.map(({ id, jobId, userId, job, ...rest }) => {
+      const sanitizedJob = job
+        ? (({ id: jId, company, ...jobRest }) => {
+            const companySanitized = company
+              ? (({ id: cId, logo, ...cRest }) => ({
+                  ...cRest,
+                  logo: sanitizeLogoUrl(logo),
+                  encryptedId: encryptId(cId),
+                }))(company)
+              : company;
+            return {
+              ...jobRest,
+              encryptedId: encryptId(jId),
+              company: companySanitized,
+            };
+          })(job)
+        : job;
+
+      return {
+        ...rest,
+        encryptedId: encryptId(id),
+        job: sanitizedJob,
+      };
+    });
 
     return res.status(200).json({
       status: "success",
@@ -203,7 +233,7 @@ const getSavedJobsController = async (req, res, next) => {
 const getMyCompanyJobsController = async (req, res, next) => {
   try {
     const jobs = await getMyCompanyJobsService(req.user);
-    const mapped = jobs.map((j) => ({ ...j, encryptedId: encryptId(j.id) }));
+    const mapped = jobs.map(({ id, ...rest }) => ({ ...rest, encryptedId: encryptId(id) }));
     return res.status(200).json({
       status: "success",
       data: mapped,
@@ -217,17 +247,18 @@ const getAdminJobsController = async (req, res, next) => {
   try {
     const result = await getAdminJobsService(req.query);
     const jobs = result.jobs.map((job) => {
-      const { company, ...rest } = job;
+      const { company, id, ...rest } = job;
       const companySanitized = company
-        ? (({ id: companyId, ...companyRest }) => ({
+        ? (({ id: companyId, logo, ...companyRest }) => ({
             ...companyRest,
+            logo: sanitizeLogoUrl(logo),
             encryptedId: encryptId(companyId),
           }))(company)
         : company;
 
       return {
         ...rest,
-        encryptedId: encryptId(rest.id),
+        encryptedId: encryptId(id),
         company: companySanitized,
       };
     });

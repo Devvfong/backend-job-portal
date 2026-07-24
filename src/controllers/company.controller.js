@@ -27,13 +27,37 @@ import {
 } from "../services/notification.service.js";
 import { encryptId, decryptId } from "../utils/crypto.js";
 
+const sanitizeLogoUrl = (url) => {
+  if (!url) return url;
+  if (url.includes("logo.dev")) {
+    try {
+      // url might be: https://img.logo.dev/domain.com?token=... or https://img.logo.dev/domain.com
+      const parsed = new URL(url);
+      const domain = parsed.pathname.replace(/^\//, "");
+      const backendUrl = process.env.BACKEND_URL || "http://localhost:5000";
+      return `${backendUrl}/api/v1/companies/logo/${domain}`;
+    } catch {
+      return url;
+    }
+  }
+  return url;
+};
+
+const sanitizeCompany = (company) => {
+  if (!company) return company;
+  return {
+    ...company,
+    logo: sanitizeLogoUrl(company.logo)
+  };
+};
+
 const createCompanyController = async (req, res, next) => {
   try {
     const company = await createCompanyService(req.body, req.user);
     const { id, ...rest } = company;
     return res.status(201).json({
       status: "success",
-      data: { ...rest, id: encryptId(id), encryptedId: encryptId(id) },
+      data: sanitizeCompany({ ...rest, id: encryptId(id), encryptedId: encryptId(id) }),
     });
   } catch (error) {
     next(error);
@@ -43,7 +67,7 @@ const createCompanyController = async (req, res, next) => {
 const getCompanyController = async (req, res, next) => {
   try {
     const result = await getCompanyService(req.query);
-    const companies = result.companies.map(({ id, ...rest }) => ({ ...rest, encryptedId: encryptId(id) }));
+    const companies = result.companies.map(({ id, ...rest }) => sanitizeCompany({ ...rest, encryptedId: encryptId(id) }));
     return res.status(200).json({
       status: "success",
       data: { companies, meta: result.meta },
@@ -77,7 +101,7 @@ const getCompanyControllerById = async (req, res, next) => {
 
     const { id: companyId, jobs = [], ...companyRest } = company;
     const jobsSanitized = (jobs || []).map(({ id: jobId, ...jobRest }) => ({ ...jobRest, encryptedId: encryptId(jobId) }));
-    const out = { ...companyRest, id: encryptId(companyId), encryptedId: encryptId(companyId), jobs: jobsSanitized };
+    const out = sanitizeCompany({ ...companyRest, id: encryptId(companyId), encryptedId: encryptId(companyId), jobs: jobsSanitized });
 
     return res.status(200).json({
       status: "success",
@@ -103,7 +127,7 @@ const getMyCompanyController = async (req, res, next) => {
 
     return res.status(200).json({
       status: "success",
-      data: { ...companyRest, id: encryptId(myId), encryptedId: encryptId(myId), jobs: jobsSanitized },
+      data: sanitizeCompany({ ...companyRest, id: encryptId(myId), encryptedId: encryptId(myId), jobs: jobsSanitized }),
     });
   } catch (error) {
     next(error);
@@ -117,9 +141,10 @@ const updateCompanyController = async (req, res, next) => {
       req.body,
       req.user,
     );
+    const { id: companyId, ...rest } = company;
     return res.status(200).json({
       status: "success",
-      data: company,
+      data: sanitizeCompany({ ...rest, encryptedId: encryptId(companyId) }),
     });
   } catch (error) {
     next(error);
@@ -170,7 +195,7 @@ const updateMyCompanyController = async (req, res, next) => {
 
     return res.status(200).json({
       status: "success",
-      data: { ...updatedRest, encryptedId: encryptId(updatedId), jobs: jobsSanitized },
+      data: sanitizeCompany({ ...updatedRest, encryptedId: encryptId(updatedId), jobs: jobsSanitized }),
     });
   } catch (error) {
     next(error);
@@ -240,7 +265,7 @@ const uploadLogoController = async (req, res, next) => {
     return res.status(200).json({
       status: "success",
       message: "Logo uploaded successfully",
-      data: { ...updatedRest, encryptedId: encryptId(updatedId), jobs: jobsSanitized },
+      data: sanitizeCompany({ ...updatedRest, encryptedId: encryptId(updatedId), jobs: jobsSanitized }),
     });
   } catch (error) {
     next(error);
@@ -260,7 +285,7 @@ const deleteLogoController = async (req, res, next) => {
     return res.status(200).json({
       status: "success",
       message: "Logo deleted successfully",
-      data: { ...deletedRest, encryptedId: encryptId(deletedId), jobs: jobsSanitized },
+      data: sanitizeCompany({ ...deletedRest, encryptedId: encryptId(deletedId), jobs: jobsSanitized }),
     });
   } catch (error) {
     next(error);
@@ -292,7 +317,7 @@ const uploadCoverController = async (req, res, next) => {
     return res.status(200).json({
       status: "success",
       message: "Cover uploaded successfully",
-      data: { ...updatedRest, encryptedId: encryptId(updatedId), jobs: jobsSanitized },
+      data: sanitizeCompany({ ...updatedRest, encryptedId: encryptId(updatedId), jobs: jobsSanitized }),
     });
   } catch (error) {
     next(error);
@@ -312,7 +337,7 @@ const deleteCoverController = async (req, res, next) => {
     return res.status(200).json({
       status: "success",
       message: "Cover deleted successfully",
-      data: { ...deletedRest, encryptedId: encryptId(deletedId), jobs: jobsSanitized },
+      data: sanitizeCompany({ ...deletedRest, encryptedId: encryptId(deletedId), jobs: jobsSanitized }),
     });
   } catch (error) {
     next(error);
@@ -327,7 +352,7 @@ const deleteCoverByIdController = async (req, res, next) => {
     return res.status(200).json({
       status: "success",
       message: "Cover deleted successfully",
-      data: { ...deletedRest, encryptedId: encryptId(deletedId) },
+      data: sanitizeCompany({ ...deletedRest, encryptedId: encryptId(deletedId) }),
     });
   } catch (error) {
     next(error);
@@ -364,7 +389,7 @@ const suspendCompanyController = async (req, res, next) => {
 
     return res.status(200).json({
       status: "success",
-      data: { ...updated, encryptedId: encryptId(updated.id) },
+      data: sanitizeCompany({ ...updated, encryptedId: encryptId(updated.id) }),
     });
   } catch (error) {
     next(error);
@@ -383,8 +408,36 @@ const warnCompanyController = async (req, res, next) => {
 
     return res.status(200).json({
       status: "success",
-      data: { ...updated, encryptedId: encryptId(updated.id) },
+      data: sanitizeCompany({ ...updated, encryptedId: encryptId(updated.id) }),
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getCompanyLogoProxyController = async (req, res, next) => {
+  try {
+    const { domain } = req.params;
+    if (!domain) {
+      return res.status(400).json({ status: "error", message: "Domain is required" });
+    }
+
+    const token = process.env.LOGO_DEV_TOKEN || "pk_HPgz74OKQZi5C6mjupUCwg";
+    const logoUrl = `https://img.logo.dev/${domain}?token=${token}`;
+
+    const response = await fetch(logoUrl);
+    if (!response.ok) {
+      return res.status(response.status).send(response.statusText);
+    }
+
+    const contentType = response.headers.get("content-type");
+    if (contentType) {
+      res.setHeader("Content-Type", contentType);
+    }
+    res.setHeader("Cache-Control", "public, max-age=86400"); // Cache for 1 day
+
+    const buffer = Buffer.from(await response.arrayBuffer());
+    return res.end(buffer);
   } catch (error) {
     next(error);
   }
@@ -407,5 +460,7 @@ export {
   getCompanyStatsController,
   suspendCompanyController,
   warnCompanyController,
+  getCompanyLogoProxyController,
+  sanitizeLogoUrl,
+  sanitizeCompany,
 };
-

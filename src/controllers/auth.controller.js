@@ -98,18 +98,9 @@ const register = async (req, res, next) => {
     await sendVerificationEmail(user, verifyUrl);
     sendWelcomeEmail(user).catch(() => {});
 
-    return res.status(201).json({
+    return res.status(200).json({
       status: "success",
-      message: "User registered successfully. Please check your email to verify your account.",
-      data: {
-        user: {
-          id: user.id,
-          encryptedId: encryptId(user.id),
-          name: user.name,
-          email: user.email,
-          role: user.role,
-        },
-      },
+      message: "If your email is eligible for registration, you will receive a verification message shortly.",
     });
   } catch (error) {
     next(error);

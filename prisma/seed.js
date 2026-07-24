@@ -809,7 +809,7 @@ async function seed() {
     if (!domain && email?.includes("@")) {
       domain = email.split("@")[1].toLowerCase();
     }
-    return domain ? `https://img.logo.dev/${domain}?token=${logoDevToken}` : null;
+    return domain ? `https://img.logo.dev/${domain}` : null;
   };
 
   for (const cData of companiesToSeed) {

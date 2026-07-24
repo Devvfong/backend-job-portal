@@ -59,6 +59,17 @@ if (process.env.NODE_ENV === 'production') {
 }
 const app = express(); // Create an Express application
 app.set("trust proxy", 1);
+
+// Redirect HTTP to HTTPS in production
+if (process.env.NODE_ENV === "production") {
+  app.use((req, res, next) => {
+    if (req.headers["x-forwarded-proto"] && req.headers["x-forwarded-proto"] !== "https") {
+      return res.redirect(301, `https://${req.get("host")}${req.originalUrl}`);
+    }
+    next();
+  });
+}
+
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -77,6 +88,12 @@ app.use(helmet({
   },
   referrerPolicy: { policy: "strict-origin-when-cross-origin" },
 }));
+
+// Set Permissions-Policy header
+app.use((req, res, next) => {
+  res.setHeader("Permissions-Policy", "geolocation=(), camera=(), microphone=(), payment=()");
+  next();
+});
 
 app.use((req, res, next) => {
   req.id = crypto.randomUUID();

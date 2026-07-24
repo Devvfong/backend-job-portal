@@ -16,6 +16,7 @@ import {
   getCompanyStatsController,
   suspendCompanyController,
   warnCompanyController,
+  getCompanyLogoProxyController,
 } from "../controllers/company.controller.js";
 import { getMyCompanyJobsController } from "../controllers/job.controller.js";
 import protect from "../middlewares/protect.middleware.js";
@@ -55,6 +56,7 @@ const warnSchema = z.object({
   reason: z.any(),
 });
 router.get("/", getCompanyController);
+router.get("/logo/:domain", getCompanyLogoProxyController);
 
 router.post(
   "/logo",
