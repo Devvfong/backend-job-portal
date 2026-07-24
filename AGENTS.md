@@ -154,12 +154,12 @@ Before marking realtime work done:
 - Nginx `/ws` proxy (API + frontend same-origin WS)
 - Integration guide + E2E script (12/12 passed live)
 - Session handoff: `features/realtime/SESSION.md`
+- Multi-server WebSocket (Redis pub/sub)
 
 ### Not done yet
 
 - Postgres `Notification` table
 - DB read/unread state (localStorage only today)
-- Multi-server WebSocket (Redis pub/sub)
 - Automated CI integration tests
 - WS rate limiting
 
